@@ -1,6 +1,7 @@
 import {
   evaluateRule,
   firstIssue,
+  parseBackupStamp,
   toLocalDate,
   triggerFamilyOf,
   triggerMatches,
@@ -258,14 +259,17 @@ export async function dryRunRule(
     const txs = await ctx.db.orm.public.Transaction.where({ userId: ctx.userId }).all();
     const live = txs.filter((t) => t.deletedAt === null);
 
+    // Only `expenseToday` varies per simulated day, so compute the rest once
+    // instead of re-reading the backup status files on every iteration.
+    const baseMetrics = await computeMetrics(ctx);
+
     const firedDates: string[] = [];
     for (let i = 0; i < days; i += 1) {
       const date = new Date(now.getTime() - i * 86_400_000).toISOString().slice(0, 10);
       const expenseThatDay = live
         .filter((t) => t.type === "EXPENSE" && String(t.occurredOn) === date)
         .reduce((sum, t) => sum + Number(t.amount), 0);
-      const metrics = await computeMetrics(ctx);
-      metrics.expenseToday = expenseThatDay;
+      const metrics = { ...baseMetrics, expenseToday: expenseThatDay };
       const truth = evaluateRule(condition as Parameters<typeof evaluateRule>[0], metrics);
       if (truth) firedDates.push(date);
     }
@@ -358,24 +362,6 @@ async function ageHoursSince(
   const parsed = stamp === null ? null : parseBackupStamp(stamp);
   if (parsed === null) return NEVER_RAN_HOURS;
   return Math.max(0, (now.getTime() - parsed.getTime()) / 3_600_000);
-}
-
-/** Parse `YYYYMMDDTHHMMSSZ`; returns `null` on anything else. */
-export function parseBackupStamp(stamp: string): Date | null {
-  const match = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(stamp.trim());
-  if (match === null) return null;
-  const [, year, month, day, hour, minute, second] = match;
-  const date = new Date(
-    Date.UTC(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hour),
-      Number(minute),
-      Number(second),
-    ),
-  );
-  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function toSummary(row: {

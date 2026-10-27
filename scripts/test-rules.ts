@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { db } from "@cashow/db";
-import { evaluateRule, parseDbTimestamp } from "@cashow/domain";
+import { evaluateRule, parseBackupStamp, parseDbTimestamp } from "@cashow/domain";
 import {
   claimOutboxEvents,
   createRule,
@@ -13,7 +13,6 @@ import {
   markNotificationRead,
   markOutboxProcessed,
   type PushSender,
-  parseBackupStamp,
   runRules,
   savePushSubscription,
   snoozeNotification,
@@ -303,8 +302,8 @@ async function main(): Promise<void> {
   assert.ok(staleRun.ok, "runRules backup stale");
   equal(staleRun.value, 1, "stale backup fires once");
 
-  // A reader that reports nothing (job never ran) is the worst case: both
-  // conditions are true, and the still-armed backup rule fires.
+  // A reader that reports nothing (job never ran) is the worst case, but both
+  // rules already fired above and edge-triggering keeps them quiet.
   const neverRan = {
     lastRunAt: async () => null,
     lastDrillAt: async () => null,

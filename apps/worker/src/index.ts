@@ -3,13 +3,13 @@ import { db } from "@cashow/db";
 import { SCHEDULED_TRIGGERS, triggerFamilyOf } from "@cashow/domain";
 import {
   claimOutboxEvents,
-  createFileBackupStatusReader,
   deliverPendingNotifications,
   failOutboxEvent,
   markOutboxProcessed,
   runDueRecurring,
   runRules,
 } from "@cashow/services";
+import { createFileBackupStatusReader } from "./backup-status";
 import { createPushSender } from "./push";
 
 const env = loadEnv();

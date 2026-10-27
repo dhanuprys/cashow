@@ -9,7 +9,6 @@
 export * from "./accounts";
 export * from "./attachments";
 export * from "./audit";
-export * from "./backup-status";
 export * from "./budgets";
 export * from "./categories";
 export * from "./context";

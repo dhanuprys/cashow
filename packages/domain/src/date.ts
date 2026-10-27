@@ -140,6 +140,28 @@ export function parseDbTimestamp(value: string): Date {
   return date;
 }
 
+/**
+ * Parse the `at` stamp the backup and restore-drill jobs write
+ * (`YYYYMMDDTHHMMSSZ`, e.g. `20261027T030000Z`). Returns `null` on anything
+ * else, so a corrupt status file reads as "never ran" rather than throwing.
+ */
+export function parseBackupStamp(stamp: string): Date | null {
+  const match = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(stamp.trim());
+  if (match === null) return null;
+  const [, year, month, day, hour, minute, second] = match;
+  const date = new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    ),
+  );
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 /** A `datetime-local` value (`YYYY-MM-DDTHH:mm`) for an instant in a timezone. */
 export function toLocalDateTimeInput(instant: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", {

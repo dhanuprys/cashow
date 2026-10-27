@@ -1,16 +1,12 @@
 /**
- * Backup freshness sources (plan §7). The services layer reads the status
- * files `backup.sh` and `restore-drill.sh` leave next to the artefacts through
- * the `BackupStatusReader` port, so no use case touches `node:fs` directly and
- * a test can supply an in-memory reader.
+ * The worker's `BackupStatusReader` implementation (plan §7). It lives beside
+ * `push.ts` because it touches the filesystem: `@cashow/services` keeps only the
+ * port, exactly like `AttachmentStorage` and `LocalAttachmentStorage`.
  */
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { BackupStatusReader } from "./context";
-
-/** Default mount point of `BACKUP_DIR` in the Compose stack. */
-export const DEFAULT_BACKUP_DIR = "/backups";
+import type { BackupStatusReader } from "@cashow/services";
 
 /**
  * Read `last-run.json` / `last-drill.json` from a local directory and return
