@@ -155,6 +155,44 @@ async function Rules() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Presets</CardTitle>
+          <CardDescription>Buat aturan umum dalam satu klik.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {[
+            {
+              name: "Batas harian 150rb",
+              trigger: '{"type":"transaction"}',
+              condition: '{"metric":"expenseToday","op":"gt","value":150000}',
+            },
+            {
+              name: "Pengeluaran besar",
+              trigger: '{"type":"transaction"}',
+              condition: '{"metric":"expenseToday","op":"gt","value":500000}',
+            },
+            {
+              name: "Saldo rendah",
+              trigger: '{"type":"schedule"}',
+              condition: '{"metric":"totalBalance","op":"lt","value":100000}',
+            },
+          ].map((preset) => (
+            <form key={preset.name} action={createRuleFormAction} className="contents">
+              <input type="hidden" name="name" value={preset.name} />
+              <input type="hidden" name="trigger" value={preset.trigger} />
+              <input type="hidden" name="condition" value={preset.condition} />
+              <button
+                type="submit"
+                className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm hover:bg-muted"
+              >
+                {preset.name}
+              </button>
+            </form>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }

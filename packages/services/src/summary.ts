@@ -62,6 +62,55 @@ export interface SummaryOptions {
   accountId?: string;
 }
 
+export interface SafeToSpend {
+  daily: bigint;
+  daysLeft: number;
+  upcoming: bigint;
+  available: bigint;
+}
+
+export async function getSafeToSpend(ctx: UseCaseContext): Promise<Result<SafeToSpend>> {
+  try {
+    const timezone = await userTimezone(ctx.db, ctx.userId);
+    const now = nowOf(ctx);
+    const budgetStartDay = await loadBudgetStartDay(ctx);
+    const range = budgetMonthRange(now, timezone, budgetStartDay);
+
+    const today = toLocalDate(now, timezone);
+    const endMs = Date.parse(`${range.to}T00:00:00Z`);
+    const todayMs = Date.parse(`${today}T00:00:00Z`);
+    const daysLeft = Math.max(1, Math.round((endMs - todayMs) / 86_400_000) + 1);
+
+    // Upcoming recurring expenses in the rest of the budget month.
+    const templates = await ctx.db.orm.public.RecurringTemplate.where({
+      userId: ctx.userId,
+      active: true,
+    }).all();
+    let upcoming = 0n;
+    for (const template of templates) {
+      if (template.type === "EXPENSE") upcoming += BigInt(template.amount);
+    }
+
+    const summaryResult = await getSummary(ctx, { period: "budgetMonth" });
+    const summary = summaryResult.ok ? summaryResult.value : null;
+    const free = summary === null ? 0n : summary.income - summary.expense;
+
+    // Prefer budget remaining when budgets exist.
+    const { getBudgetStatus } = await import("./budgets");
+    const budgetStatus = await getBudgetStatus(ctx);
+    let available = free;
+    if (budgetStatus.ok && budgetStatus.value.length > 0) {
+      available = budgetStatus.value.reduce((sum, item) => sum + item.remaining, 0n);
+    }
+    available -= upcoming;
+
+    const daily = available >= 0n ? available / BigInt(daysLeft) : 0n;
+    return ok({ daily, daysLeft, upcoming, available });
+  } catch (error) {
+    return err(toLedgerError(error));
+  }
+}
+
 export async function getSummary(
   ctx: UseCaseContext,
   options: SummaryOptions = {},

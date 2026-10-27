@@ -232,13 +232,25 @@ export async function runRules(ctx: UseCaseContext, triggerType: string): Promis
 export async function dryRunRule(
   ctx: UseCaseContext,
   condition: unknown,
-  _days = 30,
+  days = 30,
 ): Promise<Result<{ firedDates: string[] }>> {
-  // Simplified: evaluate current metrics only.
   try {
-    const metrics = await computeMetrics(ctx);
-    const truth = evaluateRule(condition as Parameters<typeof evaluateRule>[0], metrics);
-    return ok({ firedDates: truth ? [new Date().toISOString().slice(0, 10)] : [] });
+    const now = nowOf(ctx);
+    const txs = await ctx.db.orm.public.Transaction.where({ userId: ctx.userId }).all();
+    const live = txs.filter((t) => t.deletedAt === null);
+
+    const firedDates: string[] = [];
+    for (let i = 0; i < days; i += 1) {
+      const date = new Date(now.getTime() - i * 86_400_000).toISOString().slice(0, 10);
+      const expenseThatDay = live
+        .filter((t) => t.type === "EXPENSE" && String(t.occurredOn) === date)
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      const metrics = await computeMetrics(ctx);
+      metrics.expenseToday = expenseThatDay;
+      const truth = evaluateRule(condition as Parameters<typeof evaluateRule>[0], metrics);
+      if (truth) firedDates.push(date);
+    }
+    return ok({ firedDates });
   } catch (error) {
     return err(toLedgerError(error));
   }

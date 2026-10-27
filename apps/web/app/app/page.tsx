@@ -1,5 +1,11 @@
 import { formatMoney } from "@cashow/domain";
-import { getMonthOverview, listAccounts, listCategories, listTransactions } from "@cashow/services";
+import {
+  getSafeToSpend,
+  getSummary,
+  listAccounts,
+  listCategories,
+  listTransactions,
+} from "@cashow/services";
 import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -54,20 +60,22 @@ async function Dashboard({ searchParams }: { searchParams: Promise<{ month?: str
       : currentMonthKey(now, user.timezone);
   const range = monthRange(month);
 
-  const [overview, recent, accounts, categories] = await Promise.all([
-    getMonthOverview(ctx, month),
+  const [summaryResult, recent, accounts, categories, safeToSpendResult] = await Promise.all([
+    getSummary(ctx, { period: "custom", from: range.from, to: range.to }),
     listTransactions(ctx, { limit: 6 }),
     listAccounts(ctx),
     listCategories(ctx),
+    getSafeToSpend(ctx),
   ]);
 
-  const summary = unwrap(overview);
+  const summary = unwrap(summaryResult);
   const latest = unwrap(recent);
   const accountList = unwrap(accounts);
   const categoryList = unwrap(categories).filter((category) => category.archivedAt === null);
   const liveAccounts = accountList.filter((account) => account.archivedAt === null);
+  const safeToSpend = safeToSpendResult.ok ? safeToSpendResult.value : null;
 
-  const topExpense = summary.topExpenseCategories[0]?.total ?? 0n;
+  const topExpense = summary.byCategory[0]?.total ?? 0n;
   const nextMonth = (() => {
     const [yearText, monthText] = month.split("-");
     const year = Number(yearText);
@@ -197,16 +205,36 @@ async function Dashboard({ searchParams }: { searchParams: Promise<{ month?: str
         </Card>
 
         <div className="space-y-4">
+          {safeToSpend === null ? null : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Safe to spend</CardTitle>
+                <CardDescription>
+                  Sisa anggaran bulan ini dibagi {safeToSpend.daysLeft} hari.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold tabular-nums">
+                  {formatMoney(safeToSpend.daily)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Tersedia {formatMoney(safeToSpend.available)} · tagihan mendatang{" "}
+                  {formatMoney(safeToSpend.upcoming)}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Pengeluaran terbesar</CardTitle>
               <CardDescription>Bulan {monthLabel(month)}.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {summary.topExpenseCategories.length === 0 ? (
+              {summary.byCategory.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Belum ada pengeluaran bulan ini.</p>
               ) : (
-                summary.topExpenseCategories.map((category) => {
+                summary.byCategory.map((category) => {
                   const width =
                     topExpense === 0n ? 0 : Number((category.total * 100n) / topExpense);
                   return (
