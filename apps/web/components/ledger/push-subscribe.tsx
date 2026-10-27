@@ -1,8 +1,13 @@
 "use client";
 
+import { Bell, BellOff } from "lucide-react";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
-import { subscribePushAction } from "@/lib/actions/ledger";
+import {
+  markNotificationReadAction,
+  snoozeNotificationAction,
+  subscribePushAction,
+} from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -60,6 +65,38 @@ export function PushSubscribe({ vapidPublicKey }: { vapidPublicKey: string }) {
           <span className="text-xs text-destructive">{state.message}</span>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/** Mark-read and snooze controls rendered next to each inbox item. */
+export function NotificationActions({ id, read }: { id: string; read: boolean }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      {read ? (
+        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+          <BellOff className="size-3" aria-hidden="true" />
+          Sudah dibaca
+        </span>
+      ) : (
+        <form action={markNotificationReadAction}>
+          <input type="hidden" name="notificationId" value={id} />
+          <button
+            type="submit"
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            <Bell className="size-3" aria-hidden="true" />
+            Tandai dibaca
+          </button>
+        </form>
+      )}
+      <form action={snoozeNotificationAction} className="flex items-center gap-1">
+        <input type="hidden" name="notificationId" value={id} />
+        <input type="hidden" name="minutes" value="60" />
+        <button type="submit" className="text-[11px] text-muted-foreground hover:text-foreground">
+          Tunda 1 jam
+        </button>
+      </form>
     </div>
   );
 }

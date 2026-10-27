@@ -2,6 +2,7 @@
 
 import { quickAddSchema } from "@cashow/domain";
 import {
+  confirmRecurringDraft,
   createAccount,
   createBudget,
   createCategory,
@@ -25,6 +26,8 @@ import {
   setAccountArchived,
   setCategoryArchived,
   setPlanArchived,
+  skipRecurringDraft,
+  snoozeNotification,
   softDeleteAttachment,
   softDeleteSnapshot,
   softDeleteTransaction,
@@ -36,6 +39,7 @@ import {
   updatePlanItem,
   updateProfile,
   updateRecurring,
+  updateRule,
   updateTransaction,
   uploadAttachment,
   verifyCheckpoint,
@@ -729,6 +733,31 @@ export async function runRecurringAction(_formData: FormData): Promise<void> {
   revalidatePath("/app/transactions");
 }
 
+export async function confirmRecurringDraftAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "draftId");
+  if (id === "") return;
+
+  const result = await confirmRecurringDraft(session.ctx, id);
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  revalidatePath("/app/recurring");
+  revalidatePath("/app/transactions");
+}
+
+export async function skipRecurringDraftAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "draftId");
+  if (id === "") return;
+
+  const result = await skipRecurringDraft(session.ctx, id);
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  revalidatePath("/app/recurring");
+}
+
 export async function createRuleFormAction(formData: FormData): Promise<void> {
   await createRuleAction(initialActionState, formData);
 }
@@ -760,6 +789,21 @@ export async function createRuleAction(
   revalidateLedger();
   revalidatePath("/app/rules");
   return { status: "success" };
+}
+
+export async function updateRuleAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "ruleId");
+  if (id === "") return;
+
+  const activeRaw = text(formData, "active");
+  const result = await updateRule(session.ctx, id, {
+    active: activeRaw === "" ? undefined : activeRaw === "true",
+  });
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  revalidatePath("/app/rules");
 }
 
 export async function deleteRuleAction(formData: FormData): Promise<void> {
@@ -819,10 +863,21 @@ export async function importCsvAction(
   return { status: "success", message: `${created} transaksi diimpor.` };
 }
 
+/** Trigger families a full manual sweep evaluates, including scheduled rules. */
+const MANUAL_TRIGGER_FAMILIES = [
+  "transaction",
+  "snapshot",
+  "planItem",
+  "schedule",
+  "metricThreshold",
+] as const;
+
 export async function runRulesAction(formData: FormData): Promise<void> {
   const session = await requireLedgerSession();
-  const triggerType = text(formData, "triggerType") || "manual";
-  const result = await runRules(session.ctx, triggerType);
+  const requested = text(formData, "triggerType");
+  const families: readonly string[] =
+    requested === "" || requested === "manual" ? MANUAL_TRIGGER_FAMILIES : [requested];
+  const result = await runRules(session.ctx, [...families]);
   if (!result.ok) throw result.error;
   revalidateLedger();
   revalidatePath("/app/rules");
@@ -851,5 +906,15 @@ export async function markNotificationReadAction(formData: FormData): Promise<vo
   const id = text(formData, "notificationId");
   if (id === "") return;
   await markNotificationRead(session.ctx, id);
+  revalidatePath("/app/inbox");
+}
+
+export async function snoozeNotificationAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "notificationId");
+  const minutes = Number(text(formData, "minutes") || "60");
+  if (id === "") return;
+  const result = await snoozeNotification(session.ctx, id, Number.isFinite(minutes) ? minutes : 60);
+  if (!result.ok) throw result.error;
   revalidatePath("/app/inbox");
 }

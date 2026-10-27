@@ -23,9 +23,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'2d6257fdb9e7b362d34fe2b89d7ddf8bf34206336cbbb05b115c15c270d1bba3'>;
+  StorageHashBase<'34c824378cb5210717c798e1dd5efc6f4bfcf2e9e0dc3dda41ca44f79cb5d326'>;
 export type ExecutionHash =
-  ExecutionHashBase<'3853167e293ea3f9f6ebbc39db099ac1329fc6faec26dc1d78efee7046a58c86'>;
+  ExecutionHashBase<'2fd37ee088cb7264e40d3cbaa5a7e893a5284d29b06f0f4b972bd3bd18d4febb'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -267,8 +267,14 @@ type FieldTypeOverrides = {
       };
       readonly OutboxEvent: {
         readonly status: {
-          readonly output: 'PENDING' | 'PROCESSED' | 'FAILED';
-          readonly input: 'PENDING' | 'PROCESSED' | 'FAILED';
+          readonly output: 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
+          readonly input: 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
+        };
+      };
+      readonly RecurringDraft: {
+        readonly type: {
+          readonly output: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'ADJUSTMENT';
+          readonly input: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'ADJUSTMENT';
         };
       };
       readonly RecurringTemplate: {
@@ -350,8 +356,14 @@ type ColumnTypeOverrides = {
     };
     readonly OutboxEvent: {
       readonly status: {
-        readonly output: 'PENDING' | 'PROCESSED' | 'FAILED';
-        readonly input: 'PENDING' | 'PROCESSED' | 'FAILED';
+        readonly output: 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
+        readonly input: 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
+      };
+    };
+    readonly RecurringDraft: {
+      readonly type: {
+        readonly output: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'ADJUSTMENT';
+        readonly input: 'INCOME' | 'EXPENSE' | 'TRANSFER' | 'ADJUSTMENT';
       };
     };
     readonly RecurringTemplate: {
@@ -419,6 +431,8 @@ export namespace Models {
     checkpoints: public_ReconciliationCheckpoint[];
     recurringAsDestination: public_RecurringTemplate[];
     recurringAsSource: public_RecurringTemplate[];
+    recurringDraftsAsDestination: public_RecurringDraft[];
+    recurringDraftsAsSource: public_RecurringDraft[];
     snapshots: public_BalanceSnapshot[];
     transactions: public_Transaction[];
     user: public_User;
@@ -426,6 +440,8 @@ export namespace Models {
       | 'checkpoints'
       | 'recurringAsDestination'
       | 'recurringAsSource'
+      | 'recurringDraftsAsDestination'
+      | 'recurringDraftsAsSource'
       | 'snapshots'
       | 'transactions'
       | 'user';
@@ -532,10 +548,12 @@ export namespace Models {
     userId: FieldOutputTypes['public']['Category']['userId'];
     budgets: public_Budget[];
     parent: public_Category | null;
+    recurringDrafts: public_RecurringDraft[];
     recurringTemplates: public_RecurringTemplate[];
     transactions: public_Transaction[];
     user: public_User;
-    readonly [RelationKeys]?: 'budgets' | 'parent' | 'recurringTemplates' | 'transactions' | 'user';
+    readonly [RelationKeys]?:
+      'budgets' | 'parent' | 'recurringDrafts' | 'recurringTemplates' | 'transactions' | 'user';
   };
   export type public_ChannelEndpoint = {
     active: FieldOutputTypes['public']['ChannelEndpoint']['active'];
@@ -681,6 +699,32 @@ export namespace Models {
     user: public_User;
     readonly [RelationKeys]?: 'account' | 'snapshot' | 'user';
   };
+  export type public_RecurringDraft = {
+    accountId: FieldOutputTypes['public']['RecurringDraft']['accountId'];
+    amount: FieldOutputTypes['public']['RecurringDraft']['amount'];
+    categoryId: FieldOutputTypes['public']['RecurringDraft']['categoryId'];
+    confirmedAt: FieldOutputTypes['public']['RecurringDraft']['confirmedAt'];
+    counterparty: FieldOutputTypes['public']['RecurringDraft']['counterparty'];
+    createdAt: FieldOutputTypes['public']['RecurringDraft']['createdAt'];
+    destinationAccountId: FieldOutputTypes['public']['RecurringDraft']['destinationAccountId'];
+    id: FieldOutputTypes['public']['RecurringDraft']['id'];
+    merchant: FieldOutputTypes['public']['RecurringDraft']['merchant'];
+    note: FieldOutputTypes['public']['RecurringDraft']['note'];
+    runAt: FieldOutputTypes['public']['RecurringDraft']['runAt'];
+    skippedAt: FieldOutputTypes['public']['RecurringDraft']['skippedAt'];
+    status: FieldOutputTypes['public']['RecurringDraft']['status'];
+    templateId: FieldOutputTypes['public']['RecurringDraft']['templateId'];
+    transactionId: FieldOutputTypes['public']['RecurringDraft']['transactionId'];
+    type: FieldOutputTypes['public']['RecurringDraft']['type'];
+    updatedAt: FieldOutputTypes['public']['RecurringDraft']['updatedAt'];
+    userId: FieldOutputTypes['public']['RecurringDraft']['userId'];
+    account: public_Account;
+    category: public_Category | null;
+    destinationAccount: public_Account | null;
+    template: public_RecurringTemplate;
+    user: public_User;
+    readonly [RelationKeys]?: 'account' | 'category' | 'destinationAccount' | 'template' | 'user';
+  };
   export type public_RecurringTemplate = {
     accountId: FieldOutputTypes['public']['RecurringTemplate']['accountId'];
     active: FieldOutputTypes['public']['RecurringTemplate']['active'];
@@ -703,8 +747,9 @@ export namespace Models {
     account: public_Account;
     category: public_Category | null;
     destinationAccount: public_Account | null;
+    drafts: public_RecurringDraft[];
     user: public_User;
-    readonly [RelationKeys]?: 'account' | 'category' | 'destinationAccount' | 'user';
+    readonly [RelationKeys]?: 'account' | 'category' | 'destinationAccount' | 'drafts' | 'user';
   };
   export type public_Rule = {
     actions: FieldOutputTypes['public']['Rule']['actions'];
@@ -826,6 +871,7 @@ export namespace Models {
     notifications: public_Notification[];
     passkeys: public_Passkey[];
     paymentPlans: public_PaymentPlan[];
+    recurringDrafts: public_RecurringDraft[];
     recurringTemplates: public_RecurringTemplate[];
     ruleFirings: public_RuleFiring[];
     ruleStates: public_RuleState[];
@@ -846,6 +892,7 @@ export namespace Models {
       | 'notifications'
       | 'passkeys'
       | 'paymentPlans'
+      | 'recurringDrafts'
       | 'recurringTemplates'
       | 'ruleFirings'
       | 'ruleStates'
@@ -877,6 +924,7 @@ export declare const models: {
     PaymentPlan: Models.public_PaymentPlan;
     PaymentPlanItem: Models.public_PaymentPlanItem;
     ReconciliationCheckpoint: Models.public_ReconciliationCheckpoint;
+    RecurringDraft: Models.public_RecurringDraft;
     RecurringTemplate: Models.public_RecurringTemplate;
     Rule: Models.public_Rule;
     RuleFiring: Models.public_RuleFiring;
@@ -2818,6 +2866,224 @@ type ContractBase = Omit<
                 },
               ];
             };
+            readonly RecurringDraft: {
+              columns: {
+                readonly accountId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly amount: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly categoryId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly confirmedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly counterparty: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly createdAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly destinationAccountId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly merchant: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly note: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly runAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly skippedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly status: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'PENDING'>;
+                  };
+                  readonly many: false;
+                };
+                readonly templateId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly transactionId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly type: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly updatedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly userId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [{ readonly columns: readonly ['templateId', 'runAt'] }];
+              indexes: readonly [
+                {
+                  readonly name: 'RecurringDraft_accountId_idx_cbfb3085';
+                  readonly prefix: 'RecurringDraft_accountId_idx';
+                  readonly columns: readonly ['accountId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'RecurringDraft_categoryId_idx_15c304f2';
+                  readonly prefix: 'RecurringDraft_categoryId_idx';
+                  readonly columns: readonly ['categoryId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'RecurringDraft_destinationAccountId_idx_32927505';
+                  readonly prefix: 'RecurringDraft_destinationAccountId_idx';
+                  readonly columns: readonly ['destinationAccountId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'RecurringDraft_templateId_idx_19e0d972';
+                  readonly prefix: 'RecurringDraft_templateId_idx';
+                  readonly columns: readonly ['templateId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'RecurringDraft_userId_idx_a489d58a';
+                  readonly prefix: 'RecurringDraft_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'RecurringDraft_userId_status_runAt_idx_82098bf9';
+                  readonly prefix: 'RecurringDraft_userId_status_runAt_idx';
+                  readonly columns: readonly ['userId', 'status', 'runAt'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'RecurringDraft';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'RecurringDraft';
+                    readonly columns: readonly ['templateId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'RecurringTemplate';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'RecurringDraft';
+                    readonly columns: readonly ['accountId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Account';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'RecurringDraft';
+                    readonly columns: readonly ['destinationAccountId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Account';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'RecurringDraft';
+                    readonly columns: readonly ['categoryId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Category';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
             readonly RecurringTemplate: {
               columns: {
                 readonly accountId: {
@@ -3758,7 +4024,7 @@ type ContractBase = Omit<
             };
             readonly OutboxStatus: {
               readonly kind: 'valueSet';
-              readonly values: readonly ['PENDING', 'PROCESSED', 'FAILED'];
+              readonly values: readonly ['PENDING', 'PROCESSING', 'PROCESSED', 'FAILED'];
             };
             readonly RecurringFrequency: {
               readonly kind: 'valueSet';
@@ -3848,6 +4114,10 @@ type ContractBase = Omit<
     readonly ReconciliationCheckpoint: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'ReconciliationCheckpoint';
+    };
+    readonly RecurringDraft: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'RecurringDraft';
     };
     readonly RecurringTemplate: {
       readonly namespace: 'public' & NamespaceId;
@@ -3945,6 +4215,28 @@ type ContractBase = Omit<
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
                   readonly model: 'RecurringTemplate';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['accountId'];
+                };
+              };
+              readonly recurringDraftsAsDestination: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'RecurringDraft';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['destinationAccountId'];
+                };
+              };
+              readonly recurringDraftsAsSource: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'RecurringDraft';
                 };
                 readonly cardinality: '1:N';
                 readonly on: {
@@ -4606,6 +4898,17 @@ type ContractBase = Omit<
                 readonly on: {
                   readonly localFields: readonly ['parentId'];
                   readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly recurringDrafts: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'RecurringDraft';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['categoryId'];
                 };
               };
               readonly recurringTemplates: {
@@ -5537,6 +5840,180 @@ type ContractBase = Omit<
               };
             };
           };
+          readonly RecurringDraft: {
+            readonly fields: {
+              readonly accountId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly amount: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly categoryId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly confirmedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly counterparty: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly destinationAccountId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly merchant: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly note: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly runAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly skippedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly templateId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly transactionId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly type: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: {
+              readonly account: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Account';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['accountId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly category: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Category';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['categoryId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly destinationAccount: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Account';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['destinationAccountId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly template: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'RecurringTemplate';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['templateId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'RecurringDraft';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly accountId: { readonly column: 'accountId' };
+                readonly amount: { readonly column: 'amount' };
+                readonly categoryId: { readonly column: 'categoryId' };
+                readonly confirmedAt: { readonly column: 'confirmedAt' };
+                readonly counterparty: { readonly column: 'counterparty' };
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly destinationAccountId: { readonly column: 'destinationAccountId' };
+                readonly id: { readonly column: 'id' };
+                readonly merchant: { readonly column: 'merchant' };
+                readonly note: { readonly column: 'note' };
+                readonly runAt: { readonly column: 'runAt' };
+                readonly skippedAt: { readonly column: 'skippedAt' };
+                readonly status: { readonly column: 'status' };
+                readonly templateId: { readonly column: 'templateId' };
+                readonly transactionId: { readonly column: 'transactionId' };
+                readonly type: { readonly column: 'type' };
+                readonly updatedAt: { readonly column: 'updatedAt' };
+                readonly userId: { readonly column: 'userId' };
+              };
+            };
+          };
           readonly RecurringTemplate: {
             readonly fields: {
               readonly accountId: {
@@ -5659,6 +6136,17 @@ type ContractBase = Omit<
                 readonly on: {
                   readonly localFields: readonly ['destinationAccountId'];
                   readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly drafts: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'RecurringDraft';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['templateId'];
                 };
               };
               readonly user: {
@@ -6444,6 +6932,17 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['userId'];
                 };
               };
+              readonly recurringDrafts: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'RecurringDraft';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
               readonly recurringTemplates: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -6573,6 +7072,7 @@ type ContractBase = Omit<
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
               { readonly name: 'PENDING'; readonly value: 'PENDING' },
+              { readonly name: 'PROCESSING'; readonly value: 'PROCESSING' },
               { readonly name: 'PROCESSED'; readonly value: 'PROCESSED' },
               { readonly name: 'FAILED'; readonly value: 'FAILED' },
             ];
@@ -6631,6 +7131,7 @@ type ContractBase = Omit<
           ];
           readonly OutboxStatus: readonly [
             { readonly name: 'PENDING'; readonly value: 'PENDING' },
+            { readonly name: 'PROCESSING'; readonly value: 'PROCESSING' },
             { readonly name: 'PROCESSED'; readonly value: 'PROCESSED' },
             { readonly name: 'FAILED'; readonly value: 'FAILED' },
           ];
@@ -7063,6 +7564,31 @@ type ContractBase = Omit<
           readonly ref: {
             readonly entry: 'ReconciliationCheckpoint';
             readonly field: 'verifiedAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'RecurringDraft';
+            readonly field: 'createdAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'RecurringDraft';
+            readonly field: 'id';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly onUpdate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'RecurringDraft';
+            readonly field: 'updatedAt';
             readonly namespace: 'public';
           };
         },

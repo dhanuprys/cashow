@@ -12,6 +12,7 @@ import {
   PiggyBank,
   Settings,
   Tags,
+  Upload,
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
@@ -24,6 +25,7 @@ const items = [
   { href: "/app/plans", label: "Rencana", icon: Layers },
   { href: "/app/accounts", label: "Akun", icon: Wallet },
   { href: "/app/budgets", label: "Anggaran", icon: PiggyBank },
+  { href: "/app/import", label: "Impor", icon: Upload },
   { href: "/app/recurring", label: "Berulang", icon: CalendarClock },
   { href: "/app/inbox", label: "Kotak masuk", icon: Bell },
   { href: "/app/rules", label: "Aturan", icon: Gauge },

@@ -80,6 +80,10 @@
       "model": "ReconciliationCheckpoint",
       "namespace": "public"
     },
+    "RecurringDraft": {
+      "model": "RecurringDraft",
+      "namespace": "public"
+    },
     "RecurringTemplate": {
       "model": "RecurringTemplate",
       "namespace": "public"
@@ -187,6 +191,10 @@
               {
                 "name": "PENDING",
                 "value": "PENDING"
+              },
+              {
+                "name": "PROCESSING",
+                "value": "PROCESSING"
               },
               {
                 "name": "PROCESSED",
@@ -390,6 +398,36 @@
                 },
                 "to": {
                   "model": "RecurringTemplate",
+                  "namespace": "public"
+                }
+              },
+              "recurringDraftsAsDestination": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "destinationAccountId"
+                  ]
+                },
+                "to": {
+                  "model": "RecurringDraft",
+                  "namespace": "public"
+                }
+              },
+              "recurringDraftsAsSource": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "accountId"
+                  ]
+                },
+                "to": {
+                  "model": "RecurringDraft",
                   "namespace": "public"
                 }
               },
@@ -1427,6 +1465,21 @@
                 },
                 "to": {
                   "model": "Category",
+                  "namespace": "public"
+                }
+              },
+              "recurringDrafts": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "categoryId"
+                  ]
+                },
+                "to": {
+                  "model": "RecurringDraft",
                   "namespace": "public"
                 }
               },
@@ -2898,6 +2951,284 @@
               "table": "ReconciliationCheckpoint"
             }
           },
+          "RecurringDraft": {
+            "fields": {
+              "accountId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "amount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "categoryId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "confirmedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "counterparty": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "destinationAccountId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "merchant": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "note": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "runAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "skippedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "templateId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "transactionId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "type": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "TransactionType",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "account": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "accountId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Account",
+                  "namespace": "public"
+                }
+              },
+              "category": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "categoryId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Category",
+                  "namespace": "public"
+                }
+              },
+              "destinationAccount": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "destinationAccountId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Account",
+                  "namespace": "public"
+                }
+              },
+              "template": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "templateId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "RecurringTemplate",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "accountId": {
+                  "column": "accountId"
+                },
+                "amount": {
+                  "column": "amount"
+                },
+                "categoryId": {
+                  "column": "categoryId"
+                },
+                "confirmedAt": {
+                  "column": "confirmedAt"
+                },
+                "counterparty": {
+                  "column": "counterparty"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "destinationAccountId": {
+                  "column": "destinationAccountId"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "merchant": {
+                  "column": "merchant"
+                },
+                "note": {
+                  "column": "note"
+                },
+                "runAt": {
+                  "column": "runAt"
+                },
+                "skippedAt": {
+                  "column": "skippedAt"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "templateId": {
+                  "column": "templateId"
+                },
+                "transactionId": {
+                  "column": "transactionId"
+                },
+                "type": {
+                  "column": "type"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "RecurringDraft"
+            }
+          },
           "RecurringTemplate": {
             "fields": {
               "accountId": {
@@ -3085,6 +3416,21 @@
                 },
                 "to": {
                   "model": "Account",
+                  "namespace": "public"
+                }
+              },
+              "drafts": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "templateId"
+                  ]
+                },
+                "to": {
+                  "model": "RecurringDraft",
                   "namespace": "public"
                 }
               },
@@ -4315,6 +4661,21 @@
                 },
                 "to": {
                   "model": "PaymentPlan",
+                  "namespace": "public"
+                }
+              },
+              "recurringDrafts": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "RecurringDraft",
                   "namespace": "public"
                 }
               },
@@ -6162,8 +6523,8 @@
             "OutboxEvent": {
               "checks": [
                 {
-                  "expression": "\"status\" IN ('PENDING', 'PROCESSED', 'FAILED')",
-                  "name": "OutboxEvent_status_check_900a3b11",
+                  "expression": "\"status\" IN ('PENDING', 'PROCESSING', 'PROCESSED', 'FAILED')",
+                  "name": "OutboxEvent_status_check_8a5bce80",
                   "prefix": "OutboxEvent_status_check"
                 }
               ],
@@ -6779,6 +7140,294 @@
                 ]
               },
               "uniques": []
+            },
+            "RecurringDraft": {
+              "checks": [
+                {
+                  "expression": "\"type\" IN ('INCOME', 'EXPENSE', 'TRANSFER', 'ADJUSTMENT')",
+                  "name": "RecurringDraft_type_check_fb141b4e",
+                  "prefix": "RecurringDraft_type_check"
+                },
+                {
+                  "expression": "\"amount\" > 0",
+                  "name": "recurring_draft_amount_positive_ed0d10ac",
+                  "prefix": "recurring_draft_amount_positive"
+                },
+                {
+                  "expression": "\"status\" IN ('PENDING', 'CONFIRMED', 'SKIPPED')",
+                  "name": "recurring_draft_status_valid_a5f6622c",
+                  "prefix": "recurring_draft_status_valid"
+                }
+              ],
+              "columns": {
+                "accountId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "amount": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "categoryId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "confirmedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true
+                },
+                "counterparty": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "destinationAccountId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "merchant": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "note": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "runAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "skippedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "PENDING"
+                  },
+                  "nullable": false
+                },
+                "templateId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "transactionId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "type": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "TransactionType",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "RecurringDraft_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "RecurringDraft"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "RecurringDraft_templateId_idx_19e0d972"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "templateId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "RecurringDraft"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "RecurringTemplate"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "RecurringDraft_accountId_idx_cbfb3085"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "accountId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "RecurringDraft"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Account"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "RecurringDraft_destinationAccountId_idx_32927505"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "destinationAccountId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "RecurringDraft"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Account"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "RecurringDraft_categoryId_idx_15c304f2"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "categoryId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "RecurringDraft"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Category"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "accountId"
+                  ],
+                  "name": "RecurringDraft_accountId_idx_cbfb3085",
+                  "prefix": "RecurringDraft_accountId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "categoryId"
+                  ],
+                  "name": "RecurringDraft_categoryId_idx_15c304f2",
+                  "prefix": "RecurringDraft_categoryId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "destinationAccountId"
+                  ],
+                  "name": "RecurringDraft_destinationAccountId_idx_32927505",
+                  "prefix": "RecurringDraft_destinationAccountId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "templateId"
+                  ],
+                  "name": "RecurringDraft_templateId_idx_19e0d972",
+                  "prefix": "RecurringDraft_templateId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "RecurringDraft_userId_idx_a489d58a",
+                  "prefix": "RecurringDraft_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "status",
+                    "runAt"
+                  ],
+                  "name": "RecurringDraft_userId_status_runAt_idx_82098bf9",
+                  "prefix": "RecurringDraft_userId_status_runAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "templateId",
+                    "runAt"
+                  ]
+                }
+              ]
             },
             "RecurringTemplate": {
               "checks": [
@@ -7994,6 +8643,7 @@
               "kind": "valueSet",
               "values": [
                 "PENDING",
+                "PROCESSING",
                 "PROCESSED",
                 "FAILED"
               ]
@@ -8034,10 +8684,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "2d6257fdb9e7b362d34fe2b89d7ddf8bf34206336cbbb05b115c15c270d1bba3"
+    "storageHash": "34c824378cb5210717c798e1dd5efc6f4bfcf2e9e0dc3dda41ca44f79cb5d326"
   },
   "execution": {
-    "executionHash": "3853167e293ea3f9f6ebbc39db099ac1329fc6faec26dc1d78efee7046a58c86",
+    "executionHash": "2fd37ee088cb7264e40d3cbaa5a7e893a5284d29b06f0f4b972bd3bd18d4febb",
     "mutations": {
       "defaults": [
         {
@@ -8571,6 +9221,43 @@
           "ref": {
             "entry": "ReconciliationCheckpoint",
             "field": "verifiedAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "RecurringDraft",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "RecurringDraft",
+            "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "RecurringDraft",
+            "field": "updatedAt",
             "namespace": "public"
           }
         },

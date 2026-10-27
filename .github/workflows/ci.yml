@@ -72,6 +72,19 @@ jobs:
       - name: Core ledger gate (allocation invariants)
         run: bun run test:ledger
 
+      # Plan §10 Phase 2 gate: snapshot/checkpoint chains, correction and
+      # verification across timezone boundaries.
+      - name: Reconciliation chain gate
+        run: bun run test:chains
+
+      # Plan §10 Phase 3 gate: summaries, budgets and safe-to-spend.
+      - name: Summary gate
+        run: bun run test:summary
+
+      # Plan §10 Phase 5 gate: rule evaluation, edge triggering and cooldowns.
+      - name: Rules gate
+        run: bun run test:rules
+
       # Plan §6: Server Actions, a streaming route and proxy.ts on Bun. The
       # probe routes answer 404 unless COMPAT_TOKEN is set, so this step also
       # asserts that a normal deployment exposes no probe surface.

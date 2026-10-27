@@ -1,9 +1,10 @@
 import { formatMoney } from "@cashow/domain";
-import { listAccounts, listCategories, listRecurring } from "@cashow/services";
+import { listAccounts, listCategories, listRecurring, listRecurringDrafts } from "@cashow/services";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import {
   DeleteRecurringButton,
+  RecurringDraftRow,
   RecurringForm,
   RunRecurringButton,
 } from "@/components/ledger/recurring-form";
@@ -27,14 +28,16 @@ async function Recurring() {
   const db = await getDb();
   const ctx = { db, userId: user.id };
 
-  const [templatesResult, accountsResult, categoriesResult] = await Promise.all([
+  const [templatesResult, accountsResult, categoriesResult, draftsResult] = await Promise.all([
     listRecurring(ctx),
     listAccounts(ctx),
     listCategories(ctx),
+    listRecurringDrafts(ctx),
   ]);
   const templates = unwrap(templatesResult);
   const accounts = unwrap(accountsResult).filter((a) => a.archivedAt === null);
   const categories = unwrap(categoriesResult).filter((c) => c.archivedAt === null);
+  const drafts = unwrap(draftsResult);
 
   return (
     <div className="space-y-6">
@@ -55,6 +58,24 @@ async function Recurring() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
+          {drafts.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Draf menunggu konfirmasi</CardTitle>
+                <CardDescription>
+                  Tidak ada uang berpindah sampai Anda mengonfirmasi draf ini.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {drafts.map((draft) => (
+                    <RecurringDraftRow key={draft.id} draft={draft} />
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
+
           {templates.length === 0 ? (
             <Card>
               <CardContent>

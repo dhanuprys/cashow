@@ -1,6 +1,7 @@
 import {
   firstIssue,
   type LocalDate,
+  parseDbTimestamp,
   recurringInputSchema,
   recurringUpdateSchema,
   toLocalDate,
@@ -192,6 +193,16 @@ export async function deleteRecurring(ctx: UseCaseContext, id: string): Promise<
   }
 }
 
+/** Most catch-up drafts one template may stage in a single worker tick. */
+const MAX_DRAFTS_PER_TICK = 24;
+
+/**
+ * Stage due recurring occurrences as `RecurringDraft` rows (plan §5/§7).
+ *
+ * Nothing is committed here: the owner confirms or skips each draft on
+ * `/app/recurring`, so a forgotten template can never silently move money.
+ * `(templateId, runAt)` is unique, so re-running a tick is idempotent.
+ */
 export async function runDueRecurring(ctx: UseCaseContext): Promise<Result<number>> {
   try {
     const now = nowOf(ctx);
@@ -199,40 +210,39 @@ export async function runDueRecurring(ctx: UseCaseContext): Promise<Result<numbe
       userId: ctx.userId,
       active: true,
     }).all();
-    let created = 0;
+    if (templates.length === 0) return ok(0);
+
+    const _timezone = await userTimezone(ctx.db, ctx.userId);
+    let staged = 0;
+
     for (const template of templates) {
-      const timezone = await userTimezone(ctx.db, ctx.userId);
-      let nextRun = new Date(String(template.nextRunAt));
-      while (nextRun.getTime() <= now.getTime()) {
-        const occurredAtLocal = toLocalDateTimeInput(nextRun, timezone);
-        const result =
-          template.type === "TRANSFER"
-            ? await createTransfer(ctx, {
-                amount: BigInt(template.amount).toString(),
-                accountId: template.accountId,
-                destinationAccountId: template.destinationAccountId as string,
-                feeAmount: "0",
-                feeCategoryId: null,
-                note: template.note,
-                occurredAtLocal,
-                clientRequestId: null,
-                source: "RECURRING",
-              })
-            : await createTransaction(ctx, {
-                type: template.type as "INCOME" | "EXPENSE",
-                amount: BigInt(template.amount).toString(),
-                accountId: template.accountId,
-                categoryId: template.categoryId,
-                merchant: template.merchant,
-                counterparty: template.counterparty,
-                note: template.note,
-                occurredAtLocal,
-                source: "RECURRING",
-                allocations: [],
-                clientRequestId: null,
-              });
-        if (!result.ok) throw result.error;
-        created += 1;
+      let nextRun = parseDbTimestamp(template.nextRunAt);
+      let advanced = false;
+
+      for (let i = 0; i < MAX_DRAFTS_PER_TICK; i += 1) {
+        if (nextRun.getTime() > now.getTime()) break;
+
+        const existing = await ctx.db.orm.public.RecurringDraft.where({
+          templateId: template.id,
+          runAt: nextRun.toISOString(),
+        }).first();
+        if (existing === null) {
+          await ctx.db.orm.public.RecurringDraft.create({
+            userId: ctx.userId,
+            templateId: template.id,
+            runAt: nextRun.toISOString(),
+            type: template.type,
+            amount: BigInt(template.amount),
+            accountId: template.accountId,
+            destinationAccountId: template.destinationAccountId,
+            categoryId: template.categoryId,
+            merchant: template.merchant,
+            counterparty: template.counterparty,
+            note: template.note,
+            status: "PENDING",
+          });
+          staged += 1;
+        }
 
         nextRun = advanceRun(
           nextRun,
@@ -240,6 +250,10 @@ export async function runDueRecurring(ctx: UseCaseContext): Promise<Result<numbe
           template.dayOfMonth,
           template.dayOfWeek,
         );
+        advanced = true;
+      }
+
+      if (advanced) {
         await ctx.db.orm.public.RecurringTemplate.where({
           id: template.id,
           userId: ctx.userId,
@@ -249,7 +263,164 @@ export async function runDueRecurring(ctx: UseCaseContext): Promise<Result<numbe
         });
       }
     }
-    return ok(created);
+
+    return ok(staged);
+  } catch (error) {
+    return err(toLedgerError(error));
+  }
+}
+
+export interface RecurringDraftSummary {
+  id: string;
+  templateId: string;
+  templateType: "INCOME" | "EXPENSE" | "TRANSFER";
+  runAt: string;
+  amount: bigint;
+  accountId: string;
+  accountName: string;
+  destinationAccountName: string | null;
+  categoryName: string | null;
+  merchant: string | null;
+  counterparty: string | null;
+  note: string | null;
+  status: string;
+  transactionId: string | null;
+}
+
+/** Pending drafts the owner still has to confirm or skip. */
+export async function listRecurringDrafts(
+  ctx: UseCaseContext,
+): Promise<Result<RecurringDraftSummary[]>> {
+  try {
+    const [drafts, accounts, categories] = await Promise.all([
+      ctx.db.orm.public.RecurringDraft.where({ userId: ctx.userId, status: "PENDING" }).all(),
+      ctx.db.orm.public.Account.where({ userId: ctx.userId }).all(),
+      ctx.db.orm.public.Category.where({ userId: ctx.userId }).all(),
+    ]);
+    const accountName = new Map(accounts.map((a) => [a.id, a.name]));
+    const categoryName = new Map(categories.map((c) => [c.id, c.name]));
+
+    return ok(
+      drafts
+        .sort((a, b) => (String(a.runAt) < String(b.runAt) ? -1 : 1))
+        .map((draft) => ({
+          id: draft.id,
+          templateId: draft.templateId,
+          templateType: draft.type as "INCOME" | "EXPENSE" | "TRANSFER",
+          runAt: String(draft.runAt),
+          amount: BigInt(draft.amount),
+          accountId: draft.accountId,
+          accountName: accountName.get(draft.accountId) ?? "—",
+          destinationAccountName:
+            draft.destinationAccountId === null
+              ? null
+              : (accountName.get(draft.destinationAccountId) ?? "—"),
+          categoryName:
+            draft.categoryId === null ? null : (categoryName.get(draft.categoryId) ?? null),
+          merchant: draft.merchant,
+          counterparty: draft.counterparty,
+          note: draft.note,
+          status: draft.status,
+          transactionId: draft.transactionId,
+        })),
+    );
+  } catch (error) {
+    return err(toLedgerError(error));
+  }
+}
+
+/**
+ * Commit a staged draft into a real transaction (or transfer).
+ *
+ * The draft is re-read and flipped to CONFIRMED inside the flow so two clicks
+ * cannot create two transactions. `clientRequestId` is deterministic per draft,
+ * which makes a retried confirm idempotent at the transaction layer too.
+ */
+export async function confirmRecurringDraft(
+  ctx: UseCaseContext,
+  id: string,
+): Promise<Result<{ transactionId: string }>> {
+  try {
+    const draft = await ctx.db.orm.public.RecurringDraft.where({ id, userId: ctx.userId }).first();
+    if (draft === null) return err(new LedgerError("NOT_FOUND", "Draf tidak ditemukan."));
+    if (draft.status !== "PENDING") {
+      return err(new LedgerError("CONFLICT", "Draf ini sudah diproses."));
+    }
+
+    const timezone = await userTimezone(ctx.db, ctx.userId);
+    const runAt = parseDbTimestamp(draft.runAt);
+    const occurredAtLocal = toLocalDateTimeInput(runAt, timezone);
+    const clientRequestId = `recurring:${draft.templateId}:${runAt.toISOString()}`;
+
+    const created =
+      draft.type === "TRANSFER"
+        ? await createTransfer(ctx, {
+            amount: BigInt(draft.amount).toString(),
+            accountId: draft.accountId,
+            destinationAccountId: draft.destinationAccountId as string,
+            feeAmount: "0",
+            feeCategoryId: null,
+            note: draft.note,
+            occurredAtLocal,
+            clientRequestId,
+            source: "RECURRING",
+          })
+        : await createTransaction(ctx, {
+            type: draft.type as "INCOME" | "EXPENSE",
+            amount: BigInt(draft.amount).toString(),
+            accountId: draft.accountId,
+            categoryId: draft.categoryId,
+            merchant: draft.merchant,
+            counterparty: draft.counterparty,
+            note: draft.note,
+            occurredAtLocal,
+            source: "RECURRING",
+            allocations: [],
+            clientRequestId,
+          });
+    if (!created.ok) return created;
+
+    await ctx.db.orm.public.RecurringDraft.where({ id, userId: ctx.userId }).update({
+      status: "CONFIRMED",
+      transactionId: created.value.id,
+      confirmedAt: nowOf(ctx).toISOString(),
+    });
+    await writeAudit(ctx.db, {
+      userId: ctx.userId,
+      entityType: "RecurringDraft",
+      entityId: id,
+      action: "UPDATE",
+      before: { status: "PENDING" },
+      after: { status: "CONFIRMED", transactionId: created.value.id },
+    });
+
+    return ok({ transactionId: created.value.id });
+  } catch (error) {
+    return err(toLedgerError(error));
+  }
+}
+
+/** Discard a staged draft without moving money. */
+export async function skipRecurringDraft(ctx: UseCaseContext, id: string): Promise<Result<void>> {
+  try {
+    const draft = await ctx.db.orm.public.RecurringDraft.where({ id, userId: ctx.userId }).first();
+    if (draft === null) return err(new LedgerError("NOT_FOUND", "Draf tidak ditemukan."));
+    if (draft.status !== "PENDING") {
+      return err(new LedgerError("CONFLICT", "Draf ini sudah diproses."));
+    }
+    await ctx.db.orm.public.RecurringDraft.where({ id, userId: ctx.userId }).update({
+      status: "SKIPPED",
+      skippedAt: nowOf(ctx).toISOString(),
+    });
+    await writeAudit(ctx.db, {
+      userId: ctx.userId,
+      entityType: "RecurringDraft",
+      entityId: id,
+      action: "UPDATE",
+      before: { status: "PENDING" },
+      after: { status: "SKIPPED" },
+    });
+    return ok(undefined);
   } catch (error) {
     return err(toLedgerError(error));
   }

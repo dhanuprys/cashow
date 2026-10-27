@@ -1,6 +1,15 @@
 import { loadEnv } from "@cashow/config";
 import { db } from "@cashow/db";
-import { runDueRecurring, runRules } from "@cashow/services";
+import { SCHEDULED_TRIGGERS, triggerFamilyOf } from "@cashow/domain";
+import {
+  claimOutboxEvents,
+  deliverPendingNotifications,
+  failOutboxEvent,
+  markOutboxProcessed,
+  runDueRecurring,
+  runRules,
+} from "@cashow/services";
+import { createPushSender } from "./push";
 
 const env = loadEnv();
 
@@ -13,45 +22,74 @@ console.log(
   JSON.stringify({ level: "info", msg: "cashow worker starting", nodeEnv: env.NODE_ENV }),
 );
 
-async function tick(): Promise<void> {
-  // Process pending outbox events.
-  const events = await db.orm.public.OutboxEvent.where({ status: "PENDING" })
-    .orderBy((row) => row.createdAt.asc())
-    .limit(25)
-    .all();
-
-  for (const event of events) {
-    const attempts = event.attempts ?? 0;
-    if (attempts >= 5) {
-      await db.orm.public.OutboxEvent.where({ id: event.id }).update({ status: "FAILED" });
-      continue;
-    }
-    // Exponential backoff: 2^attempts * 10s, capped at 5m.
-    const backoffMs = Math.min(300_000, 10_000 * 2 ** attempts);
-    const ageMs = Date.now() - new Date(String(event.createdAt)).getTime();
-    if (ageMs < backoffMs) continue;
-
-    try {
-      const ctx = { db, userId: event.userId };
-      await runRules(ctx, event.eventType);
-      await db.orm.public.OutboxEvent.where({ id: event.id }).update({
-        status: "PROCESSED",
-        publishedAt: new Date().toISOString(),
-      });
-    } catch (error) {
-      await db.orm.public.OutboxEvent.where({ id: event.id }).update({
-        attempts: attempts + 1,
-        lastError: error instanceof Error ? error.message : String(error),
-      });
-    }
+async function processOutbox(): Promise<void> {
+  // Claim a batch under `FOR UPDATE SKIP LOCKED` so two workers never handle
+  // the same event; each claimed row is flipped to PROCESSING before handling.
+  const claimed = await claimOutboxEvents(db, 25);
+  if (!claimed.ok) {
+    console.error(
+      JSON.stringify({ level: "error", msg: "outbox claim failed", error: claimed.error.message }),
+    );
+    return;
   }
 
-  // Run due recurring templates for all users.
+  for (const event of claimed.value) {
+    try {
+      const ctx = { db, userId: event.userId };
+      const fired = await runRules(ctx, triggerFamilyOf(event.eventType));
+      if (!fired.ok) throw fired.error;
+      await markOutboxProcessed(db, event.id);
+    } catch (error) {
+      await failOutboxEvent(db, event.id, event.attempts, error);
+      console.error(
+        JSON.stringify({
+          level: "error",
+          msg: "outbox event failed",
+          eventId: event.id,
+          eventType: event.eventType,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  }
+}
+
+async function runScheduledRules(): Promise<void> {
   const users = await db.orm.public.User.all();
   for (const user of users) {
     try {
-      const ctx = { db, userId: user.id };
-      await runDueRecurring(ctx);
+      const result = await runRules({ db, userId: user.id }, [...SCHEDULED_TRIGGERS]);
+      if (!result.ok) {
+        console.error(
+          JSON.stringify({
+            level: "error",
+            msg: "scheduled rules failed",
+            userId: user.id,
+            error: result.error.message,
+          }),
+        );
+      }
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          level: "error",
+          msg: "scheduled rules failed",
+          userId: user.id,
+          error: String(error),
+        }),
+      );
+    }
+  }
+}
+
+async function runRecurring(): Promise<void> {
+  // Draft generation is capped per tick inside the service, so a long-dormant
+  // template cannot block the worker.
+  const users = await db.orm.public.User.all();
+  for (const user of users) {
+    try {
+      const result = await runDueRecurring({ db, userId: user.id });
+      if (!result.ok) throw result.error;
     } catch (error) {
       console.error(
         JSON.stringify({
@@ -62,6 +100,45 @@ async function tick(): Promise<void> {
         }),
       );
     }
+  }
+}
+
+const pushSender = createPushSender(env);
+
+async function deliverNotifications(): Promise<void> {
+  try {
+    const result = await deliverPendingNotifications(db, pushSender);
+    if (!result.ok) throw result.error;
+    if (result.value.sent > 0 || result.value.failed > 0) {
+      console.log(
+        JSON.stringify({
+          level: "info",
+          msg: "push delivery",
+          sent: result.value.sent,
+          failed: result.value.failed,
+          pruned: result.value.pruned,
+        }),
+      );
+    }
+  } catch (error) {
+    console.error(
+      JSON.stringify({ level: "error", msg: "push delivery failed", error: String(error) }),
+    );
+  }
+}
+
+let tickCount = 0;
+
+async function tick(): Promise<void> {
+  await processOutbox();
+  await deliverNotifications();
+  // Recurring and scheduled rules are wall-clock work: run them every tick
+  // (5s), which is cheap for a single-owner instance.
+  await runRecurring();
+  await runScheduledRules();
+  tickCount += 1;
+  if (tickCount % 120 === 0) {
+    console.log(JSON.stringify({ level: "info", msg: "worker heartbeat", ticks: tickCount }));
   }
 }
 

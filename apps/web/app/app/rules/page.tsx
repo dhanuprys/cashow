@@ -39,7 +39,6 @@ async function Rules() {
           </p>
         </div>
         <form action={runRulesAction}>
-          <input type="hidden" name="triggerType" value="manual" />
           <button
             type="submit"
             className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm hover:bg-muted"

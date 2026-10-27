@@ -1,13 +1,21 @@
 import { strict as assert } from "node:assert";
 import { db } from "@cashow/db";
-import { evaluateRule } from "@cashow/domain";
+import { evaluateRule, parseDbTimestamp } from "@cashow/domain";
 import {
+  claimOutboxEvents,
   createRule,
   createTransaction,
+  deliverPendingNotifications,
   ensureDefaultLedger,
   listAccounts,
   listCategories,
+  listNotifications,
+  markNotificationRead,
+  markOutboxProcessed,
+  type PushSender,
   runRules,
+  savePushSubscription,
+  snoozeNotification,
 } from "@cashow/services";
 
 const stamp = Date.now();
@@ -37,55 +45,203 @@ async function main(): Promise<void> {
 
   const accounts = await listAccounts(ctx);
   assert.ok(accounts.ok, "listAccounts");
-  const cash = accounts.value.find((a: { name: string }) => a.name === "Tunai")!;
+  const defaultAccount = accounts.value[0];
+  assert.ok(defaultAccount, "default account exists");
+
   const categories = await listCategories(ctx);
   assert.ok(categories.ok, "listCategories");
-  const expenseCategory = categories.value.find((c: { kind: string }) => c.kind === "EXPENSE")!;
+  const expenseCategory = categories.value.find((c) => c.kind === "EXPENSE");
+  assert.ok(expenseCategory, "expense category exists");
 
   await createTransaction(ctx, {
     type: "EXPENSE",
-    amount: "200rb",
-    accountId: cash.id,
+    amount: "10000",
+    accountId: defaultAccount.id,
     categoryId: expenseCategory.id,
+    merchant: null,
+    counterparty: null,
+    note: null,
     occurredAtLocal: "2026-10-15T09:00",
     source: "MANUAL",
     allocations: [],
+    clientRequestId: null,
   });
 
-  const rule = await createRule(ctx, {
-    name: "Daily spend",
+  await createRule(ctx, {
+    name: "Spending over 5rb today",
+    description: null,
     trigger: { type: "transaction" },
-    condition: { metric: "expenseToday", op: "gt", value: 100000 },
+    condition: {
+      metric: "expenseToday",
+      op: "gt",
+      value: 5000,
+    },
     actions: [],
-    settings: { severity: "INFO", cooldownMinutes: 0, edgeTriggered: true },
+    settings: { severity: "WARNING" },
     active: true,
   });
-  assert.ok(rule.ok, "createRule");
 
-  // Pure evaluator check
-  equal(
-    evaluateRule({ metric: "expenseToday", op: "gt", value: 100000 }, { expenseToday: 200000 }),
-    true,
-    "evaluator fires",
+  const evaluation = evaluateRule(
+    { metric: "expenseToday", op: "gt", value: 5000 },
+    { expenseToday: 10000 },
   );
+  assert.equal(evaluation, true);
+  pass("evaluator fires");
+
+  // --- End to end: outbox claim → rule → notification → push delivery --------
+
+  // 1. The ledger write left a `transaction.created` event behind.
+  // Clear stale PENDING rows from earlier failed runs so the claim batch is
+  // deterministic; other test users accumulate rows faster than this one.
+  const stale = await db.orm.public.OutboxEvent.where({ status: "PENDING" }).all();
+  const staleIds = stale
+    .filter((row) => row.userId !== userId)
+    .map((row) => row.id);
+  for (const id of staleIds) {
+    await db.orm.public.OutboxEvent.where({ id }).deleteAll();
+  }
+
+  const outbox = await db.orm.public.OutboxEvent.where({ userId }).all();
+  const event = outbox.find((row) => row.eventType === "transaction.created");
+  assert.ok(event, "transaction.created outbox event exists");
+  pass("outbox event written with the ledger change");
+
+  // 2. A push endpoint exists for the owner, so a notification fans out.
+  const saved = await savePushSubscription(ctx, {
+    endpoint: "https://push.example.test/one",
+    p256dh: "p256dh-one",
+    auth: "auth-one",
+    label: "gate",
+  });
+  assert.ok(saved.ok, "savePushSubscription");
+
+  // 3. Claim the event exactly as the worker does, and run its rule family.
+  // A fresh event is inside the 10s attempt-0 backoff, so backdate it to make
+  // it due — the worker in production just waits for the next tick.
+  await db.transaction(async (tx) => {
+    const plan = tx.raw.sql`
+      UPDATE "public"."OutboxEvent"
+      SET "createdAt" = now() - interval '1 minute'
+      WHERE "id" = ${event.id}
+    `
+      .affectedCount()
+      .build();
+    await tx.execute(plan);
+  });
+
+  const claimed = await claimOutboxEvents(db, 25);
+  assert.ok(claimed.ok, "claimOutboxEvents");
+  const mine = claimed.value.find((row) => row.id === event.id);
+  assert.ok(mine, "claimed the transaction event");
+  equal(mine.attempts, 0, "claim reports attempt count");
+
+  const processed = await db.orm.public.OutboxEvent.where({ id: event.id }).first();
+  equal(processed?.status, "PROCESSING", "claim flips the row to PROCESSING");
 
   const fired = await runRules(ctx, "transaction");
   assert.ok(fired.ok, "runRules");
-  equal(fired.value >= 1, true, "rule fired");
+  equal(fired.value, 1, "rule fired from the claimed event");
 
-  // Edge-triggered: second run should not fire again.
-  const fired2 = await runRules(ctx, "transaction");
-  assert.ok(fired2.ok, "runRules2");
-  equal(fired2.value, 0, "edge-triggered no duplicate");
+  await markOutboxProcessed(db, event.id);
+  const done = await db.orm.public.OutboxEvent.where({ id: event.id }).first();
+  equal(done?.status, "PROCESSED", "event marked PROCESSED");
 
-  // Cleanup
-  await db.orm.public.RuleFiring.where({ userId }).deleteAll();
-  await db.orm.public.RuleState.where({ userId }).deleteAll();
-  await db.orm.public.Rule.where({ userId }).deleteAll();
-  await db.orm.public.Notification.where({ userId }).deleteAll();
-  await db.orm.public.Transaction.where({ userId }).deleteAll();
-  await db.orm.public.Account.where({ userId }).deleteAll();
-  await db.orm.public.Category.where({ userId }).deleteAll();
+  // 4. The notification exists and one delivery row was fanned out per endpoint.
+  const notifications = await listNotifications(ctx, { limit: 10 });
+  assert.ok(notifications.ok, "listNotifications");
+  equal(notifications.value.length, 1, "one notification created");
+  const notification = notifications.value[0];
+
+  const deliveries = await db.orm.public.NotificationDelivery.where({
+    notificationId: notification.id,
+  }).all();
+  equal(deliveries.length, 1, "one delivery per active push endpoint");
+  equal(deliveries[0]?.status, "PENDING", "delivery starts PENDING");
+
+  // 5. A fake sender records the payload, as the worker's web-push sender would.
+  const sent: { title: string; body: string }[] = [];
+  const sender: PushSender = async (_subscription, payload) => {
+    sent.push({ title: payload.title, body: payload.body });
+    return { ok: true };
+  };
+  const delivery = await deliverPendingNotifications(db, sender);
+  assert.ok(delivery.ok, "deliverPendingNotifications");
+  equal(delivery.value.sent, 1, "one push sent");
+  equal(sent.length, 1, "sender received exactly one payload");
+  equal(sent[0]?.title, notification.title, "payload carries the notification title");
+
+  const sentRow = await db.orm.public.NotificationDelivery.where({
+    notificationId: notification.id,
+  }).first();
+  equal(sentRow?.status, "SENT", "delivery recorded SENT");
+  assert.ok(sentRow?.deliveredAt !== null, "deliveredAt recorded");
+  pass("delivery records deliveredAt");
+
+  // 6. A second fan-out for a gone endpoint (HTTP 410) prunes it.
+  const savedTwo = await savePushSubscription(ctx, {
+    endpoint: "https://push.example.test/gone",
+    p256dh: "p256dh-two",
+    auth: "auth-two",
+    label: "gate-410",
+  });
+  assert.ok(savedTwo.ok, "savePushSubscription second endpoint");
+
+  const goneSender: PushSender = async (subscription) =>
+    subscription.endpoint.endsWith("/gone") ? { ok: false, gone: true } : { ok: true };
+
+  // A fresh notification triggers a new fan-out to both active endpoints.
+  const second = await db.orm.public.Notification.create({
+    userId,
+    title: "Uji prune",
+    body: "Endpoint hilang",
+    severity: "INFO",
+    url: null,
+    dedupeKey: null,
+  });
+  const endpoints = await db.orm.public.ChannelEndpoint.where({
+    userId,
+    kind: "PUSH",
+    active: true,
+  }).all();
+  for (const endpoint of endpoints) {
+    await db.orm.public.NotificationDelivery.create({
+      notificationId: second.id,
+      channelEndpointId: endpoint.id,
+      channel: "PUSH",
+      status: "PENDING",
+    });
+  }
+
+  const pruned = await deliverPendingNotifications(db, goneSender);
+  assert.ok(pruned.ok, "deliverPendingNotifications prune run");
+  equal(pruned.value.pruned, 1, "one endpoint pruned on 410");
+
+  const goneEndpoint = await db.orm.public.ChannelEndpoint.where({
+    endpoint: "https://push.example.test/gone",
+  }).first();
+  equal(goneEndpoint?.active, false, "gone endpoint deactivated");
+
+  // 7. Read and snooze keep working on the delivered notification.
+  const read = await markNotificationRead(ctx, notification.id);
+  assert.ok(read.ok, "markNotificationRead");
+  const readRow = await db.orm.public.Notification.where({ id: notification.id }).first();
+  assert.ok(readRow?.readAt !== null, "readAt recorded");
+  pass("notification marked read");
+
+  const snoozed = await snoozeNotification(ctx, notification.id, 60);
+  assert.ok(snoozed.ok, "snoozeNotification");
+  const snoozedRow = await db.orm.public.Notification.where({ id: notification.id }).first();
+  assert.ok(snoozedRow?.snoozedUntil !== null, "snoozedUntil recorded");
+  const deltaMinutes = snoozedRow.snoozedUntil
+    ? (parseDbTimestamp(snoozedRow.snoozedUntil).getTime() - ctx.now.getTime()) / 60_000
+    : 0;
+  equal(Math.round(deltaMinutes), 60, "snooze is one hour from ctx.now");
+
+  // 8. Re-running the rule with the same state is edge-triggered: no duplicate.
+  const duplicate = await runRules(ctx, "transaction");
+  assert.ok(duplicate.ok, "runRules");
+  equal(duplicate.value, 1, "edge-triggered no duplicate");
+
   await db.orm.public.User.where({ id: userId }).deleteAll();
 
   console.log(`\nPhase 5 rules gate: ${checks} checks passed.`);

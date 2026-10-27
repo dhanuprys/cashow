@@ -2,7 +2,7 @@ import { listNotifications } from "@cashow/services";
 import { Bell } from "lucide-react";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { PushSubscribe } from "@/components/ledger/push-subscribe";
+import { NotificationActions, PushSubscribe } from "@/components/ledger/push-subscribe";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { requireUser } from "@/lib/auth/session";
@@ -68,6 +68,10 @@ async function Inbox() {
                       <p className="mt-2 text-[11px] text-muted-foreground">
                         {displayDateTime(new Date(notification.createdAt), user.timezone)}
                       </p>
+                      <NotificationActions
+                        id={notification.id}
+                        read={notification.readAt !== null}
+                      />
                     </div>
                   </div>
                 </li>

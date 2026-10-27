@@ -1,14 +1,18 @@
 "use client";
 
+import { formatMoney } from "@cashow/domain";
 import { useActionState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  confirmRecurringDraftAction,
   createRecurringAction,
   deleteRecurringAction,
   runRecurringAction,
+  skipRecurringDraftAction,
   updateRecurringAction,
 } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
@@ -219,7 +223,7 @@ export function RunRecurringButton() {
   return (
     <form action={runRecurringAction}>
       <SubmitButton size="sm" variant="outline" pendingLabel="Menjalankan…">
-        Jalankan yang jatuh tempo
+        Buat draf yang jatuh tempo
       </SubmitButton>
     </form>
   );
@@ -239,5 +243,55 @@ export function DeleteRecurringButton({ id }: { id: string }) {
         Hapus
       </button>
     </form>
+  );
+}
+
+export interface RecurringDraftCard {
+  id: string;
+  templateType: "INCOME" | "EXPENSE" | "TRANSFER";
+  runAt: string;
+  amount: bigint;
+  accountName: string;
+  destinationAccountName: string | null;
+  categoryName: string | null;
+  note: string | null;
+}
+
+/** One staged occurrence, with the two decisions the owner can make. */
+export function RecurringDraftRow({ draft }: { draft: RecurringDraftCard }) {
+  const label =
+    draft.templateType === "TRANSFER"
+      ? `${draft.accountName} → ${draft.destinationAccountName ?? "—"}`
+      : draft.accountName;
+
+  return (
+    <li className="rounded-2xl border border-border p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-medium">
+            {formatMoney(draft.amount)} · {label}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {new Date(draft.runAt).toLocaleDateString("id-ID")}
+            {draft.categoryName === null ? "" : ` · ${draft.categoryName}`}
+            {draft.note === null ? "" : ` · ${draft.note}`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <form action={confirmRecurringDraftAction}>
+            <input type="hidden" name="draftId" value={draft.id} />
+            <Button type="submit" size="sm">
+              Konfirmasi
+            </Button>
+          </form>
+          <form action={skipRecurringDraftAction}>
+            <input type="hidden" name="draftId" value={draft.id} />
+            <Button type="submit" size="sm" variant="outline">
+              Lewati
+            </Button>
+          </form>
+        </div>
+      </div>
+    </li>
   );
 }

@@ -52,9 +52,11 @@ enum Source {
 
 enum OutboxStatus {
   @@type("pg/text@1")
-  PENDING   = "PENDING"
-  PROCESSED = "PROCESSED"
-  FAILED    = "FAILED"
+  PENDING    = "PENDING"
+  // Claimed by a worker under `FOR UPDATE SKIP LOCKED`.
+  PROCESSING = "PROCESSING"
+  PROCESSED  = "PROCESSED"
+  FAILED     = "FAILED"
 }
 
 enum AuthChallengePurpose {
@@ -109,6 +111,7 @@ model User {
   checkpoints         ReconciliationCheckpoint[]
   budgets             Budget[]
   recurringTemplates   RecurringTemplate[]
+  recurringDrafts      RecurringDraft[]
   channelEndpoints    ChannelEndpoint[]
   notifications       Notification[]
   rules               Rule[]
@@ -208,6 +211,8 @@ model Account {
   checkpoints          ReconciliationCheckpoint[]
   recurringAsSource    RecurringTemplate[] @relation("RecurringSource")
   recurringAsDestination RecurringTemplate[] @relation("RecurringDestination")
+  recurringDraftsAsSource RecurringDraft[] @relation("RecurringDraftSource")
+  recurringDraftsAsDestination RecurringDraft[] @relation("RecurringDraftDestination")
 
   @@index([userId])
   @@index([userId, type])
@@ -230,6 +235,7 @@ model Category {
   transactions      Transaction[]
   budgets           Budget[]
   recurringTemplates RecurringTemplate[]
+  recurringDrafts   RecurringDraft[]
 
   @@unique([userId, kind, name])
   @@index([userId])
@@ -515,9 +521,49 @@ model RecurringTemplate {
 
   @@index([userId])
   @@index([userId, active, nextRunAt])
+  drafts RecurringDraft[]
+
+  @@index([userId])
+  @@index([userId, active, nextRunAt])
   @@check(expression: sql`"amount" > 0`, name: "recurring_amount_positive")
   @@check(expression: sql`("type" = 'TRANSFER') = ("destinationAccountId" IS NOT NULL)`, name: "recurring_transfer_destination_consistency")
   @@check(expression: sql`"type" <> 'TRANSFER' OR "destinationAccountId" <> "accountId"`, name: "recurring_transfer_accounts_differ")
+}
+
+// A staged occurrence of a recurring template. The worker drafts instead of
+// committing, so the owner confirms or skips before money moves.
+model RecurringDraft {
+  id           String @id @onCreate(uuid(7))
+  userId       String
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId   String
+  template     RecurringTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  // Scheduled instant this draft covers; unique per template for idempotency.
+  runAt        TimestamptzString
+  type         TransactionType
+  amount       BigInt
+  accountId    String
+  account      Account  @relation("RecurringDraftSource", fields: [accountId], references: [id], onDelete: Restrict)
+  destinationAccountId String?
+  destinationAccount Account? @relation("RecurringDraftDestination", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  categoryId   String?
+  category     Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  merchant     String?
+  counterparty String?
+  note         String?
+  // PENDING, CONFIRMED, SKIPPED
+  status       String @default("PENDING")
+  // Set when confirmed; links to the committed transaction.
+  transactionId String?
+  confirmedAt  TimestamptzString?
+  skippedAt    TimestamptzString?
+  createdAt    TimestamptzString @onCreate(now())
+  updatedAt    TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  @@unique([templateId, runAt])
+  @@index([userId, status, runAt])
+  @@check(expression: sql`"amount" > 0`, name: "recurring_draft_amount_positive")
+  @@check(expression: sql`"status" IN ('PENDING', 'CONFIRMED', 'SKIPPED')`, name: "recurring_draft_status_valid")
 }
 
 // ---------------------------------------------------------------------------

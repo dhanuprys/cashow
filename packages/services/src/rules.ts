@@ -1,7 +1,13 @@
-import { evaluateRule, firstIssue } from "@cashow/domain";
+import {
+  evaluateRule,
+  firstIssue,
+  toLocalDate,
+  triggerFamilyOf,
+  triggerMatches,
+} from "@cashow/domain";
 import { z } from "zod";
 import { writeAudit } from "./audit";
-import { nowOf, type UseCaseContext } from "./context";
+import { nowOf, type UseCaseContext, userTimezone } from "./context";
 import { LedgerError, toLedgerError } from "./errors";
 import { createNotification } from "./notifications";
 import { err, ok, type Result } from "./result";
@@ -130,16 +136,29 @@ export async function deleteRule(ctx: UseCaseContext, id: string): Promise<Resul
   }
 }
 
-export async function runRules(ctx: UseCaseContext, triggerType: string): Promise<Result<number>> {
+/**
+ * Evaluate every active rule that belongs to one of the given trigger families.
+ *
+ * Callers pass rule trigger families (`transaction`, `snapshot`, `planItem`,
+ * `schedule`, `metricThreshold`), not raw outbox event names. The worker maps
+ * `transaction.created` → `transaction` via `triggerFamilyOf` before calling;
+ * the manual "run now" action passes every family so it behaves as a full sweep.
+ */
+export async function runRules(
+  ctx: UseCaseContext,
+  triggerTypes: string | string[],
+): Promise<Result<number>> {
   try {
+    const families = (Array.isArray(triggerTypes) ? triggerTypes : [triggerTypes]).map(
+      triggerFamilyOf,
+    );
     const rules = await ctx.db.orm.public.Rule.where({ userId: ctx.userId, active: true }).all();
     const metrics = await computeMetrics(ctx);
     const now = nowOf(ctx);
     let firedCount = 0;
 
     for (const rule of rules) {
-      const trigger = rule.trigger as { type?: string };
-      if (trigger?.type !== undefined && trigger.type !== triggerType) continue;
+      if (!triggerMatches(rule.trigger, families)) continue;
 
       const condition = rule.condition as Parameters<typeof evaluateRule>[0];
       const result = evaluateRule(condition, metrics);
@@ -261,7 +280,8 @@ async function computeMetrics(ctx: UseCaseContext): Promise<Record<string, numbe
   const totalBalance = accounts.reduce((sum, a) => sum + Number(a.openingBalance ?? 0), 0);
 
   const now = nowOf(ctx);
-  const today = new Date(now).toISOString().slice(0, 10);
+  const timezone = await userTimezone(ctx.db, ctx.userId);
+  const today = toLocalDate(now, timezone);
   const monthStart = `${today.slice(0, 7)}-01`;
 
   const txs = await ctx.db.orm.public.Transaction.where({ userId: ctx.userId }).all();

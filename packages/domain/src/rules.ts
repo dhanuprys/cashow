@@ -9,8 +9,8 @@ export type RuleOp = "eq" | "ne" | "gt" | "gte" | "lt" | "lte";
 export type RuleValue =
   | number
   | { metric: string }
-  | { percentOf: string }
-  | { multipleOf: string };
+  | { percentOf: string; percent?: number }
+  | { multipleOf: string; times?: number };
 
 export type RuleCondition =
   | { all: RuleCondition[] }
@@ -42,8 +42,17 @@ const OPS: Record<RuleOp, (a: number, b: number) => boolean> = {
 function resolveValue(value: RuleValue, metrics: Record<string, number>): number {
   if (typeof value === "number") return value;
   if ("metric" in value) return metrics[value.metric] ?? 0;
-  if ("percentOf" in value) return ((metrics[value.percentOf] ?? 0) * 1) / 100; // percent already? treat as raw
-  if ("multipleOf" in value) return (metrics[value.multipleOf] ?? 0) * 1;
+  // `{ percentOf: "incomeMonth" }` means "N percent of that metric": the
+  // comparison uses `{ metric: "expenseMonth", op: "gt", value: { percentOf: "incomeMonth" } }`
+  // with the percentage supplied as a sibling `percent` field.
+  if ("percentOf" in value) {
+    const percent = "percent" in value && typeof value.percent === "number" ? value.percent : 100;
+    return ((metrics[value.percentOf] ?? 0) * percent) / 100;
+  }
+  if ("multipleOf" in value) {
+    const times = "times" in value && typeof value.times === "number" ? value.times : 1;
+    return (metrics[value.multipleOf] ?? 0) * times;
+  }
   return 0;
 }
 
@@ -68,4 +77,28 @@ export function evaluateCondition(
 
 export function evaluateRule(condition: RuleCondition, metrics: Record<string, number>): boolean {
   return evaluateCondition(condition, metrics);
+}
+
+/**
+ * Map an outbox event name onto the rule trigger family it should wake.
+ * `transaction.created` → `transaction`, `balance_snapshot.created` → `snapshot`,
+ * `payment_plan_item.updated` → `planItem`, anything else → itself.
+ */
+export function triggerFamilyOf(eventType: string): string {
+  if (eventType.startsWith("transaction.") || eventType.startsWith("transfer.")) {
+    return "transaction";
+  }
+  if (eventType.startsWith("balance_snapshot.")) return "snapshot";
+  if (eventType.startsWith("payment_plan_item.")) return "planItem";
+  if (eventType.startsWith("payment_plan.")) return "planItem";
+  return eventType;
+}
+
+/** Trigger families evaluated on every worker tick, regardless of events. */
+export const SCHEDULED_TRIGGERS = ["schedule", "metricThreshold"] as const;
+
+export function triggerMatches(trigger: unknown, families: readonly string[]): boolean {
+  const type = (trigger as { type?: unknown } | null)?.type;
+  if (typeof type !== "string") return true;
+  return families.includes(type) || families.includes(triggerFamilyOf(type));
 }
