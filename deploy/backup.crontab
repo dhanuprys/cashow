@@ -1,0 +1,2 @@
+# Cashow backup schedule (UTC). Nightly at 02:15.
+15 2 * * * /usr/local/bin/backup.sh >>/proc/1/fd/1 2>&1

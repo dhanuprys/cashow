@@ -1,0 +1,41 @@
+# Build context excludes — keep images small and reproducible.
+node_modules
+**/node_modules
+
+# Build output
+.next
+**/.next
+out
+**/out
+dist
+**/dist
+*.tsbuildinfo
+
+# Local environment and secrets (never baked into an image)
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+.secrets
+secrets
+
+# Version control and tooling
+.git
+.gitignore
+.github
+.agents
+.claude
+.cursor
+.devin
+skills-lock.json
+
+# Local development leftovers
+coverage
+*.log
+.DS_Store
+apps/web/public/*.svg.tmp
+
+# Tests and docs do not need to ship in the runtime image
+docs
+**/*.test.ts

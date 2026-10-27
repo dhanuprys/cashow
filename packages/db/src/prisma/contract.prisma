@@ -1,0 +1,272 @@
+// use prisma-8
+
+// Cashow — data contract (Phase 0 core ledger)
+//
+// The five data-integrity rules from the plan (§2):
+//   1. Integer money  — whole rupiah as 64-bit integers (`BigInt`).
+//   2. Two clocks     — `occurredAt` (editable, drives reports) and
+//                       `createdAt` (system-set, never editable), both
+//                       zone-aware (`TimestamptzString`).
+//   3. Stored date    — `occurredOn` is the calendar date in the user's
+//                       timezone, derived at write time (`DateString`).
+//   4. Derive, don't store — balances/statuses are computed, never typed in.
+//   5. DB-enforced invariants — positive amounts, transfer accounts differ,
+//                       allocation uniqueness, one snapshot per account+instant.
+
+// ---------------------------------------------------------------------------
+// Enums (stored as text, enforced by a planner-generated CHECK constraint)
+// ---------------------------------------------------------------------------
+
+enum TransactionType {
+  @@type("pg/text@1")
+  INCOME      = "INCOME"
+  EXPENSE     = "EXPENSE"
+  TRANSFER    = "TRANSFER"
+  ADJUSTMENT  = "ADJUSTMENT"
+}
+
+enum AccountType {
+  @@type("pg/text@1")
+  BANK       = "BANK"
+  EWALLET    = "EWALLET"
+  CASH       = "CASH"
+  INVESTMENT = "INVESTMENT"
+}
+
+enum CategoryKind {
+  @@type("pg/text@1")
+  INCOME  = "INCOME"
+  EXPENSE = "EXPENSE"
+}
+
+enum Source {
+  @@type("pg/text@1")
+  MANUAL           = "MANUAL"
+  QUICK_ADD        = "QUICK_ADD"
+  AI_DRAFT         = "AI_DRAFT"
+  TELEGRAM         = "TELEGRAM"
+  STATEMENT_IMPORT = "STATEMENT_IMPORT"
+  RECURRING        = "RECURRING"
+  SHARE_TARGET     = "SHARE_TARGET"
+}
+
+enum OutboxStatus {
+  @@type("pg/text@1")
+  PENDING   = "PENDING"
+  PROCESSED = "PROCESSED"
+  FAILED    = "FAILED"
+}
+
+// ---------------------------------------------------------------------------
+// Core entities
+// ---------------------------------------------------------------------------
+
+model User {
+  id                  String  @id @onCreate(uuid(7))
+  email               String? @unique
+  name                String?
+  // Timezone used to derive `occurredOn` and group reports. WIB is the
+  // default; the plan requires WIB/WITA/WIT correctness in tests.
+  timezone            String  @default("Asia/Jakarta")
+  // 0 = Sunday … 6 = Saturday. 1 = Monday.
+  weekStartsOn        Int     @default(1)
+  // Budget month starts on this day of the month (e.g. 25 = payday).
+  budgetMonthStartDay Int     @default(1)
+  currency            String  @default("IDR")
+  createdAt           TimestamptzString @onCreate(now())
+  updatedAt           TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  accounts     Account[]
+  categories   Category[]
+  transactions Transaction[]
+}
+
+model Account {
+  id             String      @id @onCreate(uuid(7))
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  type           AccountType
+  // Opening balance as whole rupiah (may be negative for a debt account).
+  openingBalance BigInt      @default(0)
+  currency       String      @default("IDR")
+  archivedAt     TimestamptzString?
+  createdAt      TimestamptzString @onCreate(now())
+  updatedAt      TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  transactions Transaction[] @relation("TxAccount")
+  snapshots    BalanceSnapshot[]
+  checkpoints  ReconciliationCheckpoint[]
+
+  @@index([userId])
+  @@index([userId, type])
+}
+
+model Category {
+  id         String       @id @onCreate(uuid(7))
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  kind       CategoryKind
+  parentId   String?
+  parent     Category?    @relation("CategoryParent", fields: [parentId], references: [id], onDelete: Restrict)
+  icon       String?
+  color      String?
+  archivedAt TimestamptzString?
+  createdAt  TimestamptzString @onCreate(now())
+  updatedAt  TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  transactions Transaction[]
+
+  @@unique([userId, kind, name])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model Transaction {
+  id                   String        @id @onCreate(uuid(7))
+  userId               String
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                 TransactionType
+  // Positive whole rupiah; the type gives the sign (rule 1).
+  amount               BigInt
+  accountId            String
+  account              Account       @relation("TxAccount", fields: [accountId], references: [id], onDelete: Restrict)
+  destinationAccountId String?
+  destinationAccount   Account?      @relation("TxDestination", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  categoryId           String?
+  category             Category?     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  merchant             String?
+  counterparty         String?
+  note                 String?
+  // Editable instant that drives every report (rule 2).
+  occurredAt           TimestamptzString
+  // Calendar date in the user's timezone at write time (rule 3).
+  occurredOn           DateString
+  source               Source        @default(MANUAL)
+  // Client request id for idempotent creates.
+  clientRequestId      String?
+  createdAt            TimestamptzString @onCreate(now())
+  updatedAt            TimestamptzString @onCreate(now()) @onUpdate(now())
+  // Soft delete: void allocations on delete, restore them on un-delete.
+  deletedAt            TimestamptzString?
+
+  allocationsOut Allocation[] @relation("AllocExpense")
+  allocationsIn  Allocation[] @relation("AllocIncome")
+
+  // One unique outstanding client request per user (idempotency).
+  @@unique([userId, clientRequestId])
+  @@index([userId, occurredOn])
+  @@index([userId, occurredAt])
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([destinationAccountId])
+  // Rule 5 — positive amounts.
+  @@check(expression: sql`"amount" > 0`, name: "amount_positive")
+  // Rule 5 — a transfer has exactly one destination, and it differs.
+  @@check(expression: sql`("type" = 'TRANSFER') = ("destinationAccountId" IS NOT NULL)`, name: "transfer_destination_consistency")
+  @@check(expression: sql`"type" <> 'TRANSFER' OR "destinationAccountId" <> "accountId"`, name: "transfer_accounts_differ")
+}
+
+model Allocation {
+  id        String      @id @onCreate(uuid(7))
+  userId    String
+  // The expense drawing the money.
+  expenseId String
+  expense   Transaction @relation("AllocExpense", fields: [expenseId], references: [id], onDelete: Cascade)
+  // The income being drawn from.
+  incomeId  String
+  income    Transaction @relation("AllocIncome", fields: [incomeId], references: [id], onDelete: Cascade)
+  // Positive whole rupiah.
+  amount    BigInt
+  createdAt TimestamptzString @onCreate(now())
+
+  // One allocation per expense-income pair.
+  @@unique([expenseId, incomeId])
+  @@index([incomeId])
+  @@index([userId])
+  // Rule 5 — positive amounts; the sum-vs-source invariant is enforced by a
+  // trigger in the migration (a CHECK cannot read other rows).
+  @@check(expression: sql`"amount" > 0`, name: "amount_positive")
+  // An allocation must not point at the same transaction on both sides.
+  @@check(expression: sql`"expenseId" <> "incomeId"`, name: "distinct_transactions")
+}
+
+model BalanceSnapshot {
+  id         String      @id @onCreate(uuid(7))
+  userId     String
+  accountId  String
+  account    Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  // Manual balance at a chosen instant (may be negative).
+  amount     BigInt
+  // The instant this balance is "as of". Append-only; corrections are new
+  // snapshots or soft-deleted ones with an audit entry.
+  recordedAt TimestamptzString
+  note       String?
+  createdAt  TimestamptzString @onCreate(now())
+  deletedAt  TimestamptzString?
+
+  // Rule 5 — one snapshot per account and instant.
+  @@unique([accountId, recordedAt])
+  @@index([userId, accountId, recordedAt])
+}
+
+model ReconciliationCheckpoint {
+  id         String      @id @onCreate(uuid(7))
+  userId     String
+  accountId  String
+  account    Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  // The zero-gap snapshot being marked as verified.
+  snapshotId String
+  // Locking earlier transactions: a checkpoint freezes edits before it.
+  verifiedAt TimestamptzString @onCreate(now())
+  // Deliberate, audited unlock.
+  unlockedAt TimestamptzString?
+  createdAt  TimestamptzString @onCreate(now())
+
+  @@index([userId, accountId])
+  @@index([accountId, verifiedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Infrastructure: transactional outbox and audit trail
+// ---------------------------------------------------------------------------
+
+model OutboxEvent {
+  id            String       @id @onCreate(uuid(7))
+  userId        String
+  // Entity that changed, e.g. "Transaction".
+  aggregateType String
+  aggregateId   String
+  // Event name, e.g. "transaction.created".
+  eventType     String
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  // Last error, for the dead-letter view.
+  lastError     String?
+  publishedAt   TimestamptzString?
+  createdAt     TimestamptzString @onCreate(now())
+
+  // Consumers poll the oldest pending event first.
+  @@index([status, createdAt])
+  @@index([userId, aggregateType, aggregateId])
+}
+
+model AuditLog {
+  id         String      @id @onCreate(uuid(7))
+  userId     String
+  // Entity being changed, e.g. "Transaction".
+  entityType String
+  entityId   String
+  // CREATE, UPDATE, SOFT_DELETE, RESTORE, MERGE, UNLOCK, …
+  action     String
+  before     Json?
+  after      Json?
+  // Who did it (a user id; null means the system/worker).
+  actorId    String?
+  createdAt  TimestamptzString @onCreate(now())
+
+  @@index([userId, entityType, entityId])
+  @@index([createdAt])
+}

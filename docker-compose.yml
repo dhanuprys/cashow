@@ -1,0 +1,215 @@
+# Cashow — single-host Docker Compose stack (plan section 7).
+#
+#   proxy     Caddy: TLS, routing, security headers          (ports 80/443)
+#   web       Next.js standalone output on Bun               (edge + backend)
+#   worker    background jobs on the same image              (backend)
+#   migrate   one-shot schema migration before web/worker     (backend)
+#   postgres  pinned major, internal only, named volume       (backend)
+#   backup    nightly pg_dump + age + rclone (profile: backup)
+#
+# Postgres is never published to the host. Only the proxy binds host ports.
+# Start:   docker compose up -d --build
+# Migrate: docker compose run --rm migrate
+# Backup:  docker compose --profile backup up -d
+#
+# Copy `.env.example` to `.env` first; Compose reads it for substitution and
+# passes it to the containers.
+
+name: cashow
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://${POSTGRES_USER:-cashow}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-cashow}
+  WEB_ORIGIN: ${WEB_ORIGIN:-https://localhost}
+  AUTH_SECRET: ${AUTH_SECRET:-}
+  DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+  DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+  DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
+  DEEPSEEK_PRO_MODEL: ${DEEPSEEK_PRO_MODEL:-deepseek-v4-pro}
+  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+  VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+  NTFY_TOPIC: ${NTFY_TOPIC:-}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  SMTP_URL: ${SMTP_URL:-}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  TZ: UTC
+
+x-app-service: &app-service
+  build:
+    context: .
+  image: ${CASHOW_WEB_IMAGE:-cashow:local-web}
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+  networks:
+    - backend
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cashow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-cashow}
+      # Keep the cluster in UTC; per-user timezones are application settings.
+      TZ: UTC
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=768MB
+      - -c
+      - max_connections=50
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - wal_compression=on
+      - -c
+      - log_min_duration_statement=500
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks:
+      - backend
+
+  migrate:
+    build:
+      context: .
+      target: worker
+    image: ${CASHOW_WORKER_IMAGE:-cashow:local-worker}
+    command: ["bun", "run", "--filter", "@cashow/db", "db:migrate"]
+    environment: *app-env
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+
+  web:
+    <<: *app-service
+    build:
+      context: .
+      target: web
+    environment:
+      <<: *app-env
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - files:/app/data
+      - next_cache:/app/apps/web/.next/cache
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - backend
+      - edge
+
+  worker:
+    <<: *app-service
+    build:
+      context: .
+      target: worker
+    image: ${CASHOW_WORKER_IMAGE:-cashow:local-worker}
+    environment: *app-env
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - files:/app/data
+    networks:
+      - backend
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CASHOW_DOMAIN: ${CASHOW_DOMAIN:-localhost}
+      WEB_ORIGIN: ${WEB_ORIGIN:-https://localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - edge
+
+  # Nightly backup. Disabled by default so the base stack starts without a
+  # backup key; enable with: docker compose --profile backup up -d
+  backup:
+    profiles: ["backup"]
+    build:
+      context: .
+      dockerfile: deploy/backup.Dockerfile
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-cashow}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      PGDATABASE: ${POSTGRES_DB:-cashow}
+      BACKUP_DIR: /backups
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
+      BACKUP_AGE_KEY: ${BACKUP_AGE_KEY:-/secrets/age.key}
+      BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:-}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      RCLONE_CONFIG: ${RCLONE_CONFIG:-/secrets/rclone.conf}
+      TZ: UTC
+    volumes:
+      - backups:/backups
+      - ./secrets:/secrets:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+
+volumes:
+  pgdata:
+  files:
+  backups:
+  next_cache:
+  caddy_data:
+  caddy_config:
+
+networks:
+  # No host ports; Postgres, web and worker talk here.
+  backend:
+    driver: bridge
+  # Only the proxy and web join the edge network.
+  edge:
+    driver: bridge

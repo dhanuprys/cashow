@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, types, tests, migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: default
+          POSTGRES_PASSWORD: default
+          POSTGRES_DB: cashow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U default -d cashow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://default:default@localhost:5432/cashow
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: Lint and format
+        run: bun run lint
+
+      # Build first: Next.js generates the route types that `tsc` consumes.
+      - name: Build web
+        run: bun run build
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Unit tests
+        run: bun run test
+
+      - name: Apply migrations to an empty database
+        run: bun run db:migrate
+
+      - name: Verify schema against the contract
+        run: bun run db:verify
+
+      - name: Database smoke test (BigInt round-trip)
+        run: bun run smoke
+
+  docker:
+    name: Docker images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: checks
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build web target
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: web
+          push: false
+          tags: cashow:ci-web
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Build worker target
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: worker
+          push: false
+          tags: cashow:ci-worker
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker

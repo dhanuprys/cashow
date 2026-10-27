@@ -1,0 +1,10 @@
+# Bun install configuration for the Cashow monorepo.
+#
+# Next.js (Turbopack) and `tsc` resolve dependencies through `node_modules`, so
+# workspace packages must be symlinked there. The "hoisted" linker does this;
+# the isolated linker (Bun 1.4's other option) does not and would break them.
+[install]
+linker = "hoisted"
+
+# Keep install scripts blocked unless explicitly trusted (section 6: review the
+# trusted list and allow only what truly needs it).

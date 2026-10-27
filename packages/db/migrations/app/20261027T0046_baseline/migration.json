@@ -1,0 +1,10 @@
+{
+  "from": null,
+  "to": "23ecf9852bcc32288db1e9efc1ff9953ed93c31054f3ed19339c30e1c338f78a",
+  "providedInvariants": [
+    "cashow:allocation-sums:allocations",
+    "cashow:allocation-sums:transactions"
+  ],
+  "createdAt": "2026-10-27T00:46:33.799Z",
+  "migrationHash": "bca744febcbdfcc9a7cb350e348a270d34c967bff0eb3879639342cf0352415f"
+}
