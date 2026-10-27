@@ -17,10 +17,20 @@ async function tick(): Promise<void> {
   // Process pending outbox events.
   const events = await db.orm.public.OutboxEvent.where({ status: "PENDING" })
     .orderBy((row) => row.createdAt.asc())
-    .limit(50)
+    .limit(25)
     .all();
 
   for (const event of events) {
+    const attempts = event.attempts ?? 0;
+    if (attempts >= 5) {
+      await db.orm.public.OutboxEvent.where({ id: event.id }).update({ status: "FAILED" });
+      continue;
+    }
+    // Exponential backoff: 2^attempts * 10s, capped at 5m.
+    const backoffMs = Math.min(300_000, 10_000 * 2 ** attempts);
+    const ageMs = Date.now() - new Date(String(event.createdAt)).getTime();
+    if (ageMs < backoffMs) continue;
+
     try {
       const ctx = { db, userId: event.userId };
       await runRules(ctx, event.eventType);
@@ -30,8 +40,7 @@ async function tick(): Promise<void> {
       });
     } catch (error) {
       await db.orm.public.OutboxEvent.where({ id: event.id }).update({
-        status: "FAILED",
-        attempts: (event.attempts ?? 0) + 1,
+        attempts: attempts + 1,
         lastError: error instanceof Error ? error.message : String(error),
       });
     }
