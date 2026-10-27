@@ -1,5 +1,5 @@
 import { parseDbTimestamp } from "@cashow/domain";
-import type { DbTransaction, UseCaseContext } from "./context";
+import type { QueryClient, UseCaseContext } from "./context";
 import { snapshot } from "./json";
 
 /**
@@ -8,7 +8,7 @@ import { snapshot } from "./json";
  * `null` is reserved for the worker/system.
  */
 export async function writeAudit(
-  tx: DbTransaction,
+  tx: QueryClient,
   entry: {
     userId: string;
     entityType: string;

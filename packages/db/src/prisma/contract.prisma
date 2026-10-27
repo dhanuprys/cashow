@@ -71,6 +71,14 @@ enum AttachmentKind {
   RECEIPT  = "RECEIPT"
 }
 
+enum RecurringFrequency {
+  @@type("pg/text@1")
+  DAILY   = "DAILY"
+  WEEKLY  = "WEEKLY"
+  MONTHLY = "MONTHLY"
+  YEARLY  = "YEARLY"
+}
+
 // ---------------------------------------------------------------------------
 // Core entities
 // ---------------------------------------------------------------------------
@@ -96,9 +104,11 @@ model User {
   attachments  Attachment[]
   passkeys     Passkey[]
   sessions     Session[]
-  paymentPlans PaymentPlan[]
-  snapshots    BalanceSnapshot[]
-  checkpoints  ReconciliationCheckpoint[]
+  paymentPlans        PaymentPlan[]
+  snapshots           BalanceSnapshot[]
+  checkpoints         ReconciliationCheckpoint[]
+  budgets             Budget[]
+  recurringTemplates   RecurringTemplate[]
 }
 
 // ---------------------------------------------------------------------------
@@ -185,9 +195,11 @@ model Account {
   createdAt      TimestamptzString @onCreate(now())
   updatedAt      TimestamptzString @onCreate(now()) @onUpdate(now())
 
-  transactions Transaction[] @relation("TxAccount")
-  snapshots    BalanceSnapshot[]
-  checkpoints  ReconciliationCheckpoint[]
+  transactions         Transaction[] @relation("TxAccount")
+  snapshots            BalanceSnapshot[]
+  checkpoints          ReconciliationCheckpoint[]
+  recurringAsSource    RecurringTemplate[] @relation("RecurringSource")
+  recurringAsDestination RecurringTemplate[] @relation("RecurringDestination")
 
   @@index([userId])
   @@index([userId, type])
@@ -207,7 +219,9 @@ model Category {
   createdAt  TimestamptzString @onCreate(now())
   updatedAt  TimestamptzString @onCreate(now()) @onUpdate(now())
 
-  transactions Transaction[]
+  transactions      Transaction[]
+  budgets           Budget[]
+  recurringTemplates RecurringTemplate[]
 
   @@unique([userId, kind, name])
   @@index([userId])
@@ -434,6 +448,68 @@ model ReconciliationCheckpoint {
   @@index([accountId, snapshotAt], unique: true, where: sql`"unlockedAt" IS NULL`, name: "Checkpoint_active_unique")
   @@index([userId, accountId])
   @@index([snapshotId])
+}
+
+// ---------------------------------------------------------------------------
+// Budgets and recurring templates (Phase 3)
+// ---------------------------------------------------------------------------
+//
+// A budget is a spending limit for one category (or the whole ledger) over a
+// budget month. Usage and projection are derived on read from live transactions.
+// Recurring templates create draft transactions on a schedule; the owner
+// confirms or skips each one.
+
+model Budget {
+  id         String    @id @onCreate(uuid(7))
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  // Null means the budget covers every expense category.
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  // Limit in whole rupiah for one budget month.
+  amount     BigInt
+  active     Boolean   @default(true)
+  createdAt  TimestamptzString @onCreate(now())
+  updatedAt  TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  @@index([userId])
+  @@index([userId, categoryId])
+  @@check(expression: sql`"amount" > 0`, name: "budget_amount_positive")
+}
+
+model RecurringTemplate {
+  id                   String              @id @onCreate(uuid(7))
+  userId               String
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                 TransactionType
+  amount               BigInt
+  accountId            String
+  account              Account             @relation("RecurringSource", fields: [accountId], references: [id], onDelete: Restrict)
+  destinationAccountId String?
+  destinationAccount   Account?            @relation("RecurringDestination", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  categoryId           String?
+  category             Category?           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  merchant             String?
+  counterparty         String?
+  note                 String?
+  frequency            RecurringFrequency
+  // Day of month for MONTHLY/YEARLY (1..31, clamped to month length).
+  dayOfMonth           Int?
+  // 0 = Sunday … 6 = Saturday for WEEKLY.
+  dayOfWeek            Int?
+  // Next scheduled run (UTC instant). Advances after each generation.
+  nextRunAt            TimestamptzString
+  lastRunAt            TimestamptzString?
+  active               Boolean             @default(true)
+  createdAt            TimestamptzString @onCreate(now())
+  updatedAt            TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  @@index([userId])
+  @@index([userId, active, nextRunAt])
+  @@check(expression: sql`"amount" > 0`, name: "recurring_amount_positive")
+  @@check(expression: sql`("type" = 'TRANSFER') = ("destinationAccountId" IS NOT NULL)`, name: "recurring_transfer_destination_consistency")
+  @@check(expression: sql`"type" <> 'TRANSFER' OR "destinationAccountId" <> "accountId"`, name: "recurring_transfer_accounts_differ")
 }
 
 // ---------------------------------------------------------------------------

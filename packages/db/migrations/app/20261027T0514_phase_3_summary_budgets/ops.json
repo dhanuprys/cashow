@@ -1,0 +1,796 @@
+[
+  {
+    "id": "table.Budget",
+    "label": "Create table \"Budget\"",
+    "summary": "Creates table \"Budget\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Budget"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Budget\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Budget\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"Budget\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Budget\"",
+        "sql": "CREATE TABLE \"public\".\"Budget\" (\n  \"active\" bool DEFAULT true NOT NULL,\n  \"amount\" int8 NOT NULL,\n  \"categoryId\" text,\n  \"createdAt\" timestamptz NOT NULL,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"budget_amount_positive_ed0d10ac\" CHECK (\"amount\" > 0)\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Budget\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"Budget\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"Budget\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.RecurringTemplate",
+    "label": "Create table \"RecurringTemplate\"",
+    "summary": "Creates table \"RecurringTemplate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "RecurringTemplate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"RecurringTemplate\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"RecurringTemplate\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"RecurringTemplate\"",
+        "sql": "CREATE TABLE \"public\".\"RecurringTemplate\" (\n  \"accountId\" text NOT NULL,\n  \"active\" bool DEFAULT true NOT NULL,\n  \"amount\" int8 NOT NULL,\n  \"categoryId\" text,\n  \"counterparty\" text,\n  \"createdAt\" timestamptz NOT NULL,\n  \"dayOfMonth\" int4,\n  \"dayOfWeek\" int4,\n  \"destinationAccountId\" text,\n  \"frequency\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"lastRunAt\" timestamptz,\n  \"merchant\" text,\n  \"nextRunAt\" timestamptz NOT NULL,\n  \"note\" text,\n  \"type\" text NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"RecurringTemplate_frequency_check_5213a287\" CHECK (\"frequency\" IN ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY')),\n  CONSTRAINT \"RecurringTemplate_type_check_fb141b4e\" CHECK (\"type\" IN ('INCOME', 'EXPENSE', 'TRANSFER', 'ADJUSTMENT')),\n  CONSTRAINT \"recurring_amount_positive_ed0d10ac\" CHECK (\"amount\" > 0),\n  CONSTRAINT \"recurring_transfer_accounts_differ_c65f2c57\" CHECK (\"type\" <> 'TRANSFER' OR \"destinationAccountId\" <> \"accountId\"),\n  CONSTRAINT \"recurring_transfer_destination_consistency_5fb4dafd\" CHECK ((\"type\" = 'TRANSFER') = (\"destinationAccountId\" IS NOT NULL))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"RecurringTemplate\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"RecurringTemplate\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "index.Budget.Budget_categoryId_idx_15c304f2",
+    "label": "Create index \"Budget_categoryId_idx_15c304f2\" on \"Budget\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Budget_categoryId_idx_15c304f2",
+        "table": "Budget"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Budget_categoryId_idx_15c304f2\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Budget_categoryId_idx_15c304f2\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Budget_categoryId_idx_15c304f2\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Budget_categoryId_idx_15c304f2\"",
+        "sql": "CREATE INDEX \"Budget_categoryId_idx_15c304f2\" ON \"public\".\"Budget\" (\"categoryId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Budget_categoryId_idx_15c304f2\" exists on \"Budget\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Budget_categoryId_idx_15c304f2\"",
+          "i",
+          "I",
+          "\"public\".\"Budget\"",
+          "btree",
+          "[\"categoryId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Budget.Budget_userId_categoryId_idx_5ac7f7c5",
+    "label": "Create index \"Budget_userId_categoryId_idx_5ac7f7c5\" on \"Budget\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Budget_userId_categoryId_idx_5ac7f7c5",
+        "table": "Budget"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Budget_userId_categoryId_idx_5ac7f7c5\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Budget_userId_categoryId_idx_5ac7f7c5\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Budget_userId_categoryId_idx_5ac7f7c5\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Budget_userId_categoryId_idx_5ac7f7c5\"",
+        "sql": "CREATE INDEX \"Budget_userId_categoryId_idx_5ac7f7c5\" ON \"public\".\"Budget\" (\"userId\", \"categoryId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Budget_userId_categoryId_idx_5ac7f7c5\" exists on \"Budget\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Budget_userId_categoryId_idx_5ac7f7c5\"",
+          "i",
+          "I",
+          "\"public\".\"Budget\"",
+          "btree",
+          "[\"userId\",\"categoryId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Budget.Budget_userId_idx_a489d58a",
+    "label": "Create index \"Budget_userId_idx_a489d58a\" on \"Budget\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Budget_userId_idx_a489d58a",
+        "table": "Budget"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Budget_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Budget_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Budget_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Budget_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"Budget_userId_idx_a489d58a\" ON \"public\".\"Budget\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Budget_userId_idx_a489d58a\" exists on \"Budget\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Budget_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"Budget\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.RecurringTemplate.RecurringTemplate_accountId_idx_cbfb3085",
+    "label": "Create index \"RecurringTemplate_accountId_idx_cbfb3085\" on \"RecurringTemplate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "RecurringTemplate_accountId_idx_cbfb3085",
+        "table": "RecurringTemplate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"RecurringTemplate_accountId_idx_cbfb3085\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate_accountId_idx_cbfb3085\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"RecurringTemplate_accountId_idx_cbfb3085\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"RecurringTemplate_accountId_idx_cbfb3085\"",
+        "sql": "CREATE INDEX \"RecurringTemplate_accountId_idx_cbfb3085\" ON \"public\".\"RecurringTemplate\" (\"accountId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"RecurringTemplate_accountId_idx_cbfb3085\" exists on \"RecurringTemplate\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate_accountId_idx_cbfb3085\"",
+          "i",
+          "I",
+          "\"public\".\"RecurringTemplate\"",
+          "btree",
+          "[\"accountId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.RecurringTemplate.RecurringTemplate_categoryId_idx_15c304f2",
+    "label": "Create index \"RecurringTemplate_categoryId_idx_15c304f2\" on \"RecurringTemplate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "RecurringTemplate_categoryId_idx_15c304f2",
+        "table": "RecurringTemplate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"RecurringTemplate_categoryId_idx_15c304f2\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate_categoryId_idx_15c304f2\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"RecurringTemplate_categoryId_idx_15c304f2\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"RecurringTemplate_categoryId_idx_15c304f2\"",
+        "sql": "CREATE INDEX \"RecurringTemplate_categoryId_idx_15c304f2\" ON \"public\".\"RecurringTemplate\" (\"categoryId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"RecurringTemplate_categoryId_idx_15c304f2\" exists on \"RecurringTemplate\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate_categoryId_idx_15c304f2\"",
+          "i",
+          "I",
+          "\"public\".\"RecurringTemplate\"",
+          "btree",
+          "[\"categoryId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.RecurringTemplate.RecurringTemplate_destinationAccountId_idx_32927505",
+    "label": "Create index \"RecurringTemplate_destinationAccountId_idx_32927505\" on \"RecurringTemplate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "RecurringTemplate_destinationAccountId_idx_32927505",
+        "table": "RecurringTemplate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"RecurringTemplate_destinationAccountId_idx_32927505\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate_destinationAccountId_idx_32927505\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"RecurringTemplate_destinationAccountId_idx_32927505\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"RecurringTemplate_destinationAccountId_idx_32927505\"",
+        "sql": "CREATE INDEX \"RecurringTemplate_destinationAccountId_idx_32927505\" ON \"public\".\"RecurringTemplate\" (\"destinationAccountId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"RecurringTemplate_destinationAccountId_idx_32927505\" exists on \"RecurringTemplate\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate_destinationAccountId_idx_32927505\"",
+          "i",
+          "I",
+          "\"public\".\"RecurringTemplate\"",
+          "btree",
+          "[\"destinationAccountId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.RecurringTemplate.RecurringTemplate_userId_active_nextRunAt_idx_d6581d26",
+    "label": "Create index \"RecurringTemplate_userId_active_nextRunAt_idx_d6581d26\" on \"RecurringTemplate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "RecurringTemplate_userId_active_nextRunAt_idx_d6581d26",
+        "table": "RecurringTemplate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"RecurringTemplate_userId_active_nextRunAt_idx_d6581d26\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate_userId_active_nextRunAt_idx_d6581d26\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"RecurringTemplate_userId_active_nextRunAt_idx_d6581d26\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"RecurringTemplate_userId_active_nextRunAt_idx_d6581d26\"",
+        "sql": "CREATE INDEX \"RecurringTemplate_userId_active_nextRunAt_idx_d6581d26\" ON \"public\".\"RecurringTemplate\" (\"userId\", \"active\", \"nextRunAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"RecurringTemplate_userId_active_nextRunAt_idx_d6581d26\" exists on \"RecurringTemplate\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate_userId_active_nextRunAt_idx_d6581d26\"",
+          "i",
+          "I",
+          "\"public\".\"RecurringTemplate\"",
+          "btree",
+          "[\"userId\",\"active\",\"nextRunAt\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.RecurringTemplate.RecurringTemplate_userId_idx_a489d58a",
+    "label": "Create index \"RecurringTemplate_userId_idx_a489d58a\" on \"RecurringTemplate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "RecurringTemplate_userId_idx_a489d58a",
+        "table": "RecurringTemplate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"RecurringTemplate_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"RecurringTemplate_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"RecurringTemplate_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"RecurringTemplate_userId_idx_a489d58a\" ON \"public\".\"RecurringTemplate\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"RecurringTemplate_userId_idx_a489d58a\" exists on \"RecurringTemplate\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"RecurringTemplate_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"RecurringTemplate\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Budget.Budget_userId_fkey",
+    "label": "Add foreign key \"Budget_userId_fkey\" on \"Budget\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Budget_userId_fkey",
+        "table": "Budget"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Budget_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Budget_userId_fkey",
+          "public",
+          "\"public\".\"Budget\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"Budget_userId_fkey\" on \"Budget\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Budget_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Budget\"\nADD CONSTRAINT \"Budget_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Budget_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "Budget_userId_fkey",
+          "public",
+          "\"public\".\"Budget\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Budget.Budget_categoryId_fkey",
+    "label": "Add foreign key \"Budget_categoryId_fkey\" on \"Budget\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Budget_categoryId_fkey",
+        "table": "Budget"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Budget_categoryId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Budget_categoryId_fkey",
+          "public",
+          "\"public\".\"Budget\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"Budget_categoryId_fkey\" on \"Budget\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Budget_categoryId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Budget\"\nADD CONSTRAINT \"Budget_categoryId_fkey\"\nFOREIGN KEY (\"categoryId\")\nREFERENCES \"public\".\"Category\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Budget_categoryId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "Budget_categoryId_fkey",
+          "public",
+          "\"public\".\"Budget\"",
+          "f",
+          "[\"categoryId\"]",
+          "\"public\".\"Category\"",
+          "[\"id\"]",
+          "r",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.RecurringTemplate.RecurringTemplate_userId_fkey",
+    "label": "Add foreign key \"RecurringTemplate_userId_fkey\" on \"RecurringTemplate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "RecurringTemplate_userId_fkey",
+        "table": "RecurringTemplate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"RecurringTemplate_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "RecurringTemplate_userId_fkey",
+          "public",
+          "\"public\".\"RecurringTemplate\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"RecurringTemplate_userId_fkey\" on \"RecurringTemplate\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"RecurringTemplate_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"RecurringTemplate\"\nADD CONSTRAINT \"RecurringTemplate_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"RecurringTemplate_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "RecurringTemplate_userId_fkey",
+          "public",
+          "\"public\".\"RecurringTemplate\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.RecurringTemplate.RecurringTemplate_accountId_fkey",
+    "label": "Add foreign key \"RecurringTemplate_accountId_fkey\" on \"RecurringTemplate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "RecurringTemplate_accountId_fkey",
+        "table": "RecurringTemplate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"RecurringTemplate_accountId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "RecurringTemplate_accountId_fkey",
+          "public",
+          "\"public\".\"RecurringTemplate\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"RecurringTemplate_accountId_fkey\" on \"RecurringTemplate\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"RecurringTemplate_accountId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"RecurringTemplate\"\nADD CONSTRAINT \"RecurringTemplate_accountId_fkey\"\nFOREIGN KEY (\"accountId\")\nREFERENCES \"public\".\"Account\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"RecurringTemplate_accountId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "RecurringTemplate_accountId_fkey",
+          "public",
+          "\"public\".\"RecurringTemplate\"",
+          "f",
+          "[\"accountId\"]",
+          "\"public\".\"Account\"",
+          "[\"id\"]",
+          "r",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.RecurringTemplate.RecurringTemplate_destinationAccountId_fkey",
+    "label": "Add foreign key \"RecurringTemplate_destinationAccountId_fkey\" on \"RecurringTemplate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "RecurringTemplate_destinationAccountId_fkey",
+        "table": "RecurringTemplate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"RecurringTemplate_destinationAccountId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "RecurringTemplate_destinationAccountId_fkey",
+          "public",
+          "\"public\".\"RecurringTemplate\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"RecurringTemplate_destinationAccountId_fkey\" on \"RecurringTemplate\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"RecurringTemplate_destinationAccountId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"RecurringTemplate\"\nADD CONSTRAINT \"RecurringTemplate_destinationAccountId_fkey\"\nFOREIGN KEY (\"destinationAccountId\")\nREFERENCES \"public\".\"Account\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"RecurringTemplate_destinationAccountId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "RecurringTemplate_destinationAccountId_fkey",
+          "public",
+          "\"public\".\"RecurringTemplate\"",
+          "f",
+          "[\"destinationAccountId\"]",
+          "\"public\".\"Account\"",
+          "[\"id\"]",
+          "r",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.RecurringTemplate.RecurringTemplate_categoryId_fkey",
+    "label": "Add foreign key \"RecurringTemplate_categoryId_fkey\" on \"RecurringTemplate\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "RecurringTemplate_categoryId_fkey",
+        "table": "RecurringTemplate"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"RecurringTemplate_categoryId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "RecurringTemplate_categoryId_fkey",
+          "public",
+          "\"public\".\"RecurringTemplate\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"RecurringTemplate_categoryId_fkey\" on \"RecurringTemplate\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"RecurringTemplate_categoryId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"RecurringTemplate\"\nADD CONSTRAINT \"RecurringTemplate_categoryId_fkey\"\nFOREIGN KEY (\"categoryId\")\nREFERENCES \"public\".\"Category\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"RecurringTemplate_categoryId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "RecurringTemplate_categoryId_fkey",
+          "public",
+          "\"public\".\"RecurringTemplate\"",
+          "f",
+          "[\"categoryId\"]",
+          "\"public\".\"Category\"",
+          "[\"id\"]",
+          "r",
+          "a"
+        ]
+      }
+    ]
+  }
+]

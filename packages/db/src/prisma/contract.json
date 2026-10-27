@@ -28,6 +28,10 @@
       "model": "BalanceSnapshot",
       "namespace": "public"
     },
+    "Budget": {
+      "model": "Budget",
+      "namespace": "public"
+    },
     "Category": {
       "model": "Category",
       "namespace": "public"
@@ -50,6 +54,10 @@
     },
     "ReconciliationCheckpoint": {
       "model": "ReconciliationCheckpoint",
+      "namespace": "public"
+    },
+    "RecurringTemplate": {
+      "model": "RecurringTemplate",
       "namespace": "public"
     },
     "Session": {
@@ -151,6 +159,27 @@
               {
                 "name": "FAILED",
                 "value": "FAILED"
+              }
+            ]
+          },
+          "RecurringFrequency": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "DAILY",
+                "value": "DAILY"
+              },
+              {
+                "name": "WEEKLY",
+                "value": "WEEKLY"
+              },
+              {
+                "name": "MONTHLY",
+                "value": "MONTHLY"
+              },
+              {
+                "name": "YEARLY",
+                "value": "YEARLY"
               }
             ]
           },
@@ -295,6 +324,36 @@
                 },
                 "to": {
                   "model": "ReconciliationCheckpoint",
+                  "namespace": "public"
+                }
+              },
+              "recurringAsDestination": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "destinationAccountId"
+                  ]
+                },
+                "to": {
+                  "model": "RecurringTemplate",
+                  "namespace": "public"
+                }
+              },
+              "recurringAsSource": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "accountId"
+                  ]
+                },
+                "to": {
+                  "model": "RecurringTemplate",
                   "namespace": "public"
                 }
               },
@@ -1032,6 +1091,130 @@
               "table": "BalanceSnapshot"
             }
           },
+          "Budget": {
+            "fields": {
+              "active": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "amount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "categoryId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "category": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "categoryId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Category",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "active": {
+                  "column": "active"
+                },
+                "amount": {
+                  "column": "amount"
+                },
+                "categoryId": {
+                  "column": "categoryId"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Budget"
+            }
+          },
           "Category": {
             "fields": {
               "archivedAt": {
@@ -1112,6 +1295,21 @@
               }
             },
             "relations": {
+              "budgets": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "categoryId"
+                  ]
+                },
+                "to": {
+                  "model": "Budget",
+                  "namespace": "public"
+                }
+              },
               "parent": {
                 "cardinality": "N:1",
                 "nullable": true,
@@ -1125,6 +1323,21 @@
                 },
                 "to": {
                   "model": "Category",
+                  "namespace": "public"
+                }
+              },
+              "recurringTemplates": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "categoryId"
+                  ]
+                },
+                "to": {
+                  "model": "RecurringTemplate",
                   "namespace": "public"
                 }
               },
@@ -1924,6 +2137,274 @@
               "table": "ReconciliationCheckpoint"
             }
           },
+          "RecurringTemplate": {
+            "fields": {
+              "accountId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "active": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "amount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "categoryId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "counterparty": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "dayOfMonth": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "dayOfWeek": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "destinationAccountId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "frequency": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "RecurringFrequency",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastRunAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "merchant": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "nextRunAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "note": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "type": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "TransactionType",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "account": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "accountId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Account",
+                  "namespace": "public"
+                }
+              },
+              "category": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "categoryId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Category",
+                  "namespace": "public"
+                }
+              },
+              "destinationAccount": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "destinationAccountId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Account",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "accountId": {
+                  "column": "accountId"
+                },
+                "active": {
+                  "column": "active"
+                },
+                "amount": {
+                  "column": "amount"
+                },
+                "categoryId": {
+                  "column": "categoryId"
+                },
+                "counterparty": {
+                  "column": "counterparty"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "dayOfMonth": {
+                  "column": "dayOfMonth"
+                },
+                "dayOfWeek": {
+                  "column": "dayOfWeek"
+                },
+                "destinationAccountId": {
+                  "column": "destinationAccountId"
+                },
+                "frequency": {
+                  "column": "frequency"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "lastRunAt": {
+                  "column": "lastRunAt"
+                },
+                "merchant": {
+                  "column": "merchant"
+                },
+                "nextRunAt": {
+                  "column": "nextRunAt"
+                },
+                "note": {
+                  "column": "note"
+                },
+                "type": {
+                  "column": "type"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "RecurringTemplate"
+            }
+          },
           "Session": {
             "fields": {
               "createdAt": {
@@ -2510,6 +2991,21 @@
                   "namespace": "public"
                 }
               },
+              "budgets": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "Budget",
+                  "namespace": "public"
+                }
+              },
               "categories": {
                 "cardinality": "1:N",
                 "on": {
@@ -2567,6 +3063,21 @@
                 },
                 "to": {
                   "model": "PaymentPlan",
+                  "namespace": "public"
+                }
+              },
+              "recurringTemplates": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "RecurringTemplate",
                   "namespace": "public"
                 }
               },
@@ -3451,6 +3962,136 @@
               },
               "uniques": []
             },
+            "Budget": {
+              "checks": [
+                {
+                  "expression": "\"amount\" > 0",
+                  "name": "budget_amount_positive_ed0d10ac",
+                  "prefix": "budget_amount_positive"
+                }
+              ],
+              "columns": {
+                "active": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "amount": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "categoryId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "Budget_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Budget"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "Budget_categoryId_idx_15c304f2"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "categoryId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Budget"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Category"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "categoryId"
+                  ],
+                  "name": "Budget_categoryId_idx_15c304f2",
+                  "prefix": "Budget_categoryId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "categoryId"
+                  ],
+                  "name": "Budget_userId_categoryId_idx_5ac7f7c5",
+                  "prefix": "Budget_userId_categoryId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "Budget_userId_idx_a489d58a",
+                  "prefix": "Budget_userId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "Category": {
               "checks": [
                 {
@@ -4213,6 +4854,275 @@
               },
               "uniques": []
             },
+            "RecurringTemplate": {
+              "checks": [
+                {
+                  "expression": "\"frequency\" IN ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY')",
+                  "name": "RecurringTemplate_frequency_check_5213a287",
+                  "prefix": "RecurringTemplate_frequency_check"
+                },
+                {
+                  "expression": "\"type\" IN ('INCOME', 'EXPENSE', 'TRANSFER', 'ADJUSTMENT')",
+                  "name": "RecurringTemplate_type_check_fb141b4e",
+                  "prefix": "RecurringTemplate_type_check"
+                },
+                {
+                  "expression": "\"amount\" > 0",
+                  "name": "recurring_amount_positive_ed0d10ac",
+                  "prefix": "recurring_amount_positive"
+                },
+                {
+                  "expression": "\"type\" <> 'TRANSFER' OR \"destinationAccountId\" <> \"accountId\"",
+                  "name": "recurring_transfer_accounts_differ_c65f2c57",
+                  "prefix": "recurring_transfer_accounts_differ"
+                },
+                {
+                  "expression": "(\"type\" = 'TRANSFER') = (\"destinationAccountId\" IS NOT NULL)",
+                  "name": "recurring_transfer_destination_consistency_5fb4dafd",
+                  "prefix": "recurring_transfer_destination_consistency"
+                }
+              ],
+              "columns": {
+                "accountId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "active": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "amount": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "categoryId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "counterparty": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "dayOfMonth": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "dayOfWeek": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "nullable": true
+                },
+                "destinationAccountId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "frequency": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "RecurringFrequency",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "lastRunAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true
+                },
+                "merchant": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "nextRunAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "note": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "type": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "TransactionType",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "RecurringTemplate_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "RecurringTemplate"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "RecurringTemplate_accountId_idx_cbfb3085"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "accountId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "RecurringTemplate"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Account"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "RecurringTemplate_destinationAccountId_idx_32927505"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "destinationAccountId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "RecurringTemplate"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Account"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "RecurringTemplate_categoryId_idx_15c304f2"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "categoryId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "RecurringTemplate"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Category"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "accountId"
+                  ],
+                  "name": "RecurringTemplate_accountId_idx_cbfb3085",
+                  "prefix": "RecurringTemplate_accountId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "categoryId"
+                  ],
+                  "name": "RecurringTemplate_categoryId_idx_15c304f2",
+                  "prefix": "RecurringTemplate_categoryId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "destinationAccountId"
+                  ],
+                  "name": "RecurringTemplate_destinationAccountId_idx_32927505",
+                  "prefix": "RecurringTemplate_destinationAccountId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "active",
+                    "nextRunAt"
+                  ],
+                  "name": "RecurringTemplate_userId_active_nextRunAt_idx_d6581d26",
+                  "prefix": "RecurringTemplate_userId_active_nextRunAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "RecurringTemplate_userId_idx_a489d58a",
+                  "prefix": "RecurringTemplate_userId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "Session": {
               "columns": {
                 "createdAt": {
@@ -4804,6 +5714,15 @@
                 "FAILED"
               ]
             },
+            "RecurringFrequency": {
+              "kind": "valueSet",
+              "values": [
+                "DAILY",
+                "WEEKLY",
+                "MONTHLY",
+                "YEARLY"
+              ]
+            },
             "Source": {
               "kind": "valueSet",
               "values": [
@@ -4831,10 +5750,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "d7af935b39ceffe99bfd2da9505905a36754c373439fbc53f79ece8edf61f714"
+    "storageHash": "72e527792ffb7e01c253d8121731ee28e30890f1ea2d4c597871e07c9a48859b"
   },
   "execution": {
-    "executionHash": "37e78f526ba586ce69cba3489c74656effde8fe9fbdc2c28cea3878b26208fd5",
+    "executionHash": "07701fca7a971854ebb72019f3a87d3ea1c470a94dcfbf4ca8f776c4e6c87683",
     "mutations": {
       "defaults": [
         {
@@ -4981,6 +5900,43 @@
           "ref": {
             "entry": "BalanceSnapshot",
             "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Budget",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Budget",
+            "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Budget",
+            "field": "updatedAt",
             "namespace": "public"
           }
         },
@@ -5169,6 +6125,43 @@
           "ref": {
             "entry": "ReconciliationCheckpoint",
             "field": "verifiedAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "RecurringTemplate",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "RecurringTemplate",
+            "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "RecurringTemplate",
+            "field": "updatedAt",
             "namespace": "public"
           }
         },

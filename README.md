@@ -77,27 +77,28 @@ repository for a real deployment; Compose uses `/app/data/uploads` on the shared
 
 ### Useful commands
 
-| Command                            | What it does                                       |
-| ---------------------------------- | -------------------------------------------------- |
-| `bun run dev`                      | Next.js dev server (Turbopack)                     |
-| `bun run build` / `bun run start`  | production build / serve                           |
-| `bun run worker`                   | run the background worker                          |
-| `bun run lint` / `bun run format`  | Biome check / rewrite                              |
-| `bun run typecheck`                | `tsc` for packages and the web app                 |
-| `bun run test`                     | `bun test` (domain unit tests)                     |
-| `bun run test:ledger`              | Phase 1 gate: allocation rules enforced by the DB  |
+| Command                            | What it does                                                      |
+| ---------------------------------- | ----------------------------------------------------------------- |
+| `bun run dev`                      | Next.js dev server (Turbopack)                                    |
+| `bun run build` / `bun run start`  | production build / serve                                          |
+| `bun run worker`                   | run the background worker                                         |
+| `bun run lint` / `bun run format`  | Biome check / rewrite                                             |
+| `bun run typecheck`                | `tsc` for packages and the web app                                |
+| `bun run test`                     | `bun test` (domain unit tests)                                    |
+| `bun run test:ledger`              | Phase 1 gate: allocation rules enforced by the DB                 |
 | `bun run test:chains`              | Phase 2 gate: payment plans, snapshots, reconciliation, transfers |
-| `bun run smoke`                    | write/read a `BigInt` row through the typed client |
-| `bun run seed`                     | seed 100,000 transactions over three years         |
-| `bun run bench`                    | check the §8 read/write budgets on that seed       |
-| `bun run seed:clean`               | remove the benchmark owner, reopening `/setup`     |
-| `bun run test:e2e:auth`            | passkey E2E in Chrome (needs a DB with no users)   |
-| `bun run smoke:compat`             | Server Action / streaming / abort gates            |
-| `bun run db:migrate`               | apply pending migrations                           |
-| `bun run db:status`                | migration path and pending state                   |
-| `bun run db:verify`                | compare the live schema with the contract          |
-| `bun run db:plan -- --name <slug>` | plan a migration from contract changes             |
-| `bun run db:emit`                  | re-emit `contract.json` / `contract.d.ts`          |
+| `bun run test:summary`             | Phase 3 gate: summary totals, budgets, recurring templates |
+| `bun run smoke`                    | write/read a `BigInt` row through the typed client                |
+| `bun run seed`                     | seed 100,000 transactions over three years                        |
+| `bun run bench`                    | check the §8 read/write budgets on that seed                      |
+| `bun run seed:clean`               | remove the benchmark owner, reopening `/setup`                    |
+| `bun run test:e2e:auth`            | passkey E2E in Chrome (needs a DB with no users)                  |
+| `bun run smoke:compat`             | Server Action / streaming / abort gates                           |
+| `bun run db:migrate`               | apply pending migrations                                          |
+| `bun run db:status`                | migration path and pending state                                  |
+| `bun run db:verify`                | compare the live schema with the contract                         |
+| `bun run db:plan -- --name <slug>` | plan a migration from contract changes                            |
+| `bun run db:emit`                  | re-emit `contract.json` / `contract.d.ts`                         |
 
 > `bun run typecheck` needs Next.js route types, which `bun run build` generates
 > on a fresh checkout. Run the build once before typechecking `apps/web`.
@@ -128,17 +129,19 @@ bun run test:e2e:auth          # CHROME_PATH overrides the browser binary
 
 After setup, `/app` is the daily surface:
 
-| Route                   | What it does                                                          |
-| ----------------------- | --------------------------------------------------------------------- |
-| `/app`                  | Month summary, quick add, recent transactions, balances, top expenses |
-| `/app/transactions`     | Filter, search, paginate; deleted rows are opt-in                     |
-| `/app/transactions/new` | Full form: type, amount, account, category, time, allocations         |
-| `/app/transactions/:id` | Detail, attachments, soft delete/restore                              |
-| `/app/accounts`         | Accounts, opening balances, snapshots and reconciliation (balance is derived) |
-| `/app/categories`       | One-level categories, separate income/expense trees                   |
-| `/app/plans`            | Payment plans: steps, derived status, partial payments, progress      |
-| `/app/transactions/new?type=TRANSFER` | Transfer between two accounts with an optional fee         |
-| `/app/settings`         | Profile, timezone, week/budget start, passkeys, audit, outbox         |
+| Route                                 | What it does                                                                  |
+| ------------------------------------- | ----------------------------------------------------------------------------- |
+| `/app`                                | Month summary, quick add, recent transactions, balances, top expenses         |
+| `/app/transactions`                   | Filter, search, paginate; deleted rows are opt-in                             |
+| `/app/transactions/new`               | Full form: type, amount, account, category, time, allocations                 |
+| `/app/transactions/:id`               | Detail, attachments, soft delete/restore                                      |
+| `/app/accounts`                       | Accounts, opening balances, snapshots and reconciliation (balance is derived) |
+| `/app/categories`                     | One-level categories, separate income/expense trees                           |
+| `/app/plans`                          | Payment plans: steps, derived status, partial payments, progress              |
+| `/app/budgets`                        | Monthly budgets with usage and projection                                   |
+| `/app/recurring`                      | Recurring transaction templates and due-run                                  |
+| `/app/transactions/new?type=TRANSFER` | Transfer between two accounts with an optional fee                            |
+| `/app/settings`                       | Profile, timezone, week/budget start, passkeys, audit, outbox                 |
 
 Amounts are typed as text and parsed once: `35rb`, `1,5jt`, `Rp 35.000`. Money
 stays a positive `bigint` in the database. An expense can draw from one or more

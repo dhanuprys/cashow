@@ -1,6 +1,15 @@
 "use client";
 
-import { ArrowLeftRight, Layers, LayoutDashboard, Settings, Tags, Wallet } from "lucide-react";
+import {
+  ArrowLeftRight,
+  CalendarClock,
+  Layers,
+  LayoutDashboard,
+  PiggyBank,
+  Settings,
+  Tags,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -10,6 +19,8 @@ const items = [
   { href: "/app/transactions", label: "Transaksi", icon: ArrowLeftRight },
   { href: "/app/plans", label: "Rencana", icon: Layers },
   { href: "/app/accounts", label: "Akun", icon: Wallet },
+  { href: "/app/budgets", label: "Anggaran", icon: PiggyBank },
+  { href: "/app/recurring", label: "Berulang", icon: CalendarClock },
   { href: "/app/categories", label: "Kategori", icon: Tags },
   { href: "/app/settings", label: "Pengaturan", icon: Settings },
 ] as const;
@@ -52,7 +63,7 @@ export function AppNav() {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
         aria-label="Navigasi utama"
       >
-        <ul className="grid grid-cols-6">
+        <ul className="grid grid-cols-8">
           {items.map((item) => {
             const active = isActive(pathname, item.href, "exact" in item && item.exact);
             const Icon = item.icon;

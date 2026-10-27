@@ -168,7 +168,15 @@ export const nonNegativeMoneyText = z
   });
 
 /** Where a quick-added row came from; manual forms use MANUAL. */
-export const sourceSchema = z.enum(["MANUAL", "QUICK_ADD"]);
+export const sourceSchema = z.enum([
+  "MANUAL",
+  "QUICK_ADD",
+  "AI_DRAFT",
+  "TELEGRAM",
+  "STATEMENT_IMPORT",
+  "RECURRING",
+  "SHARE_TARGET",
+]);
 
 export const transactionCreateSchema = z.object({
   type: cashflowTypeSchema,
@@ -349,6 +357,57 @@ export type TransferCreateInput = z.infer<typeof transferCreateSchema>;
 export type CheckpointUnlockInput = z.infer<typeof checkpointUnlockSchema>;
 
 /** Render the first issue of a failed parse as an Indonesian sentence. */
+export const budgetInputSchema = z.object({
+  name: z.string().trim().min(1, "Nama anggaran wajib diisi.").max(80, "Maksimal 80 karakter."),
+  categoryId: nullableText(64),
+  amount: positiveMoneyText,
+});
+
+export const budgetUpdateSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Nama anggaran wajib diisi.")
+    .max(80, "Maksimal 80 karakter.")
+    .optional(),
+  categoryId: nullablePatchText(64),
+  amount: positiveMoneyText.optional(),
+  active: z.boolean().optional(),
+});
+
+export const recurringFrequencySchema = z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"], {
+  message: "Frekuensi tidak dikenal.",
+});
+
+export const recurringInputSchema = z.object({
+  type: z.enum(["INCOME", "EXPENSE", "TRANSFER"], { message: "Jenis transaksi tidak dikenal." }),
+  amount: positiveMoneyText,
+  accountId: idText,
+  destinationAccountId: nullableText(64),
+  categoryId: nullableText(64),
+  merchant: nullableText(120),
+  counterparty: nullableText(120),
+  note: nullableText(1000),
+  frequency: recurringFrequencySchema,
+  dayOfMonth: z.coerce.number().int().min(1).max(31).optional().nullable(),
+  dayOfWeek: z.coerce.number().int().min(0).max(6).optional().nullable(),
+  startDate: localDateSchema.optional(),
+});
+
+export const recurringUpdateSchema = z.object({
+  amount: positiveMoneyText.optional(),
+  accountId: idText.optional(),
+  destinationAccountId: nullablePatchText(64),
+  categoryId: nullablePatchText(64),
+  merchant: nullablePatchText(120),
+  counterparty: nullablePatchText(120),
+  note: nullablePatchText(1000),
+  frequency: recurringFrequencySchema.optional(),
+  dayOfMonth: z.coerce.number().int().min(1).max(31).optional().nullable(),
+  dayOfWeek: z.coerce.number().int().min(0).max(6).optional().nullable(),
+  active: z.boolean().optional(),
+});
+
 export function firstIssue(error: z.ZodError): string {
   const issue = error.issues[0];
   if (issue === undefined) return "Data tidak valid.";

@@ -3,15 +3,20 @@
 import { quickAddSchema } from "@cashow/domain";
 import {
   createAccount,
+  createBudget,
   createCategory,
   createPlan,
   createPlanItem,
+  createRecurring,
   createSnapshot,
   createTransaction,
   createTransfer,
+  deleteBudget,
   deletePlanItem,
+  deleteRecurring,
   listAccounts,
   restoreTransaction,
+  runDueRecurring,
   setAccountArchived,
   setCategoryArchived,
   setPlanArchived,
@@ -20,10 +25,12 @@ import {
   softDeleteTransaction,
   unlockCheckpoint,
   updateAccount,
+  updateBudget,
   updateCategory,
   updatePlan,
   updatePlanItem,
   updateProfile,
+  updateRecurring,
   updateTransaction,
   verifyCheckpoint,
 } from "@cashow/services";
@@ -557,4 +564,149 @@ export async function createTransferAction(
 
   revalidateLedger();
   redirect(`/app/transactions/${result.value.id}`);
+}
+
+// ---------------------------------------------------------------------------
+// Budgets
+// ---------------------------------------------------------------------------
+
+export async function createBudgetAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const result = await createBudget(session.ctx, {
+    name: text(formData, "name"),
+    categoryId: text(formData, "categoryId"),
+    amount: text(formData, "amount"),
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath("/app/budgets");
+  return { status: "success" };
+}
+
+export async function updateBudgetAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "budgetId");
+  if (id === "") return failure("Anggaran tidak ditemukan.");
+
+  const result = await updateBudget(session.ctx, id, {
+    name: text(formData, "name"),
+    categoryId: text(formData, "categoryId"),
+    amount: text(formData, "amount"),
+    active:
+      formData.get("active") === "true"
+        ? true
+        : formData.get("active") === "false"
+          ? false
+          : undefined,
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath("/app/budgets");
+  return { status: "success" };
+}
+
+export async function deleteBudgetAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "budgetId");
+  if (id === "") return;
+
+  const result = await deleteBudget(session.ctx, id);
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  revalidatePath("/app/budgets");
+}
+
+// ---------------------------------------------------------------------------
+// Recurring templates
+// ---------------------------------------------------------------------------
+
+export async function createRecurringAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const result = await createRecurring(session.ctx, {
+    type: text(formData, "type"),
+    amount: text(formData, "amount"),
+    accountId: text(formData, "accountId"),
+    destinationAccountId: text(formData, "destinationAccountId"),
+    categoryId: text(formData, "categoryId"),
+    merchant: text(formData, "merchant"),
+    counterparty: text(formData, "counterparty"),
+    note: text(formData, "note"),
+    frequency: text(formData, "frequency"),
+    dayOfMonth: text(formData, "dayOfMonth"),
+    dayOfWeek: text(formData, "dayOfWeek"),
+    startDate: text(formData, "startDate"),
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath("/app/recurring");
+  return { status: "success" };
+}
+
+export async function updateRecurringAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "recurringId");
+  if (id === "") return failure("Template tidak ditemukan.");
+
+  const _result = await updateRecurring(session.ctx, id, {
+    amount: text(formData, "amount"),
+    accountId: text(formData, "accountId"),
+    destinationAccountId: text(formData, "destinationAccountId"),
+    categoryId: text(formData, "categoryId"),
+    merchant: text(formData, "merchant"),
+    counterparty: text(formData, "counterparty"),
+    note: text(formData, "note"),
+    frequency: (text(formData, "frequency") || undefined) as
+      | "DAILY"
+      | "WEEKLY"
+      | "MONTHLY"
+      | "YEARLY"
+      | undefined,
+    dayOfMonth: text(formData, "dayOfMonth"),
+    dayOfWeek: text(formData, "dayOfWeek"),
+    active:
+      formData.get("active") === "true"
+        ? true
+        : formData.get("active") === "false"
+          ? false
+          : undefined,
+  });
+  return { status: "success" };
+}
+
+export async function deleteRecurringAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "recurringId");
+  if (id === "") return;
+
+  const result = await deleteRecurring(session.ctx, id);
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  revalidatePath("/app/recurring");
+}
+
+export async function runRecurringAction(_formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const result = await runDueRecurring(session.ctx);
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  revalidatePath("/app/recurring");
+  revalidatePath("/app/transactions");
 }
