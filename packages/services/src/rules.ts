@@ -279,24 +279,23 @@ async function computeMetrics(ctx: UseCaseContext): Promise<Record<string, numbe
     if (t.type === "INCOME" && on >= monthStart) incomeMonth += amt;
   }
 
-  // Overdue plans
-  const plans = await ctx.db.orm.public.PaymentPlan.where({ userId: ctx.userId }).all();
+  // Overdue plan items (single pass; avoids N+1).
+  const items = await ctx.db.orm.public.PaymentPlanItem.where({ userId: ctx.userId }).all();
+  const allTxs = await ctx.db.orm.public.Transaction.where({ userId: ctx.userId }).all();
+  const receivedByItem = new Map<string, number>();
+  for (const tx of allTxs) {
+    if (tx.planItemId === null || tx.deletedAt !== null) continue;
+    receivedByItem.set(tx.planItemId, (receivedByItem.get(tx.planItemId) ?? 0) + Number(tx.amount));
+  }
   let overduePlanCount = 0;
-  for (const plan of plans) {
-    const items = await ctx.db.orm.public.PaymentPlanItem.where({ planId: plan.id }).all();
-    for (const item of items) {
-      const incomes = await ctx.db.orm.public.Transaction.where({ planItemId: item.id }).all();
-      const received = incomes.reduce(
-        (s, t) => s + (t.deletedAt === null ? Number(t.amount) : 0),
-        0,
-      );
-      if (
-        received < Number(item.expectedAmount) &&
-        item.dueOn !== null &&
-        String(item.dueOn) < today
-      ) {
-        overduePlanCount += 1;
-      }
+  for (const item of items) {
+    const received = receivedByItem.get(item.id) ?? 0;
+    if (
+      received < Number(item.expectedAmount) &&
+      item.dueOn !== null &&
+      String(item.dueOn) < today
+    ) {
+      overduePlanCount += 1;
     }
   }
 
