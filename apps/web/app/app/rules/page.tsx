@@ -1,6 +1,7 @@
 import { listRules } from "@cashow/services";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { ConfirmSubmitButton } from "@/components/ledger/confirm-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { createRuleFormAction, deleteRuleAction, runRulesAction } from "@/lib/actions/ledger";
@@ -74,15 +75,9 @@ async function Rules() {
                     </div>
                     <form action={deleteRuleAction}>
                       <input type="hidden" name="ruleId" value={rule.id} />
-                      <button
-                        type="submit"
-                        className="text-xs text-muted-foreground hover:text-destructive"
-                        onClick={(e) => {
-                          if (!window.confirm("Hapus aturan ini?")) e.preventDefault();
-                        }}
-                      >
+                      <ConfirmSubmitButton message="Hapus aturan ini?" variant="ghost" size="sm">
                         Hapus
-                      </button>
+                      </ConfirmSubmitButton>
                     </form>
                   </div>
                 </CardContent>
