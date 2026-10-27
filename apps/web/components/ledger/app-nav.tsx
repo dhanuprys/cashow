@@ -2,6 +2,7 @@
 
 import {
   ArrowLeftRight,
+  Bell,
   CalendarClock,
   Layers,
   LayoutDashboard,
@@ -21,6 +22,7 @@ const items = [
   { href: "/app/accounts", label: "Akun", icon: Wallet },
   { href: "/app/budgets", label: "Anggaran", icon: PiggyBank },
   { href: "/app/recurring", label: "Berulang", icon: CalendarClock },
+  { href: "/app/inbox", label: "Kotak masuk", icon: Bell },
   { href: "/app/categories", label: "Kategori", icon: Tags },
   { href: "/app/settings", label: "Pengaturan", icon: Settings },
 ] as const;
@@ -63,7 +65,7 @@ export function AppNav() {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
         aria-label="Navigasi utama"
       >
-        <ul className="grid grid-cols-8">
+        <ul className="grid grid-cols-9">
           {items.map((item) => {
             const active = isActive(pathname, item.href, "exact" in item && item.exact);
             const Icon = item.icon;

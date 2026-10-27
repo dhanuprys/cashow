@@ -44,5 +44,8 @@
   "trustedDependencies": [
     "sharp",
     "unrs-resolver"
-  ]
+  ],
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
 }

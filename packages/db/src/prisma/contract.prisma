@@ -109,6 +109,8 @@ model User {
   checkpoints         ReconciliationCheckpoint[]
   budgets             Budget[]
   recurringTemplates   RecurringTemplate[]
+  channelEndpoints    ChannelEndpoint[]
+  notifications       Notification[]
 }
 
 // ---------------------------------------------------------------------------
@@ -510,6 +512,70 @@ model RecurringTemplate {
   @@check(expression: sql`"amount" > 0`, name: "recurring_amount_positive")
   @@check(expression: sql`("type" = 'TRANSFER') = ("destinationAccountId" IS NOT NULL)`, name: "recurring_transfer_destination_consistency")
   @@check(expression: sql`"type" <> 'TRANSFER' OR "destinationAccountId" <> "accountId"`, name: "recurring_transfer_accounts_differ")
+}
+
+// ---------------------------------------------------------------------------
+// Notifications and channels (Phase 4)
+// ---------------------------------------------------------------------------
+
+model ChannelEndpoint {
+  id          String  @id @onCreate(uuid(7))
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // PUSH, NTFY, TELEGRAM, EMAIL
+  kind        String
+  // Push endpoint URL or channel address.
+  endpoint    String
+  // VAPID push keys (base64url), null for non-push channels.
+  p256dh     String?
+  auth        String?
+  label       String?
+  active      Boolean @default(true)
+  failureCount Int    @default(0)
+  lastUsedAt  TimestamptzString?
+  createdAt   TimestamptzString @onCreate(now())
+  updatedAt   TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  deliveries  NotificationDelivery[]
+
+  @@index([userId, kind])
+  @@index([userId, active])
+}
+
+model Notification {
+  id         String  @id @onCreate(uuid(7))
+  userId     String
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dedupeKey  String?
+  title      String
+  body       String
+  severity   String  @default("INFO")
+  url        String?
+  readAt     TimestamptzString?
+  snoozedUntil TimestamptzString?
+  createdAt  TimestamptzString @onCreate(now())
+
+  deliveries NotificationDelivery[]
+
+  @@index([userId, createdAt])
+  @@unique([userId, dedupeKey])
+}
+
+model NotificationDelivery {
+  id               String  @id @onCreate(uuid(7))
+  notificationId   String
+  notification     Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  channelEndpointId String?
+  channelEndpoint  ChannelEndpoint? @relation(fields: [channelEndpointId], references: [id], onDelete: SetNull)
+  channel          String
+  status           String  @default("PENDING")
+  attempts         Int     @default(0)
+  lastError        String?
+  deliveredAt      TimestamptzString?
+  createdAt        TimestamptzString @onCreate(now())
+
+  @@index([notificationId])
+  @@index([status, createdAt])
 }
 
 // ---------------------------------------------------------------------------

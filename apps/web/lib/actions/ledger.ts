@@ -15,8 +15,10 @@ import {
   deletePlanItem,
   deleteRecurring,
   listAccounts,
+  markNotificationRead,
   restoreTransaction,
   runDueRecurring,
+  savePushSubscription,
   setAccountArchived,
   setCategoryArchived,
   setPlanArchived,
@@ -709,4 +711,29 @@ export async function runRecurringAction(_formData: FormData): Promise<void> {
   revalidateLedger();
   revalidatePath("/app/recurring");
   revalidatePath("/app/transactions");
+}
+
+export async function subscribePushAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const result = await savePushSubscription(session.ctx, {
+    endpoint: text(formData, "endpoint"),
+    p256dh: text(formData, "p256dh"),
+    auth: text(formData, "auth"),
+    label: text(formData, "label"),
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidatePath("/app/inbox");
+  return { status: "success" };
+}
+
+export async function markNotificationReadAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "notificationId");
+  if (id === "") return;
+  await markNotificationRead(session.ctx, id);
+  revalidatePath("/app/inbox");
 }

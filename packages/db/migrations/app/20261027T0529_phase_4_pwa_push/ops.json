@@ -1,0 +1,789 @@
+[
+  {
+    "id": "table.ChannelEndpoint",
+    "label": "Create table \"ChannelEndpoint\"",
+    "summary": "Creates table \"ChannelEndpoint\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "ChannelEndpoint"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"ChannelEndpoint\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChannelEndpoint\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"ChannelEndpoint\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"ChannelEndpoint\"",
+        "sql": "CREATE TABLE \"public\".\"ChannelEndpoint\" (\n  \"active\" bool DEFAULT true NOT NULL,\n  \"auth\" text,\n  \"createdAt\" timestamptz NOT NULL,\n  \"endpoint\" text NOT NULL,\n  \"failureCount\" int4 DEFAULT 0 NOT NULL,\n  \"id\" text NOT NULL,\n  \"kind\" text NOT NULL,\n  \"label\" text,\n  \"lastUsedAt\" timestamptz,\n  \"p256dh\" text,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"ChannelEndpoint\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"ChannelEndpoint\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"ChannelEndpoint\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.Notification",
+    "label": "Create table \"Notification\"",
+    "summary": "Creates table \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Notification\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"Notification\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Notification\"",
+        "sql": "CREATE TABLE \"public\".\"Notification\" (\n  \"body\" text NOT NULL,\n  \"createdAt\" timestamptz NOT NULL,\n  \"dedupeKey\" text,\n  \"id\" text NOT NULL,\n  \"readAt\" timestamptz,\n  \"severity\" text DEFAULT 'INFO' NOT NULL,\n  \"snoozedUntil\" timestamptz,\n  \"title\" text NOT NULL,\n  \"url\" text,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Notification\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"Notification\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"Notification\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.NotificationDelivery",
+    "label": "Create table \"NotificationDelivery\"",
+    "summary": "Creates table \"NotificationDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "NotificationDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"NotificationDelivery\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"NotificationDelivery\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"NotificationDelivery\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"NotificationDelivery\"",
+        "sql": "CREATE TABLE \"public\".\"NotificationDelivery\" (\n  \"attempts\" int4 DEFAULT 0 NOT NULL,\n  \"channel\" text NOT NULL,\n  \"channelEndpointId\" text,\n  \"createdAt\" timestamptz NOT NULL,\n  \"deliveredAt\" timestamptz,\n  \"id\" text NOT NULL,\n  \"lastError\" text,\n  \"notificationId\" text NOT NULL,\n  \"status\" text DEFAULT 'PENDING' NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"NotificationDelivery\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"NotificationDelivery\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"NotificationDelivery\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "unique.Notification.Notification_userId_dedupeKey_key",
+    "label": "Add unique constraint on \"Notification\" (userId, dedupeKey)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Notification_userId_dedupeKey_key",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Notification_userId_dedupeKey_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Notification_userId_dedupeKey_key",
+          "public",
+          "\"public\".\"Notification\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"Notification_userId_dedupeKey_key\" on \"Notification\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Notification_userId_dedupeKey_key\"",
+        "sql": "ALTER TABLE \"public\".\"Notification\" ADD CONSTRAINT \"Notification_userId_dedupeKey_key\" UNIQUE (\"userId\", \"dedupeKey\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify unique constraint \"Notification_userId_dedupeKey_key\" exists on (userId, dedupeKey)",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb)) AS \"result\"",
+        "params": [
+          "Notification_userId_dedupeKey_key",
+          "public",
+          "\"public\".\"Notification\"",
+          "u",
+          "[\"userId\",\"dedupeKey\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChannelEndpoint.ChannelEndpoint_userId_active_idx_749baf02",
+    "label": "Create index \"ChannelEndpoint_userId_active_idx_749baf02\" on \"ChannelEndpoint\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChannelEndpoint_userId_active_idx_749baf02",
+        "table": "ChannelEndpoint"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChannelEndpoint_userId_active_idx_749baf02\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChannelEndpoint_userId_active_idx_749baf02\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChannelEndpoint_userId_active_idx_749baf02\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChannelEndpoint_userId_active_idx_749baf02\"",
+        "sql": "CREATE INDEX \"ChannelEndpoint_userId_active_idx_749baf02\" ON \"public\".\"ChannelEndpoint\" (\"userId\", \"active\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChannelEndpoint_userId_active_idx_749baf02\" exists on \"ChannelEndpoint\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChannelEndpoint_userId_active_idx_749baf02\"",
+          "i",
+          "I",
+          "\"public\".\"ChannelEndpoint\"",
+          "btree",
+          "[\"userId\",\"active\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChannelEndpoint.ChannelEndpoint_userId_idx_a489d58a",
+    "label": "Create index \"ChannelEndpoint_userId_idx_a489d58a\" on \"ChannelEndpoint\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChannelEndpoint_userId_idx_a489d58a",
+        "table": "ChannelEndpoint"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChannelEndpoint_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChannelEndpoint_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChannelEndpoint_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChannelEndpoint_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"ChannelEndpoint_userId_idx_a489d58a\" ON \"public\".\"ChannelEndpoint\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChannelEndpoint_userId_idx_a489d58a\" exists on \"ChannelEndpoint\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChannelEndpoint_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"ChannelEndpoint\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChannelEndpoint.ChannelEndpoint_userId_kind_idx_ed3360ff",
+    "label": "Create index \"ChannelEndpoint_userId_kind_idx_ed3360ff\" on \"ChannelEndpoint\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChannelEndpoint_userId_kind_idx_ed3360ff",
+        "table": "ChannelEndpoint"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChannelEndpoint_userId_kind_idx_ed3360ff\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChannelEndpoint_userId_kind_idx_ed3360ff\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChannelEndpoint_userId_kind_idx_ed3360ff\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChannelEndpoint_userId_kind_idx_ed3360ff\"",
+        "sql": "CREATE INDEX \"ChannelEndpoint_userId_kind_idx_ed3360ff\" ON \"public\".\"ChannelEndpoint\" (\"userId\", \"kind\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChannelEndpoint_userId_kind_idx_ed3360ff\" exists on \"ChannelEndpoint\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChannelEndpoint_userId_kind_idx_ed3360ff\"",
+          "i",
+          "I",
+          "\"public\".\"ChannelEndpoint\"",
+          "btree",
+          "[\"userId\",\"kind\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Notification.Notification_userId_createdAt_idx_f726f04a",
+    "label": "Create index \"Notification_userId_createdAt_idx_f726f04a\" on \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Notification_userId_createdAt_idx_f726f04a",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Notification_userId_createdAt_idx_f726f04a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_userId_createdAt_idx_f726f04a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Notification_userId_createdAt_idx_f726f04a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Notification_userId_createdAt_idx_f726f04a\"",
+        "sql": "CREATE INDEX \"Notification_userId_createdAt_idx_f726f04a\" ON \"public\".\"Notification\" (\"userId\", \"createdAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Notification_userId_createdAt_idx_f726f04a\" exists on \"Notification\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_userId_createdAt_idx_f726f04a\"",
+          "i",
+          "I",
+          "\"public\".\"Notification\"",
+          "btree",
+          "[\"userId\",\"createdAt\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Notification.Notification_userId_idx_a489d58a",
+    "label": "Create index \"Notification_userId_idx_a489d58a\" on \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Notification_userId_idx_a489d58a",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Notification_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Notification_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Notification_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"Notification_userId_idx_a489d58a\" ON \"public\".\"Notification\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Notification_userId_idx_a489d58a\" exists on \"Notification\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Notification_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"Notification\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.NotificationDelivery.NotificationDelivery_channelEndpointId_idx_a7d98e2f",
+    "label": "Create index \"NotificationDelivery_channelEndpointId_idx_a7d98e2f\" on \"NotificationDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "NotificationDelivery_channelEndpointId_idx_a7d98e2f",
+        "table": "NotificationDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"NotificationDelivery_channelEndpointId_idx_a7d98e2f\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"NotificationDelivery_channelEndpointId_idx_a7d98e2f\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"NotificationDelivery_channelEndpointId_idx_a7d98e2f\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"NotificationDelivery_channelEndpointId_idx_a7d98e2f\"",
+        "sql": "CREATE INDEX \"NotificationDelivery_channelEndpointId_idx_a7d98e2f\" ON \"public\".\"NotificationDelivery\" (\"channelEndpointId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"NotificationDelivery_channelEndpointId_idx_a7d98e2f\" exists on \"NotificationDelivery\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"NotificationDelivery_channelEndpointId_idx_a7d98e2f\"",
+          "i",
+          "I",
+          "\"public\".\"NotificationDelivery\"",
+          "btree",
+          "[\"channelEndpointId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.NotificationDelivery.NotificationDelivery_notificationId_idx_adfe2654",
+    "label": "Create index \"NotificationDelivery_notificationId_idx_adfe2654\" on \"NotificationDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "NotificationDelivery_notificationId_idx_adfe2654",
+        "table": "NotificationDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"NotificationDelivery_notificationId_idx_adfe2654\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"NotificationDelivery_notificationId_idx_adfe2654\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"NotificationDelivery_notificationId_idx_adfe2654\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"NotificationDelivery_notificationId_idx_adfe2654\"",
+        "sql": "CREATE INDEX \"NotificationDelivery_notificationId_idx_adfe2654\" ON \"public\".\"NotificationDelivery\" (\"notificationId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"NotificationDelivery_notificationId_idx_adfe2654\" exists on \"NotificationDelivery\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"NotificationDelivery_notificationId_idx_adfe2654\"",
+          "i",
+          "I",
+          "\"public\".\"NotificationDelivery\"",
+          "btree",
+          "[\"notificationId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.NotificationDelivery.NotificationDelivery_status_createdAt_idx_58610442",
+    "label": "Create index \"NotificationDelivery_status_createdAt_idx_58610442\" on \"NotificationDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "NotificationDelivery_status_createdAt_idx_58610442",
+        "table": "NotificationDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"NotificationDelivery_status_createdAt_idx_58610442\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"NotificationDelivery_status_createdAt_idx_58610442\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"NotificationDelivery_status_createdAt_idx_58610442\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"NotificationDelivery_status_createdAt_idx_58610442\"",
+        "sql": "CREATE INDEX \"NotificationDelivery_status_createdAt_idx_58610442\" ON \"public\".\"NotificationDelivery\" (\"status\", \"createdAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"NotificationDelivery_status_createdAt_idx_58610442\" exists on \"NotificationDelivery\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"NotificationDelivery_status_createdAt_idx_58610442\"",
+          "i",
+          "I",
+          "\"public\".\"NotificationDelivery\"",
+          "btree",
+          "[\"status\",\"createdAt\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ChannelEndpoint.ChannelEndpoint_userId_fkey",
+    "label": "Add foreign key \"ChannelEndpoint_userId_fkey\" on \"ChannelEndpoint\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ChannelEndpoint_userId_fkey",
+        "table": "ChannelEndpoint"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ChannelEndpoint_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ChannelEndpoint_userId_fkey",
+          "public",
+          "\"public\".\"ChannelEndpoint\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"ChannelEndpoint_userId_fkey\" on \"ChannelEndpoint\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ChannelEndpoint_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ChannelEndpoint\"\nADD CONSTRAINT \"ChannelEndpoint_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ChannelEndpoint_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "ChannelEndpoint_userId_fkey",
+          "public",
+          "\"public\".\"ChannelEndpoint\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Notification.Notification_userId_fkey",
+    "label": "Add foreign key \"Notification_userId_fkey\" on \"Notification\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Notification_userId_fkey",
+        "table": "Notification"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Notification_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Notification_userId_fkey",
+          "public",
+          "\"public\".\"Notification\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"Notification_userId_fkey\" on \"Notification\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Notification_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Notification\"\nADD CONSTRAINT \"Notification_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Notification_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "Notification_userId_fkey",
+          "public",
+          "\"public\".\"Notification\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.NotificationDelivery.NotificationDelivery_notificationId_fkey",
+    "label": "Add foreign key \"NotificationDelivery_notificationId_fkey\" on \"NotificationDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "NotificationDelivery_notificationId_fkey",
+        "table": "NotificationDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"NotificationDelivery_notificationId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "NotificationDelivery_notificationId_fkey",
+          "public",
+          "\"public\".\"NotificationDelivery\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"NotificationDelivery_notificationId_fkey\" on \"NotificationDelivery\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"NotificationDelivery_notificationId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"NotificationDelivery\"\nADD CONSTRAINT \"NotificationDelivery_notificationId_fkey\"\nFOREIGN KEY (\"notificationId\")\nREFERENCES \"public\".\"Notification\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"NotificationDelivery_notificationId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "NotificationDelivery_notificationId_fkey",
+          "public",
+          "\"public\".\"NotificationDelivery\"",
+          "f",
+          "[\"notificationId\"]",
+          "\"public\".\"Notification\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.NotificationDelivery.NotificationDelivery_channelEndpointId_fkey",
+    "label": "Add foreign key \"NotificationDelivery_channelEndpointId_fkey\" on \"NotificationDelivery\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "NotificationDelivery_channelEndpointId_fkey",
+        "table": "NotificationDelivery"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"NotificationDelivery_channelEndpointId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "NotificationDelivery_channelEndpointId_fkey",
+          "public",
+          "\"public\".\"NotificationDelivery\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"NotificationDelivery_channelEndpointId_fkey\" on \"NotificationDelivery\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"NotificationDelivery_channelEndpointId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"NotificationDelivery\"\nADD CONSTRAINT \"NotificationDelivery_channelEndpointId_fkey\"\nFOREIGN KEY (\"channelEndpointId\")\nREFERENCES \"public\".\"ChannelEndpoint\" (\"id\")\nON DELETE SET NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"NotificationDelivery_channelEndpointId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "NotificationDelivery_channelEndpointId_fkey",
+          "public",
+          "\"public\".\"NotificationDelivery\"",
+          "f",
+          "[\"channelEndpointId\"]",
+          "\"public\".\"ChannelEndpoint\"",
+          "[\"id\"]",
+          "n",
+          "a"
+        ]
+      }
+    ]
+  }
+]

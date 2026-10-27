@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import { ServiceWorkerRegister } from "@/components/ledger/sw-register";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -20,6 +21,7 @@ export const metadata: Metadata = {
   description:
     "Pencatat keuangan pribadi yang bisa di-host sendiri: uang masuk, pengeluaran, dan alokasi di antaranya.",
   applicationName: "Cashow",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -35,7 +37,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         inter.variable,
       )}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <ServiceWorkerRegister />
+      </body>
     </html>
   );
 }

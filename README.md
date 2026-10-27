@@ -87,7 +87,7 @@ repository for a real deployment; Compose uses `/app/data/uploads` on the shared
 | `bun run test`                     | `bun test` (domain unit tests)                                    |
 | `bun run test:ledger`              | Phase 1 gate: allocation rules enforced by the DB                 |
 | `bun run test:chains`              | Phase 2 gate: payment plans, snapshots, reconciliation, transfers |
-| `bun run test:summary`             | Phase 3 gate: summary totals, budgets, recurring templates |
+| `bun run test:summary`             | Phase 3 gate: summary totals, budgets, recurring templates        |
 | `bun run smoke`                    | write/read a `BigInt` row through the typed client                |
 | `bun run seed`                     | seed 100,000 transactions over three years                        |
 | `bun run bench`                    | check the §8 read/write budgets on that seed                      |
@@ -138,8 +138,8 @@ After setup, `/app` is the daily surface:
 | `/app/accounts`                       | Accounts, opening balances, snapshots and reconciliation (balance is derived) |
 | `/app/categories`                     | One-level categories, separate income/expense trees                           |
 | `/app/plans`                          | Payment plans: steps, derived status, partial payments, progress              |
-| `/app/budgets`                        | Monthly budgets with usage and projection                                   |
-| `/app/recurring`                      | Recurring transaction templates and due-run                                  |
+| `/app/budgets`                        | Monthly budgets with usage and projection                                     |
+| `/app/recurring`                      | Recurring transaction templates and due-run                                   |
 | `/app/transactions/new?type=TRANSFER` | Transfer between two accounts with an optional fee                            |
 | `/app/settings`                       | Profile, timezone, week/budget start, passkeys, audit, outbox                 |
 

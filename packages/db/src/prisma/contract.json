@@ -36,6 +36,18 @@
       "model": "Category",
       "namespace": "public"
     },
+    "ChannelEndpoint": {
+      "model": "ChannelEndpoint",
+      "namespace": "public"
+    },
+    "Notification": {
+      "model": "Notification",
+      "namespace": "public"
+    },
+    "NotificationDelivery": {
+      "model": "NotificationDelivery",
+      "namespace": "public"
+    },
     "OutboxEvent": {
       "model": "OutboxEvent",
       "namespace": "public"
@@ -1408,6 +1420,446 @@
               },
               "namespaceId": "public",
               "table": "Category"
+            }
+          },
+          "ChannelEndpoint": {
+            "fields": {
+              "active": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "auth": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "endpoint": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "failureCount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "kind": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "label": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastUsedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "p256dh": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "deliveries": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "channelEndpointId"
+                  ]
+                },
+                "to": {
+                  "model": "NotificationDelivery",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "active": {
+                  "column": "active"
+                },
+                "auth": {
+                  "column": "auth"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "endpoint": {
+                  "column": "endpoint"
+                },
+                "failureCount": {
+                  "column": "failureCount"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "kind": {
+                  "column": "kind"
+                },
+                "label": {
+                  "column": "label"
+                },
+                "lastUsedAt": {
+                  "column": "lastUsedAt"
+                },
+                "p256dh": {
+                  "column": "p256dh"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "ChannelEndpoint"
+            }
+          },
+          "Notification": {
+            "fields": {
+              "body": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "dedupeKey": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "readAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "severity": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "snoozedUntil": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "title": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "url": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "deliveries": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "notificationId"
+                  ]
+                },
+                "to": {
+                  "model": "NotificationDelivery",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "body": {
+                  "column": "body"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "dedupeKey": {
+                  "column": "dedupeKey"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "readAt": {
+                  "column": "readAt"
+                },
+                "severity": {
+                  "column": "severity"
+                },
+                "snoozedUntil": {
+                  "column": "snoozedUntil"
+                },
+                "title": {
+                  "column": "title"
+                },
+                "url": {
+                  "column": "url"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Notification"
+            }
+          },
+          "NotificationDelivery": {
+            "fields": {
+              "attempts": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "channel": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "channelEndpointId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "deliveredAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastError": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "notificationId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "channelEndpoint": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "channelEndpointId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "ChannelEndpoint",
+                  "namespace": "public"
+                }
+              },
+              "notification": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "notificationId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Notification",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "attempts": {
+                  "column": "attempts"
+                },
+                "channel": {
+                  "column": "channel"
+                },
+                "channelEndpointId": {
+                  "column": "channelEndpointId"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "deliveredAt": {
+                  "column": "deliveredAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "lastError": {
+                  "column": "lastError"
+                },
+                "notificationId": {
+                  "column": "notificationId"
+                },
+                "status": {
+                  "column": "status"
+                }
+              },
+              "namespaceId": "public",
+              "table": "NotificationDelivery"
             }
           },
           "OutboxEvent": {
@@ -3021,6 +3473,21 @@
                   "namespace": "public"
                 }
               },
+              "channelEndpoints": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "ChannelEndpoint",
+                  "namespace": "public"
+                }
+              },
               "checkpoints": {
                 "cardinality": "1:N",
                 "on": {
@@ -3033,6 +3500,21 @@
                 },
                 "to": {
                   "model": "ReconciliationCheckpoint",
+                  "namespace": "public"
+                }
+              },
+              "notifications": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "Notification",
                   "namespace": "public"
                 }
               },
@@ -4232,6 +4714,378 @@
                   ]
                 }
               ]
+            },
+            "ChannelEndpoint": {
+              "columns": {
+                "active": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nullable": false
+                },
+                "auth": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "endpoint": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "failureCount": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "kind": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "label": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "lastUsedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true
+                },
+                "p256dh": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "ChannelEndpoint_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ChannelEndpoint"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "userId",
+                    "active"
+                  ],
+                  "name": "ChannelEndpoint_userId_active_idx_749baf02",
+                  "prefix": "ChannelEndpoint_userId_active_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "ChannelEndpoint_userId_idx_a489d58a",
+                  "prefix": "ChannelEndpoint_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "kind"
+                  ],
+                  "name": "ChannelEndpoint_userId_kind_idx_ed3360ff",
+                  "prefix": "ChannelEndpoint_userId_kind_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "Notification": {
+              "columns": {
+                "body": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "dedupeKey": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "readAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true
+                },
+                "severity": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "INFO"
+                  },
+                  "nullable": false
+                },
+                "snoozedUntil": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true
+                },
+                "title": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "url": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "Notification_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Notification"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "userId",
+                    "createdAt"
+                  ],
+                  "name": "Notification_userId_createdAt_idx_f726f04a",
+                  "prefix": "Notification_userId_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "Notification_userId_idx_a489d58a",
+                  "prefix": "Notification_userId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "userId",
+                    "dedupeKey"
+                  ]
+                }
+              ]
+            },
+            "NotificationDelivery": {
+              "columns": {
+                "attempts": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "channel": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "channelEndpointId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "deliveredAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "lastError": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "notificationId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "PENDING"
+                  },
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "NotificationDelivery_notificationId_idx_adfe2654"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "notificationId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "NotificationDelivery"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Notification"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "NotificationDelivery_channelEndpointId_idx_a7d98e2f"
+                  },
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "channelEndpointId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "NotificationDelivery"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ChannelEndpoint"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "channelEndpointId"
+                  ],
+                  "name": "NotificationDelivery_channelEndpointId_idx_a7d98e2f",
+                  "prefix": "NotificationDelivery_channelEndpointId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "notificationId"
+                  ],
+                  "name": "NotificationDelivery_notificationId_idx_adfe2654",
+                  "prefix": "NotificationDelivery_notificationId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status",
+                    "createdAt"
+                  ],
+                  "name": "NotificationDelivery_status_createdAt_idx_58610442",
+                  "prefix": "NotificationDelivery_status_createdAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
             },
             "OutboxEvent": {
               "checks": [
@@ -5750,10 +6604,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "72e527792ffb7e01c253d8121731ee28e30890f1ea2d4c597871e07c9a48859b"
+    "storageHash": "0fe8759d4f7362e94a6d87e27b1019996c36b7564118a226a1b529c4bff039cc"
   },
   "execution": {
-    "executionHash": "07701fca7a971854ebb72019f3a87d3ea1c470a94dcfbf4ca8f776c4e6c87683",
+    "executionHash": "d89b9f8ed7a05b18397693f2cf26f6cfac56b936f142f1bf5315ba9e09b9d792",
     "mutations": {
       "defaults": [
         {
@@ -5974,6 +6828,87 @@
           "ref": {
             "entry": "Category",
             "field": "updatedAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "ChannelEndpoint",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "ChannelEndpoint",
+            "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "ChannelEndpoint",
+            "field": "updatedAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Notification",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Notification",
+            "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "NotificationDelivery",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "NotificationDelivery",
+            "field": "id",
             "namespace": "public"
           }
         },

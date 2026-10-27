@@ -15,6 +15,7 @@ export * from "./context";
 export * from "./defaults";
 export * from "./errors";
 export * from "./json";
+export * from "./notifications";
 export * from "./outbox";
 export * from "./plans";
 export * from "./recurring";
