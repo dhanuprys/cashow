@@ -239,10 +239,11 @@ async function main(): Promise<void> {
     : 0;
   equal(Math.round(deltaMinutes), 60, "snooze is one hour from ctx.now");
 
-  // 8. Re-running the rule with the same state is edge-triggered: no duplicate.
+  // 8. Re-running the rule with the same state is edge-triggered: the
+  // condition is still true, but no second notification may be produced.
   const duplicate = await runRules(ctx, "transaction");
   assert.ok(duplicate.ok, "runRules");
-  equal(duplicate.value, 1, "edge-triggered no duplicate");
+  equal(duplicate.value, 0, "edge-triggered no duplicate");
 
   await db.orm.public.User.where({ id: userId }).deleteAll();
 
