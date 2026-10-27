@@ -1,4 +1,4 @@
-import { type Money, subMoneyNonNegative } from "./money.js";
+import { type Money, subMoneyNonNegative } from "./money";
 
 /** A calendar date in the user's timezone, stored as `YYYY-MM-DD`. */
 export type LocalDate = string;

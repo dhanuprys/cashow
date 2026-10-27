@@ -1,4 +1,4 @@
-import type { Money } from "./money.js";
+import type { Money } from "./money";
 
 /**
  * Allocation: the amount an expense draws from an income (section 2).

@@ -57,6 +57,12 @@ enum OutboxStatus {
   FAILED    = "FAILED"
 }
 
+enum AuthChallengePurpose {
+  @@type("pg/text@1")
+  REGISTRATION   = "REGISTRATION"
+  AUTHENTICATION = "AUTHENTICATION"
+}
+
 // ---------------------------------------------------------------------------
 // Core entities
 // ---------------------------------------------------------------------------
@@ -79,6 +85,79 @@ model User {
   accounts     Account[]
   categories   Category[]
   transactions Transaction[]
+  passkeys     Passkey[]
+  sessions     Session[]
+}
+
+// ---------------------------------------------------------------------------
+// Auth: passkeys, sessions, and short-lived WebAuthn challenges
+// ---------------------------------------------------------------------------
+//
+// Passkeys are the only sign-in method. There is no password column and no
+// public sign-up: the first user is created by the one-time `/setup` flow, and
+// the schema stays multi-user ready.
+
+model Passkey {
+  id           String  @id @onCreate(uuid(7))
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Credential ID from the authenticator, base64url (unique per credential).
+  credentialId String  @unique
+  // COSE public key, base64url. Kept as text so the contract needs no byte
+  // scalar; it is decoded only when verifying an assertion.
+  publicKey    String
+  // Signature counter; `BigInt` because authenticators report an unsigned
+  // 32-bit value that can exceed the 32-bit signed range.
+  counter      BigInt  @default(0)
+  // Comma-separated WebAuthn transports (`internal`, `hybrid`, …).
+  transports   String?
+  // "SingleDevice" or "MultiDevice" (informational, for the passkey list).
+  deviceType   String?
+  backedUp     Boolean @default(false)
+  // User-visible label, e.g. "iPhone", set at registration.
+  name         String?
+  createdAt    TimestamptzString @onCreate(now())
+  lastUsedAt   TimestamptzString?
+  // Revoked credentials are kept for the audit trail, never accepted again.
+  revokedAt    TimestamptzString?
+
+  @@index([userId])
+}
+
+model Session {
+  id         String  @id @onCreate(uuid(7))
+  userId     String
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // SHA-256 of the random cookie token; the token itself is never stored.
+  tokenHash  String  @unique
+  expiresAt  TimestamptzString
+  createdAt  TimestamptzString @onCreate(now())
+  lastUsedAt TimestamptzString @onCreate(now())
+  ipAddress  String?
+  userAgent  String?
+  revokedAt  TimestamptzString?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuthChallenge {
+  id        String               @id @onCreate(uuid(7))
+  purpose   AuthChallengePurpose
+  // The base64url challenge signed by the authenticator.
+  challenge String               @unique
+  // The account this ceremony belongs to: an existing user for sign-in or
+  // "add passkey", or the id the first owner will receive at registration.
+  // Deliberately not an FK — a pending registration has no User row yet.
+  subjectId String?
+  // Registration only: { email?, name? } to write when verification succeeds.
+  payload   Json?
+  expiresAt TimestamptzString
+  // Single-use. Set atomically with the condition `consumedAt IS NULL`.
+  consumedAt TimestamptzString?
+  createdAt  TimestamptzString @onCreate(now())
+
+  @@index([expiresAt])
 }
 
 model Account {

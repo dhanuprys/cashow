@@ -5,6 +5,9 @@
  *
  * Proves the contract, emitted types, runtime, and the `cashow` database all
  * line up (the "connect → write → read" arc from the Prisma 8 quickstart).
+ *
+ * The rows are removed afterwards: creating a user closes the first-run
+ * `/setup` gate, and a smoke test must not change the app's state.
  */
 import { db } from "@cashow/db";
 
@@ -16,34 +19,38 @@ const created = await db.orm.public.User.create({
   timezone: "Asia/Jakarta",
 });
 
-const found = await db.orm.public.User.where({ id: created.id }).all().firstOrThrow();
+try {
+  const found = await db.orm.public.User.where({ id: created.id }).all().firstOrThrow();
 
-// BigInt money round-trip: a whole-rupiah amount as a 64-bit integer.
-const account = await db.orm.public.Account.create({
-  userId: found.id,
-  name: "Bank Gopay",
-  type: "EWALLET",
-  openingBalance: 1_500_000n,
-});
+  // BigInt money round-trip: a whole-rupiah amount as a 64-bit integer.
+  const account = await db.orm.public.Account.create({
+    userId: found.id,
+    name: "Bank Gopay",
+    type: "EWALLET",
+    openingBalance: 1_500_000n,
+  });
 
-const readBack = await db.orm.public.Account.where({ id: account.id }).all().firstOrThrow();
+  const readBack = await db.orm.public.Account.where({ id: account.id }).all().firstOrThrow();
 
-if (readBack.openingBalance !== 1_500_000n) {
-  throw new Error(`openingBalance round-trip mismatch: ${readBack.openingBalance}`);
+  if (readBack.openingBalance !== 1_500_000n) {
+    throw new Error(`openingBalance round-trip mismatch: ${readBack.openingBalance}`);
+  }
+
+  console.log(
+    JSON.stringify(
+      {
+        level: "info",
+        msg: "db smoke ok",
+        user: found.email,
+        account: readBack.name,
+        openingBalance: String(readBack.openingBalance),
+      },
+      null,
+      2,
+    ),
+  );
+} finally {
+  // Cascades remove the account and anything else this run created.
+  await db.orm.public.User.where({ id: created.id }).delete();
+  await db.close();
 }
-
-console.log(
-  JSON.stringify(
-    {
-      level: "info",
-      msg: "db smoke ok",
-      user: found.email,
-      account: readBack.name,
-      openingBalance: String(readBack.openingBalance),
-    },
-    null,
-    2,
-  ),
-);
-
-await db.close();

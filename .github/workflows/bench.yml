@@ -1,0 +1,72 @@
+name: Benchmark
+
+# Plan §8: seed ~100,000 transactions over three years and run the read/write
+# budgets nightly, so a regression shows up before it is felt. The job fails
+# when a p95 misses its budget or an allocation invariant is violated.
+
+on:
+  schedule:
+    # 17:00 UTC — 00:00 WIB.
+    - cron: "0 17 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: bench
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    name: 100k row budgets
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: default
+          POSTGRES_PASSWORD: default
+          POSTGRES_DB: cashow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U default -d cashow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://default:default@localhost:5432/cashow
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: Apply migrations
+        run: bun run db:migrate
+
+      - name: Verify schema against the contract
+        run: bun run db:verify
+
+      - name: Seed 100,000 transactions
+        run: bun run seed
+
+      - name: Benchmark
+        run: |
+          set -o pipefail
+          bun run bench | tee bench.json
+
+      - name: Upload measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark
+          path: bench.json
+          if-no-files-found: ignore

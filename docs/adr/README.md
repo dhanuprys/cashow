@@ -12,3 +12,5 @@ decision changes; do not rewrite history silently.
 | [0004](0004-biome.md)                        | Biome for lint and format                         | Accepted |
 | [0005](0005-self-hosted-compose-topology.md) | Single-host Docker Compose topology               | Accepted |
 | [0006](0006-access-option.md)                | Access option for the server                      | Proposed |
+| [0007](0007-passkey-auth.md)                 | Passkey authentication without an auth framework  | Accepted |
+| [0008](0008-compat-probes.md)                | Token-gated framework compatibility probes        | Accepted |

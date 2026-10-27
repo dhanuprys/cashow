@@ -66,6 +66,21 @@ jobs:
       - name: Database smoke test (BigInt round-trip)
         run: bun run smoke
 
+      # Plan §6: Server Actions, a streaming route and proxy.ts on Bun. The
+      # probe routes answer 404 unless COMPAT_TOKEN is set, so this step also
+      # asserts that a normal deployment exposes no probe surface.
+      - name: Framework compatibility gates (Server Action, streaming, abort)
+        env:
+          COMPAT_TOKEN: ci-compat-token-0123456789
+          NODE_ENV: production
+        run: |
+          bun run start > /tmp/cashow-web.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health > /dev/null; then break; fi
+            sleep 1
+          done
+          bun run smoke:compat
+
   docker:
     name: Docker images
     runs-on: ubuntu-latest

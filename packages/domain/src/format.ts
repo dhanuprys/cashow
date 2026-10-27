@@ -1,4 +1,4 @@
-import type { Money } from "./money.js";
+import type { Money } from "./money";
 
 const idr = new Intl.NumberFormat("id-ID", {
   style: "currency",

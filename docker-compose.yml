@@ -22,6 +22,11 @@ x-app-env: &app-env
   DATABASE_URL: postgresql://${POSTGRES_USER:-cashow}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-cashow}
   WEB_ORIGIN: ${WEB_ORIGIN:-https://localhost}
   AUTH_SECRET: ${AUTH_SECRET:-}
+  SETUP_TOKEN: ${SETUP_TOKEN:-}
+  WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
+  WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Cashow}
+  # Empty by default: the compatibility probes answer 404 unless CI sets it.
+  COMPAT_TOKEN: ${COMPAT_TOKEN:-}
   DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
   DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
   DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}

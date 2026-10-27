@@ -9,7 +9,7 @@ import {
   wouldExceedExpense,
   wouldExceedIncome,
   ZERO,
-} from "./index.js";
+} from "./index";
 
 describe("parseMoney", () => {
   test("parses plain integers", () => {

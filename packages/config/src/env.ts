@@ -15,8 +15,28 @@ export const envSchema = z.object({
   /** Origin of the web app, used for cookies, passkeys and push. */
   WEB_ORIGIN: z.string().url().default("http://localhost:3000"),
 
-  /** Auth (Better Auth / Auth.js). Required in production. */
+  /** Auth. Passkey sessions are random and hashed at rest; kept for future signed tokens. */
   AUTH_SECRET: z.string().min(1).optional(),
+
+  /**
+   * Optional one-time token for `/setup`. When set, the first-run owner must
+   * present it. Leave empty for a purely local install.
+   */
+  SETUP_TOKEN: z.string().min(1).optional(),
+
+  /**
+   * WebAuthn relying party. Defaults to the `WEB_ORIGIN` hostname. Override
+   * `WEBAUTHN_RP_ID` only when passkeys must be shared across subdomains.
+   */
+  WEBAUTHN_RP_ID: z.string().min(1).optional(),
+  WEBAUTHN_RP_NAME: z.string().min(1).default("Cashow"),
+
+  /**
+   * Opt-in token for the framework compatibility probes (`/compat` and
+   * `/api/compat/stream`). Unset in normal operation, which makes both routes
+   * answer 404; the CI smoke test sets it for the duration of the run.
+   */
+  COMPAT_TOKEN: z.string().min(16).optional(),
 
   /** DeepSeek models are kept in env because they have been renamed before. */
   DEEPSEEK_API_KEY: z.string().min(1).optional(),

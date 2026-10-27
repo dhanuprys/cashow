@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const principles = [
   {
     title: "Uang masuk",
@@ -28,6 +30,21 @@ export default function Home() {
           alokasi di antaranya tercatat rapi — tanpa angka yang hilang.
         </p>
 
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <Link
+            className="inline-flex h-10 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
+            href="/setup"
+          >
+            Mulai
+          </Link>
+          <Link
+            className="inline-flex h-10 items-center rounded-full border border-border px-5 text-sm font-medium transition-colors hover:bg-muted"
+            href="/login"
+          >
+            Masuk
+          </Link>
+        </div>
+
         <dl className="mt-10 grid gap-4 sm:grid-cols-3">
           {principles.map((principle) => (
             <div key={principle.title} className="rounded-xl border border-border bg-card p-4">
@@ -38,7 +55,8 @@ export default function Home() {
         </dl>
 
         <p className="mt-10 text-sm text-muted-foreground">
-          Fase 0 selesai: fondasi monorepo, skema basis data, dan stack deployment sudah berjalan.
+          Fase 0 selesai: fondasi monorepo, skema basis data, stack deployment, dan autentikasi
+          passkey sudah berjalan.
         </p>
       </section>
     </main>
