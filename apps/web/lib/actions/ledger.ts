@@ -759,6 +759,53 @@ export async function deleteRuleAction(formData: FormData): Promise<void> {
   revalidatePath("/app/rules");
 }
 
+export async function importCsvAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const csv = text(formData, "csv");
+  if (csv.trim() === "") return failure("CSV wajib diisi.");
+
+  const _db = session.ctx.db;
+  const accounts = await (await import("@cashow/services")).listAccounts(session.ctx);
+  const account = accounts.ok ? accounts.value.find((a) => a.archivedAt === null) : null;
+  if (account === undefined || account === null) return failure("Tidak ada akun aktif.");
+
+  const categories = await (await import("@cashow/services")).listCategories(session.ctx);
+  const expenseCategory = categories.ok
+    ? categories.value.find((c) => c.kind === "EXPENSE" && c.archivedAt === null)
+    : null;
+  const incomeCategory = categories.ok
+    ? categories.value.find((c) => c.kind === "INCOME" && c.archivedAt === null)
+    : null;
+
+  const lines = csv.trim().split(/\r?\n/).slice(1);
+  let created = 0;
+  for (const line of lines) {
+    const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
+    if (parts.length < 3) continue;
+    const [date, amount, typeRaw] = parts;
+    const type = typeRaw?.toUpperCase() === "INCOME" ? "INCOME" : "EXPENSE";
+    const category = type === "INCOME" ? incomeCategory : expenseCategory;
+    const result = await (await import("@cashow/services")).createTransaction(session.ctx, {
+      type,
+      amount,
+      accountId: account.id,
+      categoryId: category?.id ?? null,
+      occurredAtLocal: `${date}T12:00`,
+      source: "STATEMENT_IMPORT",
+      allocations: [],
+      clientRequestId: null,
+    });
+    if (result.ok) created += 1;
+  }
+
+  revalidateLedger();
+  revalidatePath("/app/transactions");
+  return { status: "success", message: `${created} transaksi diimpor.` };
+}
+
 export async function runRulesAction(formData: FormData): Promise<void> {
   const session = await requireLedgerSession();
   const triggerType = text(formData, "triggerType") || "manual";
