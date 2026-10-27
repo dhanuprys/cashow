@@ -319,6 +319,11 @@ async function computeMetrics(ctx: UseCaseContext): Promise<Record<string, numbe
     }
   }
 
+  // Backup freshness. A missing status file means the job never ran (or its
+  // output vanished), which must read as "very old" so the system rule fires.
+  const backupAgeHours = await ageHoursSince(ctx.backups?.lastRunAt, now);
+  const drillAgeHours = await ageHoursSince(ctx.backups?.lastDrillAt, now);
+
   return {
     expenseToday,
     expenseMonth,
@@ -326,7 +331,51 @@ async function computeMetrics(ctx: UseCaseContext): Promise<Record<string, numbe
     totalBalance,
     overduePlanCount,
     unallocatedIncome: 0,
+    backupAgeHours,
+    drillAgeHours,
   };
+}
+
+/** Sentinel age for a backup/drill stamp that is absent or unparseable. */
+const NEVER_RAN_HOURS = 999_999;
+
+/**
+ * Hours between now and the `at` stamp written by `backup.sh` /
+ * `restore-drill.sh` (`YYYYMMDDTHHMMSSZ`). A clock skew that puts the stamp in
+ * the future clamps to 0, so it never fires spuriously.
+ */
+async function ageHoursSince(
+  read: (() => Promise<string | null>) | undefined,
+  now: Date,
+): Promise<number> {
+  if (read === undefined) return NEVER_RAN_HOURS;
+  let stamp: string | null = null;
+  try {
+    stamp = await read();
+  } catch {
+    return NEVER_RAN_HOURS;
+  }
+  const parsed = stamp === null ? null : parseBackupStamp(stamp);
+  if (parsed === null) return NEVER_RAN_HOURS;
+  return Math.max(0, (now.getTime() - parsed.getTime()) / 3_600_000);
+}
+
+/** Parse `YYYYMMDDTHHMMSSZ`; returns `null` on anything else. */
+export function parseBackupStamp(stamp: string): Date | null {
+  const match = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(stamp.trim());
+  if (match === null) return null;
+  const [, year, month, day, hour, minute, second] = match;
+  const date = new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    ),
+  );
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function toSummary(row: {

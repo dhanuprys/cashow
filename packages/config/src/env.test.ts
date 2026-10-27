@@ -25,6 +25,11 @@ describe("loadEnv", () => {
     expect(() => loadEnv({})).toThrow(/DATABASE_URL/);
   });
 
+  test("defaults BACKUP_DIR and accepts an override", () => {
+    expect(loadEnv({ DATABASE_URL }).BACKUP_DIR).toBe("/backups");
+    expect(loadEnv({ DATABASE_URL, BACKUP_DIR: "./backups" }).BACKUP_DIR).toBe("./backups");
+  });
+
   test("reads a <NAME>_FILE secret and trims it", () => {
     const dir = mkdtempSync(join(tmpdir(), "cashow-env-"));
     const file = join(dir, "database_url");

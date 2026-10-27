@@ -870,6 +870,7 @@ const MANUAL_TRIGGER_FAMILIES = [
   "planItem",
   "schedule",
   "metricThreshold",
+  "backup",
 ] as const;
 
 export async function runRulesAction(formData: FormData): Promise<void> {

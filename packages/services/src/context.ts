@@ -9,12 +9,25 @@ export type Database = (typeof CashowDb)["db"];
 export type DbTransaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 export type QueryClient = Database | DbTransaction;
 
+/**
+ * Reads the backup artefacts' status files (`last-run.json`, `last-drill.json`)
+ * without the service layer touching `node:fs` — the same port pattern as
+ * `AttachmentStorage`. Returns the parsed `at` stamp (`YYYYMMDDTHHMMSSZ`) or
+ * `null` when the file is missing, unreadable or malformed.
+ */
+export interface BackupStatusReader {
+  lastRunAt(): Promise<string | null>;
+  lastDrillAt(): Promise<string | null>;
+}
+
 export interface UseCaseContext {
   db: Database;
   /** Every query is scoped to this owner; the schema is multi-user ready. */
   userId: string;
   /** Injectable clock for tests; defaults to the wall clock. */
   now?: Date;
+  /** Optional backup freshness source; absent means "never ran". */
+  backups?: BackupStatusReader;
 }
 
 export function nowOf(ctx: UseCaseContext): Date {

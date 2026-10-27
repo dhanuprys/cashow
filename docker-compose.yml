@@ -142,12 +142,18 @@ services:
       context: .
       target: worker
     image: ${CASHOW_WORKER_IMAGE:-cashow:local-worker}
-    environment: *app-env
+    environment:
+      <<: *app-env
+      # The freshness rule reads last-run.json / last-drill.json from here.
+      BACKUP_DIR: /backups
     read_only: true
     tmpfs:
       - /tmp
     volumes:
       - files:/app/data
+      # Read-only view of the backup directory so the worker can see the
+      # status files the backup/drill jobs write (the freshness rule).
+      - ${BACKUP_DIR:-./backups}:/backups:ro
     networks:
       - backend
 

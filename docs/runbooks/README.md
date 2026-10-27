@@ -13,6 +13,17 @@ Short, do-it-now procedures for the failures that actually happen. Each one is w
 | [`push-fully-failing.md`](./push-fully-failing.md)                       | No notification reaches any device.                                       |
 | [`disk-full-or-db-wont-start.md`](./disk-full-or-db-wont-start.md)       | Disk pressure or Postgres refuses to come up.                             |
 
+## Backup freshness notifications
+
+The worker evaluates two system rules on every tick and raises a `WARNING` in the inbox when either is overdue:
+
+| Rule                        | Fires when                      | Source file                   |
+| --------------------------- | ------------------------------- | ----------------------------- |
+| `Backup kedaluwarsa`        | `backupAgeHours > 26`           | `$BACKUP_DIR/last-run.json`   |
+| `Uji pemulihan kedaluwarsa` | `drillAgeHours > 960` (40 days) | `$BACKUP_DIR/last-drill.json` |
+
+A missing, unreadable or malformed status file counts as "never ran" and fires the rule. Both are edge-triggered: one warning per outage, not one per tick. Fix the underlying job (see `disk-full-or-db-wont-start.md`), run `deploy/backup.sh` or `deploy/restore-drill.sh`, and the next tick records the fresh stamp and clears the condition.
+
 ## Conventions
 
 - Commands assume the repo root on the host unless stated otherwise.

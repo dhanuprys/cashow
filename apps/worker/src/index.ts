@@ -3,6 +3,7 @@ import { db } from "@cashow/db";
 import { SCHEDULED_TRIGGERS, triggerFamilyOf } from "@cashow/domain";
 import {
   claimOutboxEvents,
+  createFileBackupStatusReader,
   deliverPendingNotifications,
   failOutboxEvent,
   markOutboxProcessed,
@@ -12,6 +13,9 @@ import {
 import { createPushSender } from "./push";
 
 const env = loadEnv();
+
+/** Backup freshness source shared by every rule evaluation in this process. */
+const backups = createFileBackupStatusReader(env.BACKUP_DIR);
 
 const shutdown = new AbortController();
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
@@ -58,7 +62,7 @@ async function runScheduledRules(): Promise<void> {
   const users = await db.orm.public.User.all();
   for (const user of users) {
     try {
-      const result = await runRules({ db, userId: user.id }, [...SCHEDULED_TRIGGERS]);
+      const result = await runRules({ db, userId: user.id, backups }, [...SCHEDULED_TRIGGERS]);
       if (!result.ok) {
         console.error(
           JSON.stringify({

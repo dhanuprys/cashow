@@ -13,6 +13,7 @@ import {
   markNotificationRead,
   markOutboxProcessed,
   type PushSender,
+  parseBackupStamp,
   runRules,
   savePushSubscription,
   snoozeNotification,
@@ -98,6 +99,21 @@ async function main(): Promise<void> {
   for (const row of stale) {
     if (row.userId !== userId) {
       await db.orm.public.OutboxEvent.where({ id: row.id }).deleteAll();
+    }
+  }
+
+  // A previous aborted run can leave PENDING delivery rows behind, and
+  // `deliverPendingNotifications` claims every due row in the database, not
+  // just this user's. Purge foreign ones so the batch is deterministic.
+  const staleDeliveries = await db.orm.public.NotificationDelivery.where({
+    status: "PENDING",
+  }).all();
+  for (const row of staleDeliveries) {
+    const owner = await db.orm.public.Notification.where({ id: row.notificationId })
+      .select("userId")
+      .first();
+    if (owner !== null && owner.userId !== userId) {
+      await db.orm.public.NotificationDelivery.where({ id: row.id }).deleteAll();
     }
   }
 
@@ -244,6 +260,64 @@ async function main(): Promise<void> {
   const duplicate = await runRules(ctx, "transaction");
   assert.ok(duplicate.ok, "runRules");
   equal(duplicate.value, 0, "edge-triggered no duplicate");
+
+  // --- Backup freshness ----------------------------------------------------
+
+  equal(
+    parseBackupStamp("20261015T030000Z")?.toISOString(),
+    "2026-10-15T03:00:00.000Z",
+    "stamp parses",
+  );
+  equal(parseBackupStamp("nope"), null, "malformed stamp returns null");
+
+  // The seeded system rules are the only backup-triggered rules for this user.
+  const systemRules = await db.orm.public.Rule.where({ userId }).all();
+  const backupRules = systemRules.filter(
+    (rule) => (rule.trigger as { type?: string }).type === "backup",
+  );
+  equal(backupRules.length, 2, "two system backup rules seeded");
+
+  // ctx.now is 2026-10-15T03:00:00Z. A 30-minute-old backup is fresh; a
+  // drill 41 days old is stale. Only the drill rule may fire.
+  const freshBackups = {
+    lastRunAt: async () => "20261015T023000Z",
+    lastDrillAt: async () => "20260904T030000Z",
+  };
+  const freshCtx = { ...ctx, backups: freshBackups };
+  const staleDrill = await runRules(freshCtx, "backup");
+  assert.ok(staleDrill.ok, "runRules backup");
+  equal(staleDrill.value, 1, "stale drill fires once");
+
+  const repeat = await runRules(freshCtx, "backup");
+  assert.ok(repeat.ok, "runRules backup repeat");
+  equal(repeat.value, 0, "fresh backup + unchanged stale drill stays edge-triggered");
+
+  // A backup that goes stale while the drill is still fresh fires only the
+  // backup rule; the drill rule's state is already true and stays quiet.
+  const staleBackup = {
+    lastRunAt: async () => "20261013T030000Z",
+    lastDrillAt: async () => "20260904T030000Z",
+  };
+  const staleBackupCtx = { ...ctx, backups: staleBackup };
+  const staleRun = await runRules(staleBackupCtx, "backup");
+  assert.ok(staleRun.ok, "runRules backup stale");
+  equal(staleRun.value, 1, "stale backup fires once");
+
+  // A reader that reports nothing (job never ran) is the worst case: both
+  // conditions are true, and the still-armed backup rule fires.
+  const neverRan = {
+    lastRunAt: async () => null,
+    lastDrillAt: async () => null,
+  };
+  const neverRanCtx = { ...ctx, backups: neverRan };
+  const missing = await runRules(neverRanCtx, "backup");
+  assert.ok(missing.ok, "runRules backup missing files");
+  equal(missing.value, 0, "missing files with both rules already true stays quiet");
+
+  // A caller with no reader at all behaves like "never ran".
+  const noReader = await runRules(ctx, "backup");
+  assert.ok(noReader.ok, "runRules backup without reader");
+  equal(noReader.value, 0, "no reader stays edge-triggered");
 
   await db.orm.public.User.where({ id: userId }).deleteAll();
 

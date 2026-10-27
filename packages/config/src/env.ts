@@ -54,6 +54,12 @@ export const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   SMTP_URL: z.string().optional(),
 
+  /**
+   * Directory holding backup artefacts and their status files. The worker reads
+   * `last-run.json` / `last-drill.json` from here for the freshness rule.
+   */
+  BACKUP_DIR: z.string().min(1).default("/backups"),
+
   /** Logging. */
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
 });

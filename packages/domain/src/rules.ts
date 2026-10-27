@@ -23,7 +23,8 @@ export type RuleTrigger =
   | { type: "schedule"; cron?: string }
   | { type: "snapshot" }
   | { type: "planItem" }
-  | { type: "metricThreshold"; metric: string };
+  | { type: "metricThreshold"; metric: string }
+  | { type: "backup" };
 
 export interface RuleDefinition {
   trigger: RuleTrigger;
@@ -95,7 +96,7 @@ export function triggerFamilyOf(eventType: string): string {
 }
 
 /** Trigger families evaluated on every worker tick, regardless of events. */
-export const SCHEDULED_TRIGGERS = ["schedule", "metricThreshold"] as const;
+export const SCHEDULED_TRIGGERS = ["schedule", "metricThreshold", "backup"] as const;
 
 export function triggerMatches(trigger: unknown, families: readonly string[]): boolean {
   const type = (trigger as { type?: unknown } | null)?.type;
