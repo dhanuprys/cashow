@@ -20,3 +20,9 @@ export interface UseCaseContext {
 export function nowOf(ctx: UseCaseContext): Date {
   return ctx.now ?? new Date();
 }
+
+/** The owner's timezone; every stored local date derives from it. */
+export async function userTimezone(client: QueryClient, userId: string): Promise<string> {
+  const user = await client.orm.public.User.where({ id: userId }).select("timezone").first();
+  return user?.timezone ?? "Asia/Jakarta";
+}

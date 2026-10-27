@@ -188,6 +188,103 @@ async function main(): Promise<void> {
     const anonymous = await fetch(`${BASE_URL}${attachmentSrc}`);
     assert(anonymous.status === 401, `Anonymous attachment read returned ${anonymous.status}.`);
 
+    // --- Phase 2 smoke: a three-step plan, a partial payment, a transfer --
+    await page.goto(`${BASE_URL}/app/plans`);
+    await page.locator("#plan-name-new").fill("Proyek E2E");
+    await page.locator("#plan-description-new").fill("Dibayar tiga tahap");
+    await page.getByRole("button", { name: "Buat rencana" }).click();
+    await page.waitForURL(/\/app\/plans\/[^/]+$/, { timeout: 20_000 });
+    const planUrl = page.url();
+
+    const steps = [
+      { label: "DP", amount: "5jt" },
+      { label: "Termin 2", amount: "3jt" },
+      { label: "Pelunasan", amount: "2jt" },
+    ] as const;
+    for (const step of steps) {
+      await page.goto(planUrl);
+      await page.locator("summary").filter({ hasText: "Tambah tahap" }).click();
+      await page.locator("#item-label-new").fill(step.label);
+      await page.locator("#item-amount-new").fill(step.amount);
+      await page.getByRole("button", { name: "Tambah tahap" }).click();
+      await page.getByText(step.label, { exact: true }).first().waitFor({ timeout: 10_000 });
+    }
+
+    // Pay the first step in full.
+    await page.getByRole("link", { name: "Catat pembayaran" }).first().click();
+    await page.waitForURL(/\/app\/transactions\/new\?/, { timeout: 10_000 });
+    await page.locator("#amount").fill("5jt");
+    await page.locator("#note").fill("DP proyek E2E");
+    await page.getByRole("button", { name: "Simpan transaksi" }).click();
+    await page.waitForURL(
+      (url) => /^\/app\/transactions\/[^/]+$/.test(url.pathname) && !url.pathname.endsWith("/new"),
+      { timeout: 20_000 },
+    );
+    await page.getByText("Proyek E2E · DP").first().waitFor({ timeout: 10_000 });
+
+    // Pay the second step in part.
+    await page.goto(`${BASE_URL}/app/transactions/new?type=INCOME`);
+    const secondStep = await page
+      .locator("#planItemId option")
+      .filter({ hasText: "Termin 2" })
+      .first()
+      .getAttribute("value");
+    assert(secondStep !== null && secondStep !== "", "Second plan step was not offered.");
+    await page.selectOption("#planItemId", secondStep);
+    await page.locator("#amount").fill("1,5jt");
+    await page.locator("#note").fill("Termin 2 sebagian");
+    await page.getByRole("button", { name: "Simpan transaksi" }).click();
+    await page.waitForURL(
+      (url) => /^\/app\/transactions\/[^/]+$/.test(url.pathname) && !url.pathname.endsWith("/new"),
+      { timeout: 20_000 },
+    );
+
+    await page.goto(planUrl);
+    await page.getByText("Sebagian").first().waitFor({ timeout: 10_000 });
+    await page
+      .getByText(/Rp\s?6\.500\.000/)
+      .first()
+      .waitFor({ timeout: 10_000 });
+
+    // A transfer with a fee: two accounts, one transfer, one fee expense.
+    await page.goto(`${BASE_URL}/app/accounts`);
+    await page.locator("#account-name-new").fill("Dompet E2E");
+    await page.locator("#account-type-new").selectOption("EWALLET");
+    await page.locator("#account-opening-new").fill("0");
+    await page.getByRole("button", { name: "Tambah akun" }).click();
+    await page.getByText("Dompet E2E").first().waitFor({ timeout: 10_000 });
+
+    await page.goto(`${BASE_URL}/app/transactions/new?type=TRANSFER`);
+    await page.locator("#transfer-amount").fill("100rb");
+    await page.locator("#transfer-fee").fill("2,5rb");
+    // The source defaults to the first live account; force the seeded cash
+    // account so the new wallet stays available as a destination.
+    const source = await page
+      .locator("#transfer-source option")
+      .filter({ hasText: "Tunai" })
+      .first()
+      .getAttribute("value");
+    assert(source !== null && source !== "", "Transfer source was not offered.");
+    await page.selectOption("#transfer-source", source);
+    const destination = await page
+      .locator("#transfer-destination option")
+      .filter({ hasText: "Dompet E2E" })
+      .first()
+      .getAttribute("value");
+    assert(destination !== null && destination !== "", "Transfer destination was not offered.");
+    await page.selectOption("#transfer-destination", destination);
+    await page.getByRole("button", { name: "Simpan transfer" }).click();
+    await page.waitForURL(
+      (url) => /^\/app\/transactions\/[^/]+$/.test(url.pathname) && !url.pathname.endsWith("/new"),
+      { timeout: 20_000 },
+    );
+    await page.getByText("Transfer", { exact: true }).first().waitFor({ timeout: 10_000 });
+    await page.getByText("Biaya transfer").first().waitFor({ timeout: 10_000 });
+    await page
+      .getByText(/Rp\s?2\.500/)
+      .first()
+      .waitFor({ timeout: 10_000 });
+
     // --- Passkeys live on /app/settings ----------------------------------
     await page.goto(`${BASE_URL}/app/settings`);
 
@@ -251,6 +348,9 @@ async function main(): Promise<void> {
             "income-500k",
             "expense-250k-allocation",
             "attachment-upload-serve",
+            "plan-three-steps",
+            "plan-partial-payment",
+            "transfer-with-fee",
             "add-passkey",
             "logout",
             "login",

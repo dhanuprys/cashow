@@ -23,9 +23,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'bcbc0ebb82b058d57e4dadab5fa0619cee244c8cfded7b4e35e6660fa0e9c34b'>;
+  StorageHashBase<'d7af935b39ceffe99bfd2da9505905a36754c373439fbc53f79ece8edf61f714'>;
 export type ExecutionHash =
-  ExecutionHashBase<'f3b5d129ae1e64bb6254e992cd1628e5d854dcac5f92a2a3f78e7c063fbef1c4'>;
+  ExecutionHashBase<'37e78f526ba586ce69cba3489c74656effde8fe9fbdc2c28cea3878b26208fd5'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -422,12 +422,16 @@ export namespace Models {
     id: FieldOutputTypes['public']['Attachment']['id'];
     kind: FieldOutputTypes['public']['Attachment']['kind'];
     mimeType: FieldOutputTypes['public']['Attachment']['mimeType'];
+    planId: FieldOutputTypes['public']['Attachment']['planId'];
+    planItemId: FieldOutputTypes['public']['Attachment']['planItemId'];
     storageKey: FieldOutputTypes['public']['Attachment']['storageKey'];
     transactionId: FieldOutputTypes['public']['Attachment']['transactionId'];
     userId: FieldOutputTypes['public']['Attachment']['userId'];
+    plan: public_PaymentPlan | null;
+    planItem: public_PaymentPlanItem | null;
     transaction: public_Transaction | null;
     user: public_User;
-    readonly [RelationKeys]?: 'transaction' | 'user';
+    readonly [RelationKeys]?: 'plan' | 'planItem' | 'transaction' | 'user';
   };
   export type public_AuditLog = {
     action: FieldOutputTypes['public']['AuditLog']['action'];
@@ -462,7 +466,9 @@ export namespace Models {
     recordedAt: FieldOutputTypes['public']['BalanceSnapshot']['recordedAt'];
     userId: FieldOutputTypes['public']['BalanceSnapshot']['userId'];
     account: public_Account;
-    readonly [RelationKeys]?: 'account';
+    checkpoints: public_ReconciliationCheckpoint[];
+    user: public_User;
+    readonly [RelationKeys]?: 'account' | 'checkpoints' | 'user';
   };
   export type public_Category = {
     archivedAt: FieldOutputTypes['public']['Category']['archivedAt'];
@@ -510,16 +516,50 @@ export namespace Models {
     user: public_User;
     readonly [RelationKeys]?: 'user';
   };
+  export type public_PaymentPlan = {
+    archivedAt: FieldOutputTypes['public']['PaymentPlan']['archivedAt'];
+    createdAt: FieldOutputTypes['public']['PaymentPlan']['createdAt'];
+    description: FieldOutputTypes['public']['PaymentPlan']['description'];
+    id: FieldOutputTypes['public']['PaymentPlan']['id'];
+    name: FieldOutputTypes['public']['PaymentPlan']['name'];
+    updatedAt: FieldOutputTypes['public']['PaymentPlan']['updatedAt'];
+    userId: FieldOutputTypes['public']['PaymentPlan']['userId'];
+    attachments: public_Attachment[];
+    items: public_PaymentPlanItem[];
+    user: public_User;
+    readonly [RelationKeys]?: 'attachments' | 'items' | 'user';
+  };
+  export type public_PaymentPlanItem = {
+    createdAt: FieldOutputTypes['public']['PaymentPlanItem']['createdAt'];
+    dueOn: FieldOutputTypes['public']['PaymentPlanItem']['dueOn'];
+    expectedAmount: FieldOutputTypes['public']['PaymentPlanItem']['expectedAmount'];
+    id: FieldOutputTypes['public']['PaymentPlanItem']['id'];
+    label: FieldOutputTypes['public']['PaymentPlanItem']['label'];
+    note: FieldOutputTypes['public']['PaymentPlanItem']['note'];
+    planId: FieldOutputTypes['public']['PaymentPlanItem']['planId'];
+    sortOrder: FieldOutputTypes['public']['PaymentPlanItem']['sortOrder'];
+    updatedAt: FieldOutputTypes['public']['PaymentPlanItem']['updatedAt'];
+    userId: FieldOutputTypes['public']['PaymentPlanItem']['userId'];
+    attachments: public_Attachment[];
+    incomes: public_Transaction[];
+    plan: public_PaymentPlan;
+    user: public_User;
+    readonly [RelationKeys]?: 'attachments' | 'incomes' | 'plan' | 'user';
+  };
   export type public_ReconciliationCheckpoint = {
     accountId: FieldOutputTypes['public']['ReconciliationCheckpoint']['accountId'];
     createdAt: FieldOutputTypes['public']['ReconciliationCheckpoint']['createdAt'];
     id: FieldOutputTypes['public']['ReconciliationCheckpoint']['id'];
+    snapshotAt: FieldOutputTypes['public']['ReconciliationCheckpoint']['snapshotAt'];
     snapshotId: FieldOutputTypes['public']['ReconciliationCheckpoint']['snapshotId'];
+    unlockReason: FieldOutputTypes['public']['ReconciliationCheckpoint']['unlockReason'];
     unlockedAt: FieldOutputTypes['public']['ReconciliationCheckpoint']['unlockedAt'];
     userId: FieldOutputTypes['public']['ReconciliationCheckpoint']['userId'];
     verifiedAt: FieldOutputTypes['public']['ReconciliationCheckpoint']['verifiedAt'];
     account: public_Account;
-    readonly [RelationKeys]?: 'account';
+    snapshot: public_BalanceSnapshot;
+    user: public_User;
+    readonly [RelationKeys]?: 'account' | 'snapshot' | 'user';
   };
   export type public_Session = {
     createdAt: FieldOutputTypes['public']['Session']['createdAt'];
@@ -548,7 +588,9 @@ export namespace Models {
     note: FieldOutputTypes['public']['Transaction']['note'];
     occurredAt: FieldOutputTypes['public']['Transaction']['occurredAt'];
     occurredOn: FieldOutputTypes['public']['Transaction']['occurredOn'];
+    planItemId: FieldOutputTypes['public']['Transaction']['planItemId'];
     source: FieldOutputTypes['public']['Transaction']['source'];
+    transferId: FieldOutputTypes['public']['Transaction']['transferId'];
     type: FieldOutputTypes['public']['Transaction']['type'];
     updatedAt: FieldOutputTypes['public']['Transaction']['updatedAt'];
     userId: FieldOutputTypes['public']['Transaction']['userId'];
@@ -558,6 +600,9 @@ export namespace Models {
     attachments: public_Attachment[];
     category: public_Category | null;
     destinationAccount: public_Account | null;
+    feeFor: public_Transaction | null;
+    planItem: public_PaymentPlanItem | null;
+    transfer: public_Transaction | null;
     user: public_User;
     readonly [RelationKeys]?:
       | 'account'
@@ -566,6 +611,9 @@ export namespace Models {
       | 'attachments'
       | 'category'
       | 'destinationAccount'
+      | 'feeFor'
+      | 'planItem'
+      | 'transfer'
       | 'user';
   };
   export type public_User = {
@@ -581,11 +629,22 @@ export namespace Models {
     accounts: public_Account[];
     attachments: public_Attachment[];
     categories: public_Category[];
+    checkpoints: public_ReconciliationCheckpoint[];
     passkeys: public_Passkey[];
+    paymentPlans: public_PaymentPlan[];
     sessions: public_Session[];
+    snapshots: public_BalanceSnapshot[];
     transactions: public_Transaction[];
     readonly [RelationKeys]?:
-      'accounts' | 'attachments' | 'categories' | 'passkeys' | 'sessions' | 'transactions';
+      | 'accounts'
+      | 'attachments'
+      | 'categories'
+      | 'checkpoints'
+      | 'passkeys'
+      | 'paymentPlans'
+      | 'sessions'
+      | 'snapshots'
+      | 'transactions';
   };
 }
 
@@ -600,6 +659,8 @@ export declare const models: {
     Category: Models.public_Category;
     OutboxEvent: Models.public_OutboxEvent;
     Passkey: Models.public_Passkey;
+    PaymentPlan: Models.public_PaymentPlan;
+    PaymentPlanItem: Models.public_PaymentPlanItem;
     ReconciliationCheckpoint: Models.public_ReconciliationCheckpoint;
     Session: Models.public_Session;
     Transaction: Models.public_Transaction;
@@ -863,6 +924,18 @@ type ContractBase = Omit<
                   readonly nullable: false;
                   readonly many: false;
                 };
+                readonly planId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly planItemId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly storageKey: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
@@ -886,6 +959,18 @@ type ContractBase = Omit<
               uniques: readonly [];
               indexes: readonly [
                 {
+                  readonly name: 'Attachment_planId_idx_5b32079a';
+                  readonly prefix: 'Attachment_planId_idx';
+                  readonly columns: readonly ['planId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Attachment_planItemId_idx_c9fb8d06';
+                  readonly prefix: 'Attachment_planItemId_idx';
+                  readonly columns: readonly ['planItemId'];
+                  readonly unique: false;
+                },
+                {
                   readonly name: 'Attachment_storageKey_idx_8c086641';
                   readonly prefix: 'Attachment_storageKey_idx';
                   readonly columns: readonly ['storageKey'];
@@ -907,6 +992,18 @@ type ContractBase = Omit<
                   readonly name: 'Attachment_userId_idx_a489d58a';
                   readonly prefix: 'Attachment_userId_idx';
                   readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Attachment_userId_planId_idx_092164f4';
+                  readonly prefix: 'Attachment_userId_planId_idx';
+                  readonly columns: readonly ['userId', 'planId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Attachment_userId_planItemId_idx_2d4e875e';
+                  readonly prefix: 'Attachment_userId_planItemId_idx';
+                  readonly columns: readonly ['userId', 'planItemId'];
                   readonly unique: false;
                 },
                 {
@@ -938,6 +1035,30 @@ type ContractBase = Omit<
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'Transaction';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Attachment';
+                    readonly columns: readonly ['planId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'PaymentPlan';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Attachment';
+                    readonly columns: readonly ['planItemId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'PaymentPlanItem';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -1133,7 +1254,7 @@ type ContractBase = Omit<
                 };
               };
               primaryKey: { readonly columns: readonly ['id'] };
-              uniques: readonly [{ readonly columns: readonly ['accountId', 'recordedAt'] }];
+              uniques: readonly [];
               indexes: readonly [
                 {
                   readonly name: 'BalanceSnapshot_accountId_idx_cbfb3085';
@@ -1142,13 +1263,38 @@ type ContractBase = Omit<
                   readonly unique: false;
                 },
                 {
+                  readonly name: 'BalanceSnapshot_live_unique_24c6a3e9';
+                  readonly prefix: 'BalanceSnapshot_live_unique';
+                  readonly columns: readonly ['accountId', 'recordedAt'];
+                  readonly where: '"deletedAt" IS NULL';
+                  readonly unique: true;
+                },
+                {
                   readonly name: 'BalanceSnapshot_userId_accountId_recordedAt_idx_84e04ff9';
                   readonly prefix: 'BalanceSnapshot_userId_accountId_recordedAt_idx';
                   readonly columns: readonly ['userId', 'accountId', 'recordedAt'];
                   readonly unique: false;
                 },
+                {
+                  readonly name: 'BalanceSnapshot_userId_idx_a489d58a';
+                  readonly prefix: 'BalanceSnapshot_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
               ];
               foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'BalanceSnapshot';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
                 {
                   readonly source: {
                     readonly namespaceId: 'public' & NamespaceId;
@@ -1472,6 +1618,204 @@ type ContractBase = Omit<
                 },
               ];
             };
+            readonly PaymentPlan: {
+              columns: {
+                readonly archivedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly createdAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly description: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly name: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly updatedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly userId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'PaymentPlan_userId_archivedAt_idx_7b90304b';
+                  readonly prefix: 'PaymentPlan_userId_archivedAt_idx';
+                  readonly columns: readonly ['userId', 'archivedAt'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'PaymentPlan_userId_idx_a489d58a';
+                  readonly prefix: 'PaymentPlan_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'PaymentPlan';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
+            readonly PaymentPlanItem: {
+              columns: {
+                readonly createdAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly dueOn: {
+                  readonly dataType: 'pg/date';
+                  readonly codecId: 'pg/date-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly expectedAmount: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly label: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly note: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly planId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly sortOrder: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                  readonly many: false;
+                };
+                readonly updatedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly userId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'PaymentPlanItem_planId_idx_5b32079a';
+                  readonly prefix: 'PaymentPlanItem_planId_idx';
+                  readonly columns: readonly ['planId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'PaymentPlanItem_planId_sortOrder_idx_d47cc6ce';
+                  readonly prefix: 'PaymentPlanItem_planId_sortOrder_idx';
+                  readonly columns: readonly ['planId', 'sortOrder'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'PaymentPlanItem_userId_idx_a489d58a';
+                  readonly prefix: 'PaymentPlanItem_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'PaymentPlanItem_userId_planId_idx_092164f4';
+                  readonly prefix: 'PaymentPlanItem_userId_planId_idx';
+                  readonly columns: readonly ['userId', 'planId'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'PaymentPlanItem';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'PaymentPlanItem';
+                    readonly columns: readonly ['planId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'PaymentPlan';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
             readonly ReconciliationCheckpoint: {
               columns: {
                 readonly accountId: {
@@ -1492,10 +1836,22 @@ type ContractBase = Omit<
                   readonly nullable: false;
                   readonly many: false;
                 };
+                readonly snapshotAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
                 readonly snapshotId: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly unlockReason: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
                   readonly many: false;
                 };
                 readonly unlockedAt: {
@@ -1521,15 +1877,22 @@ type ContractBase = Omit<
               uniques: readonly [];
               indexes: readonly [
                 {
+                  readonly name: 'Checkpoint_active_unique_bb3efe8e';
+                  readonly prefix: 'Checkpoint_active_unique';
+                  readonly columns: readonly ['accountId', 'snapshotAt'];
+                  readonly where: '"unlockedAt" IS NULL';
+                  readonly unique: true;
+                },
+                {
                   readonly name: 'ReconciliationCheckpoint_accountId_idx_cbfb3085';
                   readonly prefix: 'ReconciliationCheckpoint_accountId_idx';
                   readonly columns: readonly ['accountId'];
                   readonly unique: false;
                 },
                 {
-                  readonly name: 'ReconciliationCheckpoint_accountId_verifiedAt_idx_b454d1d4';
-                  readonly prefix: 'ReconciliationCheckpoint_accountId_verifiedAt_idx';
-                  readonly columns: readonly ['accountId', 'verifiedAt'];
+                  readonly name: 'ReconciliationCheckpoint_snapshotId_idx_e639e2e6';
+                  readonly prefix: 'ReconciliationCheckpoint_snapshotId_idx';
+                  readonly columns: readonly ['snapshotId'];
                   readonly unique: false;
                 },
                 {
@@ -1538,8 +1901,26 @@ type ContractBase = Omit<
                   readonly columns: readonly ['userId', 'accountId'];
                   readonly unique: false;
                 },
+                {
+                  readonly name: 'ReconciliationCheckpoint_userId_idx_a489d58a';
+                  readonly prefix: 'ReconciliationCheckpoint_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
               ];
               foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'ReconciliationCheckpoint';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
                 {
                   readonly source: {
                     readonly namespaceId: 'public' & NamespaceId;
@@ -1549,6 +1930,18 @@ type ContractBase = Omit<
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'Account';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'ReconciliationCheckpoint';
+                    readonly columns: readonly ['snapshotId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'BalanceSnapshot';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -1722,6 +2115,12 @@ type ContractBase = Omit<
                   readonly nullable: false;
                   readonly many: false;
                 };
+                readonly planItemId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly source: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
@@ -1730,6 +2129,12 @@ type ContractBase = Omit<
                     readonly kind: 'literal';
                     readonly value: DefaultLiteralValue<'pg/text@1', 'MANUAL'>;
                   };
+                  readonly many: false;
+                };
+                readonly transferId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
                   readonly many: false;
                 };
                 readonly type: {
@@ -1752,7 +2157,10 @@ type ContractBase = Omit<
                 };
               };
               primaryKey: { readonly columns: readonly ['id'] };
-              uniques: readonly [{ readonly columns: readonly ['userId', 'clientRequestId'] }];
+              uniques: readonly [
+                { readonly columns: readonly ['transferId'] },
+                { readonly columns: readonly ['userId', 'clientRequestId'] },
+              ];
               indexes: readonly [
                 {
                   readonly name: 'Transaction_accountId_idx_cbfb3085';
@@ -1777,6 +2185,12 @@ type ContractBase = Omit<
                   readonly prefix: 'Transaction_live_recent_idx';
                   readonly columns: readonly ['userId', 'occurredAt'];
                   readonly where: '"deletedAt" IS NULL';
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Transaction_planItemId_idx_c9fb8d06';
+                  readonly prefix: 'Transaction_planItemId_idx';
+                  readonly columns: readonly ['planItemId'];
                   readonly unique: false;
                 },
                 {
@@ -1844,6 +2258,30 @@ type ContractBase = Omit<
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'Category';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Transaction';
+                    readonly columns: readonly ['planItemId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'PaymentPlanItem';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Transaction';
+                    readonly columns: readonly ['transferId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Transaction';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -2000,6 +2438,14 @@ type ContractBase = Omit<
       readonly model: 'OutboxEvent';
     };
     readonly Passkey: { readonly namespace: 'public' & NamespaceId; readonly model: 'Passkey' };
+    readonly PaymentPlan: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'PaymentPlan';
+    };
+    readonly PaymentPlanItem: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'PaymentPlanItem';
+    };
     readonly ReconciliationCheckpoint: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'ReconciliationCheckpoint';
@@ -2232,6 +2678,14 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly planId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly planItemId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly storageKey: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -2246,6 +2700,30 @@ type ContractBase = Omit<
               };
             };
             readonly relations: {
+              readonly plan: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'PaymentPlan';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['planId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly planItem: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'PaymentPlanItem';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['planItemId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
               readonly transaction: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -2280,6 +2758,8 @@ type ContractBase = Omit<
                 readonly id: { readonly column: 'id' };
                 readonly kind: { readonly column: 'kind' };
                 readonly mimeType: { readonly column: 'mimeType' };
+                readonly planId: { readonly column: 'planId' };
+                readonly planItemId: { readonly column: 'planItemId' };
                 readonly storageKey: { readonly column: 'storageKey' };
                 readonly transactionId: { readonly column: 'transactionId' };
                 readonly userId: { readonly column: 'userId' };
@@ -2459,6 +2939,26 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly on: {
                   readonly localFields: readonly ['accountId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly checkpoints: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'ReconciliationCheckpoint';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['snapshotId'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
                   readonly targetFields: readonly ['id'];
                 };
               };
@@ -2743,6 +3243,204 @@ type ContractBase = Omit<
               };
             };
           };
+          readonly PaymentPlan: {
+            readonly fields: {
+              readonly archivedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly description: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly name: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: {
+              readonly attachments: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Attachment';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['planId'];
+                };
+              };
+              readonly items: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'PaymentPlanItem';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['planId'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'PaymentPlan';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly archivedAt: { readonly column: 'archivedAt' };
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly description: { readonly column: 'description' };
+                readonly id: { readonly column: 'id' };
+                readonly name: { readonly column: 'name' };
+                readonly updatedAt: { readonly column: 'updatedAt' };
+                readonly userId: { readonly column: 'userId' };
+              };
+            };
+          };
+          readonly PaymentPlanItem: {
+            readonly fields: {
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly dueOn: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/date-string@1' };
+              };
+              readonly expectedAmount: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly label: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly note: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly planId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly sortOrder: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: {
+              readonly attachments: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Attachment';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['planItemId'];
+                };
+              };
+              readonly incomes: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Transaction';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['planItemId'];
+                };
+              };
+              readonly plan: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'PaymentPlan';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['planId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'PaymentPlanItem';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly dueOn: { readonly column: 'dueOn' };
+                readonly expectedAmount: { readonly column: 'expectedAmount' };
+                readonly id: { readonly column: 'id' };
+                readonly label: { readonly column: 'label' };
+                readonly note: { readonly column: 'note' };
+                readonly planId: { readonly column: 'planId' };
+                readonly sortOrder: { readonly column: 'sortOrder' };
+                readonly updatedAt: { readonly column: 'updatedAt' };
+                readonly userId: { readonly column: 'userId' };
+              };
+            };
+          };
           readonly ReconciliationCheckpoint: {
             readonly fields: {
               readonly accountId: {
@@ -2760,8 +3458,19 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly snapshotAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
               readonly snapshotId: {
                 readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly unlockReason: {
+                readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly unlockedAt: {
@@ -2796,6 +3505,27 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['id'];
                 };
               };
+              readonly snapshot: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'BalanceSnapshot';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['snapshotId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
             };
             readonly storage: {
               readonly table: 'ReconciliationCheckpoint';
@@ -2804,7 +3534,9 @@ type ContractBase = Omit<
                 readonly accountId: { readonly column: 'accountId' };
                 readonly createdAt: { readonly column: 'createdAt' };
                 readonly id: { readonly column: 'id' };
+                readonly snapshotAt: { readonly column: 'snapshotAt' };
                 readonly snapshotId: { readonly column: 'snapshotId' };
+                readonly unlockReason: { readonly column: 'unlockReason' };
                 readonly unlockedAt: { readonly column: 'unlockedAt' };
                 readonly userId: { readonly column: 'userId' };
                 readonly verifiedAt: { readonly column: 'verifiedAt' };
@@ -2952,8 +3684,16 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/date-string@1' };
               };
+              readonly planItemId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly source: {
                 readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly transferId: {
+                readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly type: {
@@ -3042,6 +3782,42 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['id'];
                 };
               };
+              readonly feeFor: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Transaction';
+                };
+                readonly cardinality: '1:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['transferId'];
+                };
+              };
+              readonly planItem: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'PaymentPlanItem';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['planItemId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly transfer: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Transaction';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['transferId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
               readonly user: {
                 readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
                 readonly cardinality: 'N:1';
@@ -3069,7 +3845,9 @@ type ContractBase = Omit<
                 readonly note: { readonly column: 'note' };
                 readonly occurredAt: { readonly column: 'occurredAt' };
                 readonly occurredOn: { readonly column: 'occurredOn' };
+                readonly planItemId: { readonly column: 'planItemId' };
                 readonly source: { readonly column: 'source' };
+                readonly transferId: { readonly column: 'transferId' };
                 readonly type: { readonly column: 'type' };
                 readonly updatedAt: { readonly column: 'updatedAt' };
                 readonly userId: { readonly column: 'userId' };
@@ -3155,6 +3933,17 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['userId'];
                 };
               };
+              readonly checkpoints: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'ReconciliationCheckpoint';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
               readonly passkeys: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -3166,10 +3955,32 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['userId'];
                 };
               };
+              readonly paymentPlans: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'PaymentPlan';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
               readonly sessions: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
                   readonly model: 'Session';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
+              readonly snapshots: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'BalanceSnapshot';
                 };
                 readonly cardinality: '1:N';
                 readonly on: {
@@ -3505,6 +4316,56 @@ type ContractBase = Omit<
           readonly ref: {
             readonly entry: 'Passkey';
             readonly field: 'id';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'PaymentPlan';
+            readonly field: 'createdAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'PaymentPlan';
+            readonly field: 'id';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly onUpdate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'PaymentPlan';
+            readonly field: 'updatedAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'PaymentPlanItem';
+            readonly field: 'createdAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'PaymentPlanItem';
+            readonly field: 'id';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly onUpdate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'PaymentPlanItem';
+            readonly field: 'updatedAt';
             readonly namespace: 'public';
           };
         },

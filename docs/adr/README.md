@@ -15,3 +15,8 @@ decision changes; do not rewrite history silently.
 | [0007](0007-passkey-auth.md)                 | Passkey authentication without an auth framework  | Accepted |
 | [0008](0008-compat-probes.md)                | Token-gated framework compatibility probes        | Accepted |
 | [0009](0009-attachment-storage.md)           | Attachment bytes on local disk behind a port      | Accepted |
+
+Phase 2 (chains and balances) introduces no new ADR. Its decisions — derived
+plan and snapshot status, snapshot-based reconciliation, checkpoint locking
+with audited unlock, and transfer fees as separate expenses — are captured in
+the contract (`packages/db/src/prisma/contract.prisma`) and the services.

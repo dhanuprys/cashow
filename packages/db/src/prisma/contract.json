@@ -40,6 +40,14 @@
       "model": "Passkey",
       "namespace": "public"
     },
+    "PaymentPlan": {
+      "model": "PaymentPlan",
+      "namespace": "public"
+    },
+    "PaymentPlanItem": {
+      "model": "PaymentPlanItem",
+      "namespace": "public"
+    },
     "ReconciliationCheckpoint": {
       "model": "ReconciliationCheckpoint",
       "namespace": "public"
@@ -539,6 +547,20 @@
                   "kind": "scalar"
                 }
               },
+              "planId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "planItemId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "storageKey": {
                 "nullable": false,
                 "type": {
@@ -562,6 +584,38 @@
               }
             },
             "relations": {
+              "plan": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "planId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "PaymentPlan",
+                  "namespace": "public"
+                }
+              },
+              "planItem": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "planItemId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "PaymentPlanItem",
+                  "namespace": "public"
+                }
+              },
               "transaction": {
                 "cardinality": "N:1",
                 "nullable": true,
@@ -620,6 +674,12 @@
                 },
                 "mimeType": {
                   "column": "mimeType"
+                },
+                "planId": {
+                  "column": "planId"
+                },
+                "planItemId": {
+                  "column": "planItemId"
                 },
                 "storageKey": {
                   "column": "storageKey"
@@ -906,6 +966,37 @@
                 },
                 "to": {
                   "model": "Account",
+                  "namespace": "public"
+                }
+              },
+              "checkpoints": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "snapshotId"
+                  ]
+                },
+                "to": {
+                  "model": "ReconciliationCheckpoint",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
                   "namespace": "public"
                 }
               }
@@ -1381,6 +1472,308 @@
               "table": "Passkey"
             }
           },
+          "PaymentPlan": {
+            "fields": {
+              "archivedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "description": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "attachments": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "planId"
+                  ]
+                },
+                "to": {
+                  "model": "Attachment",
+                  "namespace": "public"
+                }
+              },
+              "items": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "planId"
+                  ]
+                },
+                "to": {
+                  "model": "PaymentPlanItem",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "archivedAt": {
+                  "column": "archivedAt"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "description": {
+                  "column": "description"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "PaymentPlan"
+            }
+          },
+          "PaymentPlanItem": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "dueOn": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/date-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "expectedAmount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "label": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "note": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "planId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "sortOrder": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "attachments": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "planItemId"
+                  ]
+                },
+                "to": {
+                  "model": "Attachment",
+                  "namespace": "public"
+                }
+              },
+              "incomes": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "planItemId"
+                  ]
+                },
+                "to": {
+                  "model": "Transaction",
+                  "namespace": "public"
+                }
+              },
+              "plan": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "planId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "PaymentPlan",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "dueOn": {
+                  "column": "dueOn"
+                },
+                "expectedAmount": {
+                  "column": "expectedAmount"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "label": {
+                  "column": "label"
+                },
+                "note": {
+                  "column": "note"
+                },
+                "planId": {
+                  "column": "planId"
+                },
+                "sortOrder": {
+                  "column": "sortOrder"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "PaymentPlanItem"
+            }
+          },
           "ReconciliationCheckpoint": {
             "fields": {
               "accountId": {
@@ -1404,8 +1797,22 @@
                   "kind": "scalar"
                 }
               },
+              "snapshotAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
               "snapshotId": {
                 "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "unlockReason": {
+                "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
@@ -1449,6 +1856,38 @@
                   "model": "Account",
                   "namespace": "public"
                 }
+              },
+              "snapshot": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "snapshotId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "BalanceSnapshot",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
               }
             },
             "storage": {
@@ -1462,8 +1901,14 @@
                 "id": {
                   "column": "id"
                 },
+                "snapshotAt": {
+                  "column": "snapshotAt"
+                },
                 "snapshotId": {
                   "column": "snapshotId"
+                },
+                "unlockReason": {
+                  "column": "unlockReason"
                 },
                 "unlockedAt": {
                   "column": "unlockedAt"
@@ -1690,6 +2135,13 @@
                   "kind": "scalar"
                 }
               },
+              "planItemId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "source": {
                 "nullable": false,
                 "type": {
@@ -1701,6 +2153,13 @@
                   "entityName": "Source",
                   "namespaceId": "public",
                   "plane": "domain"
+                }
+              },
+              "transferId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
                 }
               },
               "type": {
@@ -1825,6 +2284,54 @@
                   "namespace": "public"
                 }
               },
+              "feeFor": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "transferId"
+                  ]
+                },
+                "to": {
+                  "model": "Transaction",
+                  "namespace": "public"
+                }
+              },
+              "planItem": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "planItemId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "PaymentPlanItem",
+                  "namespace": "public"
+                }
+              },
+              "transfer": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "transferId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Transaction",
+                  "namespace": "public"
+                }
+              },
               "user": {
                 "cardinality": "N:1",
                 "nullable": false,
@@ -1883,8 +2390,14 @@
                 "occurredOn": {
                   "column": "occurredOn"
                 },
+                "planItemId": {
+                  "column": "planItemId"
+                },
                 "source": {
                   "column": "source"
+                },
+                "transferId": {
+                  "column": "transferId"
                 },
                 "type": {
                   "column": "type"
@@ -2012,6 +2525,21 @@
                   "namespace": "public"
                 }
               },
+              "checkpoints": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "ReconciliationCheckpoint",
+                  "namespace": "public"
+                }
+              },
               "passkeys": {
                 "cardinality": "1:N",
                 "on": {
@@ -2027,6 +2555,21 @@
                   "namespace": "public"
                 }
               },
+              "paymentPlans": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "PaymentPlan",
+                  "namespace": "public"
+                }
+              },
               "sessions": {
                 "cardinality": "1:N",
                 "on": {
@@ -2039,6 +2582,21 @@
                 },
                 "to": {
                   "model": "Session",
+                  "namespace": "public"
+                }
+              },
+              "snapshots": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "BalanceSnapshot",
                   "namespace": "public"
                 }
               },
@@ -2353,6 +2911,11 @@
                   "prefix": "Attachment_kind_check"
                 },
                 {
+                  "expression": "num_nonnulls(\"transactionId\", \"planId\", \"planItemId\") = 1",
+                  "name": "attachment_one_target_a019a492",
+                  "prefix": "attachment_one_target"
+                },
+                {
                   "expression": "\"byteSize\" > 0",
                   "name": "byte_size_positive_1e79ac18",
                   "prefix": "byte_size_positive"
@@ -2408,6 +2971,16 @@
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
                   "nullable": false
+                },
+                "planId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "planItemId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
                 },
                 "storageKey": {
                   "codecId": "pg/text@1",
@@ -2465,9 +3038,65 @@
                     "namespaceId": "public",
                     "tableName": "Transaction"
                   }
+                },
+                {
+                  "index": {
+                    "name": "Attachment_planId_idx_5b32079a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "planId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Attachment"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "PaymentPlan"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "Attachment_planItemId_idx_c9fb8d06"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "planItemId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Attachment"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "PaymentPlanItem"
+                  }
                 }
               ],
               "indexes": [
+                {
+                  "columns": [
+                    "planId"
+                  ],
+                  "name": "Attachment_planId_idx_5b32079a",
+                  "prefix": "Attachment_planId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "planItemId"
+                  ],
+                  "name": "Attachment_planItemId_idx_c9fb8d06",
+                  "prefix": "Attachment_planItemId_idx",
+                  "unique": false
+                },
                 {
                   "columns": [
                     "storageKey"
@@ -2499,6 +3128,24 @@
                   ],
                   "name": "Attachment_userId_idx_a489d58a",
                   "prefix": "Attachment_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "planId"
+                  ],
+                  "name": "Attachment_userId_planId_idx_092164f4",
+                  "prefix": "Attachment_userId_planId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "planItemId"
+                  ],
+                  "name": "Attachment_userId_planItemId_idx_2d4e875e",
+                  "prefix": "Attachment_userId_planItemId_idx",
                   "unique": false
                 },
                 {
@@ -2720,6 +3367,26 @@
               "foreignKeys": [
                 {
                   "index": {
+                    "name": "BalanceSnapshot_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "BalanceSnapshot"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                },
+                {
+                  "index": {
                     "name": "BalanceSnapshot_accountId_idx_cbfb3085"
                   },
                   "onDelete": "cascade",
@@ -2750,12 +3417,30 @@
                 },
                 {
                   "columns": [
+                    "accountId",
+                    "recordedAt"
+                  ],
+                  "name": "BalanceSnapshot_live_unique_24c6a3e9",
+                  "prefix": "BalanceSnapshot_live_unique",
+                  "unique": true,
+                  "where": "\"deletedAt\" IS NULL"
+                },
+                {
+                  "columns": [
                     "userId",
                     "accountId",
                     "recordedAt"
                   ],
                   "name": "BalanceSnapshot_userId_accountId_recordedAt_idx_84e04ff9",
                   "prefix": "BalanceSnapshot_userId_accountId_recordedAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "BalanceSnapshot_userId_idx_a489d58a",
+                  "prefix": "BalanceSnapshot_userId_idx",
                   "unique": false
                 }
               ],
@@ -2764,14 +3449,7 @@
                   "id"
                 ]
               },
-              "uniques": [
-                {
-                  "columns": [
-                    "accountId",
-                    "recordedAt"
-                  ]
-                }
-              ]
+              "uniques": []
             },
             "Category": {
               "checks": [
@@ -3138,6 +3816,241 @@
                 }
               ]
             },
+            "PaymentPlan": {
+              "columns": {
+                "archivedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "description": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "PaymentPlan_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "PaymentPlan"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "userId",
+                    "archivedAt"
+                  ],
+                  "name": "PaymentPlan_userId_archivedAt_idx_7b90304b",
+                  "prefix": "PaymentPlan_userId_archivedAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "PaymentPlan_userId_idx_a489d58a",
+                  "prefix": "PaymentPlan_userId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "PaymentPlanItem": {
+              "checks": [
+                {
+                  "expression": "\"expectedAmount\" > 0",
+                  "name": "expected_amount_positive_62ceb3db",
+                  "prefix": "expected_amount_positive"
+                }
+              ],
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "dueOn": {
+                  "codecId": "pg/date-string@1",
+                  "dataType": "pg/date",
+                  "nullable": true
+                },
+                "expectedAmount": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "label": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "note": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "planId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "sortOrder": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "PaymentPlanItem_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "PaymentPlanItem"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "PaymentPlanItem_planId_idx_5b32079a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "planId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "PaymentPlanItem"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "PaymentPlan"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "planId"
+                  ],
+                  "name": "PaymentPlanItem_planId_idx_5b32079a",
+                  "prefix": "PaymentPlanItem_planId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "planId",
+                    "sortOrder"
+                  ],
+                  "name": "PaymentPlanItem_planId_sortOrder_idx_d47cc6ce",
+                  "prefix": "PaymentPlanItem_planId_sortOrder_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "PaymentPlanItem_userId_idx_a489d58a",
+                  "prefix": "PaymentPlanItem_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "planId"
+                  ],
+                  "name": "PaymentPlanItem_userId_planId_idx_092164f4",
+                  "prefix": "PaymentPlanItem_userId_planId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "ReconciliationCheckpoint": {
               "columns": {
                 "accountId": {
@@ -3155,10 +4068,20 @@
                   "dataType": "pg/text",
                   "nullable": false
                 },
+                "snapshotAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
                 "snapshotId": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
                   "nullable": false
+                },
+                "unlockReason": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
                 },
                 "unlockedAt": {
                   "codecId": "pg/timestamptz-string@1",
@@ -3179,6 +4102,26 @@
               "foreignKeys": [
                 {
                   "index": {
+                    "name": "ReconciliationCheckpoint_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ReconciliationCheckpoint"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                },
+                {
+                  "index": {
                     "name": "ReconciliationCheckpoint_accountId_idx_cbfb3085"
                   },
                   "onDelete": "cascade",
@@ -3196,9 +4139,39 @@
                     "namespaceId": "public",
                     "tableName": "Account"
                   }
+                },
+                {
+                  "index": {
+                    "name": "ReconciliationCheckpoint_snapshotId_idx_e639e2e6"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "snapshotId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "ReconciliationCheckpoint"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "BalanceSnapshot"
+                  }
                 }
               ],
               "indexes": [
+                {
+                  "columns": [
+                    "accountId",
+                    "snapshotAt"
+                  ],
+                  "name": "Checkpoint_active_unique_bb3efe8e",
+                  "prefix": "Checkpoint_active_unique",
+                  "unique": true,
+                  "where": "\"unlockedAt\" IS NULL"
+                },
                 {
                   "columns": [
                     "accountId"
@@ -3209,11 +4182,10 @@
                 },
                 {
                   "columns": [
-                    "accountId",
-                    "verifiedAt"
+                    "snapshotId"
                   ],
-                  "name": "ReconciliationCheckpoint_accountId_verifiedAt_idx_b454d1d4",
-                  "prefix": "ReconciliationCheckpoint_accountId_verifiedAt_idx",
+                  "name": "ReconciliationCheckpoint_snapshotId_idx_e639e2e6",
+                  "prefix": "ReconciliationCheckpoint_snapshotId_idx",
                   "unique": false
                 },
                 {
@@ -3223,6 +4195,14 @@
                   ],
                   "name": "ReconciliationCheckpoint_userId_accountId_idx_1325e8cb",
                   "prefix": "ReconciliationCheckpoint_userId_accountId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "ReconciliationCheckpoint_userId_idx_a489d58a",
+                  "prefix": "ReconciliationCheckpoint_userId_idx",
                   "unique": false
                 }
               ],
@@ -3357,6 +4337,11 @@
                   "prefix": "category_only_for_cashflow"
                 },
                 {
+                  "expression": "\"planItemId\" IS NULL OR \"type\" = 'INCOME'",
+                  "name": "plan_item_only_for_income_9ae1d02a",
+                  "prefix": "plan_item_only_for_income"
+                },
+                {
                   "expression": "\"type\" <> 'TRANSFER' OR \"destinationAccountId\" <> \"accountId\"",
                   "name": "transfer_accounts_differ_c65f2c57",
                   "prefix": "transfer_accounts_differ"
@@ -3365,6 +4350,11 @@
                   "expression": "(\"type\" = 'TRANSFER') = (\"destinationAccountId\" IS NOT NULL)",
                   "name": "transfer_destination_consistency_5fb4dafd",
                   "prefix": "transfer_destination_consistency"
+                },
+                {
+                  "expression": "\"transferId\" IS NULL OR \"type\" = 'EXPENSE'",
+                  "name": "transfer_fee_only_for_expense_075b2aad",
+                  "prefix": "transfer_fee_only_for_expense"
                 }
               ],
               "columns": {
@@ -3433,6 +4423,11 @@
                   "dataType": "pg/date",
                   "nullable": false
                 },
+                "planItemId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
                 "source": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -3447,6 +4442,11 @@
                     "namespaceId": "public",
                     "plane": "storage"
                   }
+                },
+                "transferId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
                 },
                 "type": {
                   "codecId": "pg/text@1",
@@ -3550,6 +4550,48 @@
                     "namespaceId": "public",
                     "tableName": "Category"
                   }
+                },
+                {
+                  "index": {
+                    "name": "Transaction_planItemId_idx_c9fb8d06"
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "planItemId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Transaction"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "PaymentPlanItem"
+                  }
+                },
+                {
+                  "index": {
+                    "unique": [
+                      "transferId"
+                    ]
+                  },
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "transferId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Transaction"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Transaction"
+                  }
                 }
               ],
               "indexes": [
@@ -3589,6 +4631,14 @@
                 },
                 {
                   "columns": [
+                    "planItemId"
+                  ],
+                  "name": "Transaction_planItemId_idx_c9fb8d06",
+                  "prefix": "Transaction_planItemId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
                     "userId"
                   ],
                   "name": "Transaction_userId_idx_a489d58a",
@@ -3620,6 +4670,11 @@
                 ]
               },
               "uniques": [
+                {
+                  "columns": [
+                    "transferId"
+                  ]
+                },
                 {
                   "columns": [
                     "userId",
@@ -3776,10 +4831,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "bcbc0ebb82b058d57e4dadab5fa0619cee244c8cfded7b4e35e6660fa0e9c34b"
+    "storageHash": "d7af935b39ceffe99bfd2da9505905a36754c373439fbc53f79ece8edf61f714"
   },
   "execution": {
-    "executionHash": "f3b5d129ae1e64bb6254e992cd1628e5d854dcac5f92a2a3f78e7c063fbef1c4",
+    "executionHash": "37e78f526ba586ce69cba3489c74656effde8fe9fbdc2c28cea3878b26208fd5",
     "mutations": {
       "defaults": [
         {
@@ -4007,6 +5062,80 @@
           "ref": {
             "entry": "Passkey",
             "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "PaymentPlan",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "PaymentPlan",
+            "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "PaymentPlan",
+            "field": "updatedAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "PaymentPlanItem",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "PaymentPlanItem",
+            "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "PaymentPlanItem",
+            "field": "updatedAt",
             "namespace": "public"
           }
         },

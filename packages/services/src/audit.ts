@@ -13,7 +13,16 @@ export async function writeAudit(
     userId: string;
     entityType: string;
     entityId: string;
-    action: "CREATE" | "UPDATE" | "SOFT_DELETE" | "RESTORE" | "ARCHIVE" | "UNARCHIVE" | "MERGE";
+    action:
+      | "CREATE"
+      | "UPDATE"
+      | "SOFT_DELETE"
+      | "RESTORE"
+      | "ARCHIVE"
+      | "UNARCHIVE"
+      | "MERGE"
+      | "VERIFY"
+      | "UNLOCK";
     before?: object | null;
     after?: object | null;
     actorId?: string | null;

@@ -96,6 +96,9 @@ model User {
   attachments  Attachment[]
   passkeys     Passkey[]
   sessions     Session[]
+  paymentPlans PaymentPlan[]
+  snapshots    BalanceSnapshot[]
+  checkpoints  ReconciliationCheckpoint[]
 }
 
 // ---------------------------------------------------------------------------
@@ -211,6 +214,58 @@ model Category {
   @@index([parentId])
 }
 
+// ---------------------------------------------------------------------------
+// Payment plans: chained project income
+// ---------------------------------------------------------------------------
+//
+// A project paid as DP, termin 2 and final is one plan with three items. Each
+// real payment is an ordinary INCOME linked to an item. Status, totals and
+// outstanding amounts are derived from live linked incomes, never stored
+// (plan §2, "Derive, do not store").
+
+model PaymentPlan {
+  id          String  @id @onCreate(uuid(7))
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  // Plans are archived, never deleted, once they hold payment history.
+  archivedAt  TimestamptzString?
+  createdAt   TimestamptzString @onCreate(now())
+  updatedAt   TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  items       PaymentPlanItem[]
+  attachments Attachment[]
+
+  @@index([userId])
+  @@index([userId, archivedAt])
+}
+
+model PaymentPlanItem {
+  id             String      @id @onCreate(uuid(7))
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId         String
+  plan           PaymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  label          String
+  // Expected whole rupiah; several incomes may pay this one item.
+  expectedAmount BigInt
+  // Optional local due date (`YYYY-MM-DD`), used only to derive OVERDUE.
+  dueOn          DateString?
+  note           String?
+  sortOrder      Int         @default(0)
+  createdAt      TimestamptzString @onCreate(now())
+  updatedAt      TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  incomes     Transaction[]  @relation("TxPlanItem")
+  attachments Attachment[]
+
+  @@index([userId, planId])
+  @@index([planId, sortOrder])
+  // Rule 5 — an item asks for a positive amount.
+  @@check(expression: sql`"expectedAmount" > 0`, name: "expected_amount_positive")
+}
+
 model Transaction {
   id                   String        @id @onCreate(uuid(7))
   userId               String
@@ -224,6 +279,13 @@ model Transaction {
   destinationAccount   Account?      @relation("TxDestination", fields: [destinationAccountId], references: [id], onDelete: Restrict)
   categoryId           String?
   category             Category?     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  // Chained payment: an INCOME that settles a payment-plan item.
+  planItemId           String?
+  planItem             PaymentPlanItem? @relation("TxPlanItem", fields: [planItemId], references: [id], onDelete: Restrict)
+  // A transfer fee is an ordinary EXPENSE linked to the transfer it paid for.
+  transferId           String?       @unique
+  transfer             Transaction?  @relation("TransferFee", fields: [transferId], references: [id], onDelete: Restrict)
+  feeFor               Transaction?  @relation("TransferFee")
   merchant             String?
   counterparty         String?
   note                 String?
@@ -253,6 +315,7 @@ model Transaction {
   @@index([accountId])
   @@index([categoryId])
   @@index([destinationAccountId])
+  @@index([planItemId])
   // Rule 5 — positive amounts.
   @@check(expression: sql`"amount" > 0`, name: "amount_positive")
   // Rule 5 — a transfer has exactly one destination, and it differs.
@@ -260,6 +323,10 @@ model Transaction {
   @@check(expression: sql`"type" <> 'TRANSFER' OR "destinationAccountId" <> "accountId"`, name: "transfer_accounts_differ")
   // Only cashflow rows carry a category; a transfer is not spending.
   @@check(expression: sql`"type" IN ('INCOME', 'EXPENSE') OR "categoryId" IS NULL`, name: "category_only_for_cashflow")
+  // Only an income can settle a payment-plan item.
+  @@check(expression: sql`"planItemId" IS NULL OR "type" = 'INCOME'`, name: "plan_item_only_for_income")
+  // Only an expense can be the fee of a transfer.
+  @@check(expression: sql`"transferId" IS NULL OR "type" = 'EXPENSE'`, name: "transfer_fee_only_for_expense")
 }
 
 model Allocation {
@@ -290,10 +357,13 @@ model Attachment {
   id            String         @id @onCreate(uuid(7))
   userId        String
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // Evidence belongs to a transaction now; plans and items get their own
-  // nullable links when Phase 2 lands.
+  // Evidence belongs to exactly one target: a transaction, a plan or an item.
   transactionId String?
   transaction   Transaction?   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  planId        String?
+  plan          PaymentPlan?   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planItemId    String?
+  planItem      PaymentPlanItem? @relation(fields: [planItemId], references: [id], onDelete: Cascade)
   kind          AttachmentKind @default(PROOF)
   // Content-addressed path inside the storage driver, e.g. "<userId>/<sha256>.webp".
   storageKey    String
@@ -307,15 +377,20 @@ model Attachment {
   deletedAt     TimestamptzString?
 
   @@index([userId, transactionId])
+  @@index([userId, planId])
+  @@index([userId, planItemId])
   @@index([userId, contentHash])
   @@index([storageKey])
   // Rule 5 — a stored file has a positive size.
   @@check(expression: sql`"byteSize" > 0`, name: "byte_size_positive")
+  // Exactly one target, so an attachment cannot silently belong to two things.
+  @@check(expression: sql`num_nonnulls("transactionId", "planId", "planItemId") = 1`, name: "attachment_one_target")
 }
 
 model BalanceSnapshot {
   id         String      @id @onCreate(uuid(7))
   userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountId  String
   account    Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
   // Manual balance at a chosen instant (may be negative).
@@ -327,26 +402,38 @@ model BalanceSnapshot {
   createdAt  TimestamptzString @onCreate(now())
   deletedAt  TimestamptzString?
 
-  // Rule 5 — one snapshot per account and instant.
-  @@unique([accountId, recordedAt])
+  checkpoints ReconciliationCheckpoint[]
+
+  // Rule 5 — one live snapshot per account and instant. Soft-deleted rows are
+  // excluded so a correction can reuse the same instant with an audit trail.
+  @@index([accountId, recordedAt], unique: true, where: sql`"deletedAt" IS NULL`, name: "BalanceSnapshot_live_unique")
   @@index([userId, accountId, recordedAt])
 }
 
 model ReconciliationCheckpoint {
-  id         String      @id @onCreate(uuid(7))
-  userId     String
-  accountId  String
-  account    Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id           String      @id @onCreate(uuid(7))
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId    String
+  account      Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
   // The zero-gap snapshot being marked as verified.
-  snapshotId String
-  // Locking earlier transactions: a checkpoint freezes edits before it.
-  verifiedAt TimestamptzString @onCreate(now())
+  snapshotId   String
+  snapshot     BalanceSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Restrict)
+  // The snapshot instant. Transactions at or before this instant are frozen
+  // while the checkpoint is active.
+  snapshotAt   TimestamptzString
+  // When the owner marked the snapshot verified.
+  verifiedAt   TimestamptzString @onCreate(now())
   // Deliberate, audited unlock.
-  unlockedAt TimestamptzString?
-  createdAt  TimestamptzString @onCreate(now())
+  unlockedAt   TimestamptzString?
+  unlockReason String?
+  createdAt    TimestamptzString @onCreate(now())
 
+  // One active checkpoint per account and snapshot instant; an unlocked row
+  // stays as history and does not block a later re-verification.
+  @@index([accountId, snapshotAt], unique: true, where: sql`"unlockedAt" IS NULL`, name: "Checkpoint_active_unique")
   @@index([userId, accountId])
-  @@index([accountId, verifiedAt])
+  @@index([snapshotId])
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import { listAccounts, listCategories, listTransactions } from "@cashow/services";
-import { Plus, Search } from "lucide-react";
+import { ArrowLeftRight, Plus, Search } from "lucide-react";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { LinkButton } from "@/components/ledger/link-button";
@@ -46,7 +46,10 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
   const params = await searchParams;
 
   const page = Math.max(Number(params.page ?? "1") || 1, 1);
-  const type = params.type === "INCOME" || params.type === "EXPENSE" ? params.type : undefined;
+  const type =
+    params.type === "INCOME" || params.type === "EXPENSE" || params.type === "TRANSFER"
+      ? params.type
+      : undefined;
   const includeDeleted = params.deleted === "1";
 
   const [result, accounts, categories] = await Promise.all([
@@ -104,10 +107,16 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
             {list.total} catatan{includeDeleted ? " termasuk yang dihapus" : ""}.
           </p>
         </div>
-        <LinkButton href="/app/transactions/new">
-          <Plus aria-hidden="true" />
-          Tambah transaksi
-        </LinkButton>
+        <div className="flex flex-wrap gap-2">
+          <LinkButton href="/app/transactions/new?type=TRANSFER" variant="outline">
+            <ArrowLeftRight aria-hidden="true" />
+            Transfer
+          </LinkButton>
+          <LinkButton href="/app/transactions/new">
+            <Plus aria-hidden="true" />
+            Tambah transaksi
+          </LinkButton>
+        </div>
       </section>
 
       <Card>
@@ -130,6 +139,7 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
               <NativeSelectOption value="">Semua jenis</NativeSelectOption>
               <NativeSelectOption value="EXPENSE">Pengeluaran</NativeSelectOption>
               <NativeSelectOption value="INCOME">Pemasukan</NativeSelectOption>
+              <NativeSelectOption value="TRANSFER">Transfer</NativeSelectOption>
             </NativeSelect>
             <NativeSelect name="accountId" defaultValue={params.accountId ?? ""} aria-label="Akun">
               <NativeSelectOption value="">Semua akun</NativeSelectOption>

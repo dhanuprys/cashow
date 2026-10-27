@@ -76,6 +76,30 @@ export function toLedgerError(
   const message = messageOf(error);
 
   if (code === "23514") {
+    if (message.includes("locked by a checkpoint")) {
+      return new LedgerError(
+        "CONFLICT",
+        "Periode ini terkunci oleh checkpoint. Buka kunci checkpoint dulu untuk mengubahnya.",
+      );
+    }
+    if (message.includes("zero-gap snapshot")) {
+      return new LedgerError(
+        "CONFLICT",
+        "Checkpoint hanya bisa dibuat untuk snapshot tanpa selisih.",
+      );
+    }
+    if (message.includes("checkpoint")) {
+      return new LedgerError("CONFLICT", "Checkpoint tidak memenuhi aturan rekonsiliasi.");
+    }
+    if (message.includes("transfer fee")) {
+      return new LedgerError("VALIDATION", "Biaya transfer harus memakai akun asal transfer.");
+    }
+    if (message.includes("archived plan")) {
+      return new LedgerError("CONFLICT", "Rencana sudah diarsipkan.");
+    }
+    if (message.includes("plan item")) {
+      return new LedgerError("VALIDATION", "Tahap pembayaran tidak sesuai.");
+    }
     if (message.includes("allocation sum") || message.includes("exceeds transaction")) {
       return new LedgerError("CONFLICT", "Alokasi melebihi jumlah yang tersedia.");
     }

@@ -1,6 +1,6 @@
-import { accountInputSchema, firstIssue } from "@cashow/domain";
+import { accountInputSchema, ageInDays, firstIssue, parseDbTimestamp } from "@cashow/domain";
 import { writeAudit } from "./audit";
-import type { DbTransaction, QueryClient, UseCaseContext } from "./context";
+import { type DbTransaction, nowOf, type QueryClient, type UseCaseContext } from "./context";
 import { LedgerError, toLedgerError } from "./errors";
 import { writeOutbox } from "./outbox";
 import { err, ok, type Result } from "./result";
@@ -14,8 +14,18 @@ export interface AccountSummary {
   openingBalance: bigint;
   currency: string;
   archivedAt: string | null;
-  /** Opening balance plus every live transaction that touches the account. */
+  /**
+   * Estimated live balance: the latest snapshot plus every live movement after
+   * it, or the opening balance plus the whole ledger when no snapshot exists.
+   */
   balance: bigint;
+  /** The latest stated balance, or null when the account has no snapshot. */
+  snapshotBalance: bigint | null;
+  snapshotRecordedAt: string | null;
+  /** Whole days since the latest snapshot, for the stale-balance label. */
+  snapshotAgeDays: number | null;
+  /** The snapshot instant of the newest active checkpoint. */
+  lastCheckpointAt: string | null;
 }
 
 interface AccountBalanceRow {
@@ -26,61 +36,38 @@ interface AccountBalanceRow {
   currency: string;
   archivedAt: string;
   balance: string;
+  snapshotBalance: string | null;
+  snapshotRecordedAt: string | null;
+  lastCheckpointAt: string | null;
 }
+
+const ACCOUNT_ROW_CODECS = {
+  id: "pg/text@1",
+  name: "pg/text@1",
+  type: "pg/text@1",
+  openingBalance: "pg/text@1",
+  currency: "pg/text@1",
+  archivedAt: "pg/text@1",
+  balance: "pg/text@1",
+  snapshotBalance: { codecId: "pg/text@1", nullable: true },
+  snapshotRecordedAt: { codecId: "pg/text@1", nullable: true },
+  lastCheckpointAt: { codecId: "pg/text@1", nullable: true },
+} as const;
 
 /**
  * Accounts with a derived balance (plan §2: "Derive, do not store").
  *
- * The two-branch aggregate is deliberate: a `LEFT JOIN … ON (accountId = a OR
- * destinationAccountId = a)` cannot use one index for both sides and degrades
- * on a large ledger (benchmark §8).
+ * With a snapshot, the estimate starts from the stated balance and only adds
+ * movements after it. Without one, it is the opening balance plus the ledger.
+ * The two-branch movement aggregate is deliberate: a
+ * `LEFT JOIN … ON (accountId = a OR destinationAccountId = a)` cannot use one
+ * index for both sides and degrades on a large ledger (benchmark §8).
  */
 export async function listAccounts(ctx: UseCaseContext): Promise<Result<AccountSummary[]>> {
   try {
-    const plan = ctx.db.raw.sql`
-      SELECT a."id" AS id,
-             a."name" AS name,
-             a."type" AS type,
-             a."openingBalance"::text AS "openingBalance",
-             a."currency" AS currency,
-             COALESCE(a."archivedAt"::text, '') AS "archivedAt",
-             (a."openingBalance" + COALESCE(m.delta, 0))::text AS balance
-      FROM "public"."Account" a
-      LEFT JOIN (
-        SELECT x.id AS id, SUM(x.delta) AS delta
-        FROM (
-          SELECT "accountId" AS id,
-                 CASE "type"
-                   WHEN 'EXPENSE' THEN -"amount"
-                   WHEN 'TRANSFER' THEN -"amount"
-                   ELSE "amount"
-                 END AS delta
-          FROM "public"."Transaction"
-          WHERE "userId" = ${ctx.userId} AND "deletedAt" IS NULL
-          UNION ALL
-          SELECT "destinationAccountId" AS id, "amount" AS delta
-          FROM "public"."Transaction"
-          WHERE "userId" = ${ctx.userId} AND "deletedAt" IS NULL
-            AND "type" = 'TRANSFER' AND "destinationAccountId" IS NOT NULL
-        ) x
-        GROUP BY x.id
-      ) m ON m.id = a."id"
-      WHERE a."userId" = ${ctx.userId}
-      ORDER BY (a."archivedAt" IS NOT NULL), a."name"
-    `
-      .returnsRow({
-        id: "pg/text@1",
-        name: "pg/text@1",
-        type: "pg/text@1",
-        openingBalance: "pg/text@1",
-        currency: "pg/text@1",
-        archivedAt: "pg/text@1",
-        balance: "pg/text@1",
-      })
-      .build();
-
-    const rows = await ctx.db.query(plan);
-    return ok(rows.map(mapAccount));
+    const rows = await loadAccountRows(ctx.db, ctx.userId, "");
+    const now = nowOf(ctx);
+    return ok(rows.map((row) => mapAccount(row, now)));
   } catch (error) {
     return err(toLedgerError(error));
   }
@@ -91,6 +78,16 @@ export async function getAccount(
   userId: string,
   accountId: string,
 ): Promise<AccountSummary | null> {
+  const rows = await loadAccountRows(client, userId, accountId);
+  const row = rows[0];
+  return row === undefined ? null : mapAccount(row, new Date());
+}
+
+async function loadAccountRows(
+  client: QueryClient,
+  userId: string,
+  accountId: string,
+): Promise<AccountBalanceRow[]> {
   const plan = client.raw.sql`
     SELECT a."id" AS id,
            a."name" AS name,
@@ -98,43 +95,56 @@ export async function getAccount(
            a."openingBalance"::text AS "openingBalance",
            a."currency" AS currency,
            COALESCE(a."archivedAt"::text, '') AS "archivedAt",
-           (a."openingBalance" + COALESCE(m.delta, 0))::text AS balance
+           CASE WHEN snap."amount" IS NOT NULL
+                THEN (snap."amount" + COALESCE(m.delta_after, 0))::text
+                ELSE (a."openingBalance" + COALESCE(m.delta_all, 0))::text
+           END AS balance,
+           snap."amount"::text AS "snapshotBalance",
+           snap."recordedAt"::text AS "snapshotRecordedAt",
+           cp."snapshotAt"::text AS "lastCheckpointAt"
     FROM "public"."Account" a
-    LEFT JOIN (
-      SELECT x.id AS id, SUM(x.delta) AS delta
+    LEFT JOIN LATERAL (
+      SELECT s."amount", s."recordedAt"
+      FROM "public"."BalanceSnapshot" s
+      WHERE s."accountId" = a."id" AND s."deletedAt" IS NULL
+      ORDER BY s."recordedAt" DESC
+      LIMIT 1
+    ) snap ON true
+    LEFT JOIN LATERAL (
+      SELECT SUM(x.delta) AS delta_all,
+             SUM(CASE WHEN snap."recordedAt" IS NULL OR x."occurredAt" > snap."recordedAt"
+                      THEN x.delta ELSE 0 END) AS delta_after
       FROM (
-        SELECT "accountId" AS id,
-               CASE "type"
+        SELECT CASE "type"
                  WHEN 'EXPENSE' THEN -"amount"
                  WHEN 'TRANSFER' THEN -"amount"
                  ELSE "amount"
-               END AS delta
+               END AS delta,
+               "occurredAt" AS "occurredAt"
         FROM "public"."Transaction"
-        WHERE "userId" = ${userId} AND "deletedAt" IS NULL
+        WHERE "userId" = ${userId} AND "deletedAt" IS NULL AND "accountId" = a."id"
         UNION ALL
-        SELECT "destinationAccountId" AS id, "amount" AS delta
+        SELECT "amount" AS delta, "occurredAt" AS "occurredAt"
         FROM "public"."Transaction"
         WHERE "userId" = ${userId} AND "deletedAt" IS NULL
-          AND "type" = 'TRANSFER' AND "destinationAccountId" IS NOT NULL
+          AND "type" = 'TRANSFER' AND "destinationAccountId" = a."id"
       ) x
-      GROUP BY x.id
-    ) m ON m.id = a."id"
-    WHERE a."userId" = ${userId} AND a."id" = ${accountId}
+    ) m ON true
+    LEFT JOIN LATERAL (
+      SELECT c."snapshotAt"
+      FROM "public"."ReconciliationCheckpoint" c
+      WHERE c."accountId" = a."id" AND c."unlockedAt" IS NULL
+      ORDER BY c."snapshotAt" DESC
+      LIMIT 1
+    ) cp ON true
+    WHERE a."userId" = ${userId}
+      AND (NULLIF(${accountId}, '')::text IS NULL OR a."id" = ${accountId})
+    ORDER BY (a."archivedAt" IS NOT NULL), a."name"
   `
-    .returnsRow({
-      id: "pg/text@1",
-      name: "pg/text@1",
-      type: "pg/text@1",
-      openingBalance: "pg/text@1",
-      currency: "pg/text@1",
-      archivedAt: "pg/text@1",
-      balance: "pg/text@1",
-    })
+    .returnsRow(ACCOUNT_ROW_CODECS)
     .build();
 
-  const rows = await client.query(plan);
-  const row = rows[0];
-  return row === undefined ? null : mapAccount(row);
+  return client.query(plan);
 }
 
 export async function createAccount(
@@ -281,7 +291,9 @@ export async function setAccountArchived(
   }
 }
 
-function mapAccount(row: AccountBalanceRow): AccountSummary {
+function mapAccount(row: AccountBalanceRow, now: Date): AccountSummary {
+  const snapshotRecordedAt =
+    row.snapshotRecordedAt === null ? null : parseDbTimestamp(row.snapshotRecordedAt).toISOString();
   return {
     id: row.id,
     name: row.name,
@@ -290,6 +302,12 @@ function mapAccount(row: AccountBalanceRow): AccountSummary {
     currency: row.currency,
     archivedAt: row.archivedAt === "" ? null : row.archivedAt,
     balance: BigInt(row.balance),
+    snapshotBalance: row.snapshotBalance === null ? null : BigInt(row.snapshotBalance),
+    snapshotRecordedAt,
+    snapshotAgeDays:
+      snapshotRecordedAt === null ? null : ageInDays(parseDbTimestamp(snapshotRecordedAt), now),
+    lastCheckpointAt:
+      row.lastCheckpointAt === null ? null : parseDbTimestamp(row.lastCheckpointAt).toISOString(),
   };
 }
 

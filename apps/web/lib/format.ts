@@ -97,3 +97,23 @@ export const ATTACHMENT_KIND_LABEL: Record<string, string> = {
   CONTRACT: "Kontrak",
   RECEIPT: "Struk",
 };
+
+export const PLAN_STATUS_LABEL: Record<string, string> = {
+  ACTIVE: "Berjalan",
+  COMPLETED: "Lunas",
+  OVERDUE: "Terlambat",
+};
+
+export const PLAN_ITEM_STATUS_LABEL: Record<string, string> = {
+  PENDING: "Belum dibayar",
+  PARTIAL: "Sebagian",
+  RECEIVED: "Diterima",
+  OVER_RECEIVED: "Lebih bayar",
+  OVERDUE: "Terlambat",
+};
+
+export const GAP_KIND_LABEL: Record<string, string> = {
+  BALANCED: "Seimbang",
+  UNLOGGED_SPENDING: "Pengeluaran belum tercatat",
+  UNLOGGED_INCOME: "Pemasukan belum tercatat",
+};

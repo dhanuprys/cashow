@@ -1,0 +1,13 @@
+{
+  "from": "bcbc0ebb82b058d57e4dadab5fa0619cee244c8cfded7b4e35e6660fa0e9c34b",
+  "to": "d7af935b39ceffe99bfd2da9505905a36754c373439fbc53f79ece8edf61f714",
+  "providedInvariants": [
+    "cashow:checkpoint-locks:snapshots",
+    "cashow:checkpoint-locks:transactions",
+    "cashow:checkpoint-zero-gap",
+    "cashow:plan-item-links",
+    "cashow:transaction-plan-links"
+  ],
+  "createdAt": "2026-10-27T04:48:36.462Z",
+  "migrationHash": "05456c3f93b3932ea7a1e96aaee3ee36d3655ef4c057031e70b983b4cbb22c09"
+}

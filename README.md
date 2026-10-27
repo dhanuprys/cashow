@@ -4,12 +4,14 @@
 income arrives, expenses draw from it through explicit allocations, and every
 balance is derived rather than stored.
 
-This repository is Phase 0 plus the Phase 1 core ledger: the monorepo,
-PostgreSQL schema and migrations, environment validation, passkey
-authentication, the deployment stack, the seeded performance benchmark, the
-account and category pages, income/expense capture with quick add, allocation of
-expenses to incomes, attachments, audit log, soft delete, and a transactional
-outbox. Transfers, snapshots, budgets, rules, notifications and AI build on top.
+This repository is Phase 0, the Phase 1 core ledger, and Phase 2 chains and
+balances: the monorepo, PostgreSQL schema and migrations, environment
+validation, passkey authentication, the deployment stack, the seeded
+performance benchmark, the account and category pages, income/expense capture
+with quick add, allocation of expenses to incomes, attachments, payment plans
+with derived status, balance snapshots and reconciliation, checkpoints that lock
+settled periods, transfers with fees, audit log, soft delete, and a
+transactional outbox. Budgets, rules, notifications and AI build on top.
 
 ## Stack
 
@@ -84,6 +86,7 @@ repository for a real deployment; Compose uses `/app/data/uploads` on the shared
 | `bun run typecheck`                | `tsc` for packages and the web app                 |
 | `bun run test`                     | `bun test` (domain unit tests)                     |
 | `bun run test:ledger`              | Phase 1 gate: allocation rules enforced by the DB  |
+| `bun run test:chains`              | Phase 2 gate: payment plans, snapshots, reconciliation, transfers |
 | `bun run smoke`                    | write/read a `BigInt` row through the typed client |
 | `bun run seed`                     | seed 100,000 transactions over three years         |
 | `bun run bench`                    | check the §8 read/write budgets on that seed       |
@@ -131,8 +134,10 @@ After setup, `/app` is the daily surface:
 | `/app/transactions`     | Filter, search, paginate; deleted rows are opt-in                     |
 | `/app/transactions/new` | Full form: type, amount, account, category, time, allocations         |
 | `/app/transactions/:id` | Detail, attachments, soft delete/restore                              |
-| `/app/accounts`         | Accounts and opening balances (balance is always derived)             |
+| `/app/accounts`         | Accounts, opening balances, snapshots and reconciliation (balance is derived) |
 | `/app/categories`       | One-level categories, separate income/expense trees                   |
+| `/app/plans`            | Payment plans: steps, derived status, partial payments, progress      |
+| `/app/transactions/new?type=TRANSFER` | Transfer between two accounts with an optional fee         |
 | `/app/settings`         | Profile, timezone, week/budget start, passkeys, audit, outbox         |
 
 Amounts are typed as text and parsed once: `35rb`, `1,5jt`, `Rp 35.000`. Money
@@ -265,18 +270,21 @@ Back it up or move it with the database; see
 
 CI runs, in order: frozen install, lint/format, production build, typecheck,
 unit tests, migrations against an empty Postgres, `db verify`, the database
-smoke test, the Phase 1 ledger gate (`test:ledger`: the Rp500.000/Rp250.000 flow
-plus database rejections for over-allocation, wrong direction, cross-user
-references, category-kind mismatch and restore-after-shrink), the framework
-compatibility gates (Server Action, streaming, abort), and a Docker build of
-both runtime targets. A nightly job seeds 100,000 transactions and runs the §8
-performance budgets.
+smoke test, the Phase 1 ledger gate (`test:ledger`: the Rp500.000/Rp250.000 flow plus database rejections for
+over-allocation, wrong direction, cross-user references, category-kind mismatch
+and restore-after-shrink), `test:chains` (a three-step plan with one partial
+payment, derived progress, a backdated snapshot that recomputes later gaps,
+checkpoint locking/unlocking, transfer fee cascades, ownership guards), the
+framework compatibility gates (Server Action, streaming, abort), and a Docker
+build of both runtime targets. A nightly job seeds 100,000 transactions and runs
+the §8 performance budgets.
 
 Local-only gates: `bun run test:e2e:auth` (Chrome with a virtual authenticator;
 it now also drives the ledger smoke: defaults, quick add, the
-Rp500.000/Rp250.000 allocation, and an attachment upload/serve). The passkey
-gate in plan §6 additionally requires the real HTTPS domain, so run it once
-after the deployment name is final.
+Rp500.000/Rp250.000 allocation, an attachment upload/serve, a three-step plan
+with a partial payment, and a transfer with a fee). The passkey gate in plan §6
+additionally requires the real HTTPS domain, so run it once after the deployment
+name is final.
 
 ## Decisions
 

@@ -4,17 +4,28 @@ import { quickAddSchema } from "@cashow/domain";
 import {
   createAccount,
   createCategory,
+  createPlan,
+  createPlanItem,
+  createSnapshot,
   createTransaction,
+  createTransfer,
+  deletePlanItem,
   listAccounts,
   restoreTransaction,
   setAccountArchived,
   setCategoryArchived,
+  setPlanArchived,
   softDeleteAttachment,
+  softDeleteSnapshot,
   softDeleteTransaction,
+  unlockCheckpoint,
   updateAccount,
   updateCategory,
+  updatePlan,
+  updatePlanItem,
   updateProfile,
   updateTransaction,
+  verifyCheckpoint,
 } from "@cashow/services";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -72,6 +83,7 @@ function revalidateLedger(): void {
   revalidatePath("/app/transactions");
   revalidatePath("/app/accounts");
   revalidatePath("/app/categories");
+  revalidatePath("/app/plans");
 }
 
 export async function createTransactionAction(
@@ -92,6 +104,7 @@ export async function createTransactionAction(
     amount: text(formData, "amount"),
     accountId: text(formData, "accountId"),
     categoryId: text(formData, "categoryId"),
+    planItemId: text(formData, "planItemId"),
     merchant: text(formData, "merchant"),
     counterparty: text(formData, "counterparty"),
     note: text(formData, "note"),
@@ -126,6 +139,7 @@ export async function updateTransactionAction(
     amount: text(formData, "amount"),
     accountId: text(formData, "accountId"),
     categoryId: text(formData, "categoryId"),
+    planItemId: text(formData, "planItemId"),
     merchant: text(formData, "merchant"),
     counterparty: text(formData, "counterparty"),
     note: text(formData, "note"),
@@ -343,4 +357,204 @@ export async function updateSettingsAction(
   revalidatePath("/app");
   revalidatePath("/app/settings");
   return { status: "success" };
+}
+
+// ---------------------------------------------------------------------------
+// Payment plans
+// ---------------------------------------------------------------------------
+
+export async function createPlanAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const result = await createPlan(session.ctx, {
+    name: text(formData, "name"),
+    description: text(formData, "description"),
+    items: [],
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  redirect(`/app/plans/${result.value.id}`);
+}
+
+export async function updatePlanAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "planId");
+  if (id === "") return failure("Rencana tidak ditemukan.");
+
+  const result = await updatePlan(session.ctx, id, {
+    name: text(formData, "name"),
+    description: text(formData, "description"),
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath(`/app/plans/${id}`);
+  return { status: "success" };
+}
+
+export async function archivePlanAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "planId");
+  if (id === "") return;
+
+  const result = await setPlanArchived(session.ctx, id, text(formData, "archived") === "true");
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  revalidatePath(`/app/plans/${id}`);
+}
+
+export async function createPlanItemAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const planId = text(formData, "planId");
+  if (planId === "") return failure("Rencana tidak ditemukan.");
+
+  const result = await createPlanItem(session.ctx, planId, {
+    label: text(formData, "label"),
+    expectedAmount: text(formData, "expectedAmount"),
+    dueOn: text(formData, "dueOn"),
+    note: text(formData, "note"),
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath(`/app/plans/${planId}`);
+  return { status: "success" };
+}
+
+export async function updatePlanItemAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const itemId = text(formData, "itemId");
+  const planId = text(formData, "planId");
+  if (itemId === "" || planId === "") return failure("Tahap pembayaran tidak ditemukan.");
+
+  const result = await updatePlanItem(session.ctx, itemId, {
+    label: text(formData, "label"),
+    expectedAmount: text(formData, "expectedAmount"),
+    dueOn: text(formData, "dueOn"),
+    note: text(formData, "note"),
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath(`/app/plans/${planId}`);
+  return { status: "success" };
+}
+
+export async function deletePlanItemAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const itemId = text(formData, "itemId");
+  const planId = text(formData, "planId");
+  if (itemId === "") return;
+
+  const result = await deletePlanItem(session.ctx, itemId);
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  if (planId !== "") revalidatePath(`/app/plans/${planId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Snapshots and checkpoints
+// ---------------------------------------------------------------------------
+
+export async function createSnapshotAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const accountId = text(formData, "accountId");
+
+  const result = await createSnapshot(session.ctx, {
+    accountId,
+    amount: text(formData, "amount"),
+    recordedAtLocal: text(formData, "recordedAtLocal"),
+    note: text(formData, "note"),
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  return { status: "success" };
+}
+
+export async function deleteSnapshotAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const snapshotId = text(formData, "snapshotId");
+  if (snapshotId === "") return;
+
+  const result = await softDeleteSnapshot(session.ctx, snapshotId);
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+}
+
+export async function verifyCheckpointAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const snapshotId = text(formData, "snapshotId");
+  if (snapshotId === "") return failure("Snapshot tidak ditemukan.");
+
+  const result = await verifyCheckpoint(session.ctx, snapshotId);
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  return { status: "success" };
+}
+
+export async function unlockCheckpointAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const checkpointId = text(formData, "checkpointId");
+  if (checkpointId === "") return failure("Checkpoint tidak ditemukan.");
+
+  const result = await unlockCheckpoint(session.ctx, checkpointId, {
+    reason: text(formData, "reason"),
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  return { status: "success" };
+}
+
+// ---------------------------------------------------------------------------
+// Transfers
+// ---------------------------------------------------------------------------
+
+export async function createTransferAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+
+  const result = await createTransfer(session.ctx, {
+    amount: text(formData, "amount"),
+    accountId: text(formData, "accountId"),
+    destinationAccountId: text(formData, "destinationAccountId"),
+    feeAmount: text(formData, "feeAmount") || "0",
+    feeCategoryId: text(formData, "feeCategoryId"),
+    note: text(formData, "note"),
+    occurredAtLocal: text(formData, "occurredAtLocal"),
+    clientRequestId: text(formData, "clientRequestId") || null,
+    source: "MANUAL",
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  redirect(`/app/transactions/${result.value.id}`);
 }

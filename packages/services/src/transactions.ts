@@ -6,9 +6,10 @@ import {
   toLocalDate,
   transactionCreateSchema,
   transactionUpdateSchema,
+  transferCreateSchema,
 } from "@cashow/domain";
 import { writeAudit } from "./audit";
-import type { DbTransaction, QueryClient, UseCaseContext } from "./context";
+import { type DbTransaction, type QueryClient, type UseCaseContext, userTimezone } from "./context";
 import { isUniqueViolation, LedgerError, toLedgerError } from "./errors";
 import { writeOutbox } from "./outbox";
 import { err, ok, type Result } from "./result";
@@ -25,6 +26,16 @@ export interface TransactionSummary {
   destinationAccountName: string | null;
   categoryId: string | null;
   categoryName: string | null;
+  /** The payment-plan item this income settles, if any. */
+  planItemId: string | null;
+  planItemLabel: string | null;
+  planId: string | null;
+  planName: string | null;
+  /** Set on a transfer fee expense: the transfer it belongs to. */
+  transferId: string | null;
+  /** Set on a transfer row: its linked fee expense, when one exists. */
+  transferFeeId: string | null;
+  transferFeeAmount: bigint | null;
   merchant: string | null;
   counterparty: string | null;
   note: string | null;
@@ -66,9 +77,11 @@ export interface TransactionDetail extends TransactionSummary {
 }
 
 export interface TransactionListFilter {
-  type?: CashflowType;
+  type?: CashflowType | "TRANSFER" | "ADJUSTMENT";
   accountId?: string;
   categoryId?: string;
+  /** Only incomes linked to an item of this payment plan. */
+  planId?: string;
   /** Inclusive local date, `YYYY-MM-DD`. */
   from?: string;
   /** Inclusive local date, `YYYY-MM-DD`. */
@@ -120,6 +133,13 @@ interface TransactionRow {
   destinationAccountName: string | null;
   categoryId: string | null;
   categoryName: string | null;
+  planItemId: string | null;
+  planItemLabel: string | null;
+  planId: string | null;
+  planName: string | null;
+  transferId: string | null;
+  transferFeeId: string | null;
+  transferFeeAmount: string | null;
   merchant: string | null;
   counterparty: string | null;
   note: string | null;
@@ -145,6 +165,13 @@ const TRANSACTION_ROW_CODECS = {
   destinationAccountName: { codecId: "pg/text@1", nullable: true },
   categoryId: { codecId: "pg/text@1", nullable: true },
   categoryName: { codecId: "pg/text@1", nullable: true },
+  planItemId: { codecId: "pg/text@1", nullable: true },
+  planItemLabel: { codecId: "pg/text@1", nullable: true },
+  planId: { codecId: "pg/text@1", nullable: true },
+  planName: { codecId: "pg/text@1", nullable: true },
+  transferId: { codecId: "pg/text@1", nullable: true },
+  transferFeeId: { codecId: "pg/text@1", nullable: true },
+  transferFeeAmount: { codecId: "pg/text@1", nullable: true },
   merchant: { codecId: "pg/text@1", nullable: true },
   counterparty: { codecId: "pg/text@1", nullable: true },
   note: { codecId: "pg/text@1", nullable: true },
@@ -182,6 +209,7 @@ export async function listTransactions(
   const type = filter.type ?? "";
   const accountId = filter.accountId ?? "";
   const categoryId = filter.categoryId ?? "";
+  const planId = filter.planId ?? "";
   const from = filter.from ?? "";
   const to = filter.to ?? "";
 
@@ -197,6 +225,13 @@ export async function listTransactions(
         dest."name" AS "destinationAccountName",
         t."categoryId" AS "categoryId",
         c."name" AS "categoryName",
+        t."planItemId" AS "planItemId",
+        pi."label" AS "planItemLabel",
+        pi."planId" AS "planId",
+        p."name" AS "planName",
+        t."transferId" AS "transferId",
+        fe."id" AS "transferFeeId",
+        fe."amount"::text AS "transferFeeAmount",
         t."merchant" AS merchant,
         t."counterparty" AS counterparty,
         t."note" AS note,
@@ -215,6 +250,9 @@ export async function listTransactions(
       JOIN "public"."Account" acc ON acc."id" = t."accountId"
       LEFT JOIN "public"."Account" dest ON dest."id" = t."destinationAccountId"
       LEFT JOIN "public"."Category" c ON c."id" = t."categoryId"
+      LEFT JOIN "public"."PaymentPlanItem" pi ON pi."id" = t."planItemId"
+      LEFT JOIN "public"."PaymentPlan" p ON p."id" = pi."planId"
+      LEFT JOIN "public"."Transaction" fe ON fe."transferId" = t."id" AND fe."deletedAt" IS NULL
       LEFT JOIN (
         SELECT a."expenseId" AS expense_id,
                SUM(a."amount") AS allocated,
@@ -237,6 +275,7 @@ export async function listTransactions(
         AND (NULLIF(${accountId}, '')::text IS NULL OR t."accountId" = ${accountId}
              OR t."destinationAccountId" = ${accountId})
         AND (NULLIF(${categoryId}, '')::text IS NULL OR t."categoryId" = ${categoryId})
+        AND (NULLIF(${planId}, '')::text IS NULL OR pi."planId" = ${planId})
         AND (NULLIF(${from}, '')::date IS NULL OR t."occurredOn" >= NULLIF(${from}, '')::date)
         AND (NULLIF(${to}, '')::date IS NULL OR t."occurredOn" <= NULLIF(${to}, '')::date)
         AND (NULLIF(${pattern}, '')::text IS NULL
@@ -303,6 +342,7 @@ export async function createTransaction(
       const occurredOn = toLocalDate(occurredAt, timezone);
 
       await assertCategoryKind(tx, ctx.userId, data.categoryId, data.type);
+      await assertPlanItem(tx, ctx.userId, data.planItemId, data.type);
       const allocations = normaliseAllocations(data.allocations);
 
       const transaction = await tx.orm.public.Transaction.create({
@@ -311,6 +351,7 @@ export async function createTransaction(
         amount: data.amount,
         accountId: data.accountId,
         categoryId: data.categoryId,
+        planItemId: data.planItemId,
         merchant: data.merchant,
         counterparty: data.counterparty,
         note: data.note,
@@ -354,6 +395,124 @@ export async function createTransaction(
   }
 }
 
+/**
+ * A transfer between the owner's own accounts. The fee is a separate EXPENSE
+ * linked to the transfer (plan §3: "bank fees never become mystery gaps"), so
+ * the source balance falls by `amount + fee`, the destination rises by
+ * `amount`, and the fee is ordinary spending with its own category.
+ */
+export async function createTransfer(
+  ctx: UseCaseContext,
+  input: unknown,
+): Promise<Result<TransactionDetail>> {
+  const parsed = transferCreateSchema.safeParse(input);
+  if (!parsed.success) {
+    return err(new LedgerError("VALIDATION", firstIssue(parsed.error)));
+  }
+  const data = parsed.data;
+
+  if (data.accountId === data.destinationAccountId) {
+    return err(new LedgerError("VALIDATION", "Akun asal dan tujuan transfer harus berbeda."));
+  }
+
+  if (data.clientRequestId !== null) {
+    const existing = await findByIdempotencyKey(ctx, data.clientRequestId);
+    if (existing !== null) return existing;
+  }
+
+  try {
+    const created = await ctx.db.transaction(async (tx) => {
+      const timezone = await userTimezone(tx, ctx.userId);
+      const occurredAt = localDateTimeToUtc(data.occurredAtLocal, timezone);
+      const occurredOn = toLocalDate(occurredAt, timezone);
+
+      const source = await tx.orm.public.Account.where({
+        id: data.accountId,
+        userId: ctx.userId,
+      }).first();
+      if (source === null) throw new LedgerError("NOT_FOUND", "Akun asal tidak ditemukan.");
+      if (source.archivedAt !== null) {
+        throw new LedgerError("CONFLICT", "Akun asal sudah diarsipkan.");
+      }
+      const destination = await tx.orm.public.Account.where({
+        id: data.destinationAccountId,
+        userId: ctx.userId,
+      }).first();
+      if (destination === null) throw new LedgerError("NOT_FOUND", "Akun tujuan tidak ditemukan.");
+      if (destination.archivedAt !== null) {
+        throw new LedgerError("CONFLICT", "Akun tujuan sudah diarsipkan.");
+      }
+
+      const transfer = await tx.orm.public.Transaction.create({
+        userId: ctx.userId,
+        type: "TRANSFER",
+        amount: data.amount,
+        accountId: data.accountId,
+        destinationAccountId: data.destinationAccountId,
+        note: data.note,
+        occurredAt: occurredAt.toISOString(),
+        occurredOn,
+        source: data.source,
+        clientRequestId: data.clientRequestId,
+      });
+
+      let fee: { id: string } | null = null;
+      if (data.feeAmount > 0n) {
+        const feeCategoryId = await ensureTransferFeeCategory(tx, ctx.userId, data.feeCategoryId);
+        const createdFee = await tx.orm.public.Transaction.create({
+          userId: ctx.userId,
+          type: "EXPENSE",
+          amount: data.feeAmount,
+          accountId: data.accountId,
+          categoryId: feeCategoryId,
+          transferId: transfer.id,
+          merchant: destination.name,
+          note: `Biaya transfer ke ${destination.name}`,
+          occurredAt: occurredAt.toISOString(),
+          occurredOn,
+          source: data.source,
+        });
+        fee = createdFee;
+
+        await writeAudit(tx, {
+          userId: ctx.userId,
+          entityType: "Transaction",
+          entityId: createdFee.id,
+          action: "CREATE",
+          after: createdFee,
+        });
+      }
+
+      await writeAudit(tx, {
+        userId: ctx.userId,
+        entityType: "Transaction",
+        entityId: transfer.id,
+        action: "CREATE",
+        after: { transaction: transfer, fee },
+      });
+      await writeOutbox(tx, {
+        userId: ctx.userId,
+        aggregateType: "Transaction",
+        aggregateId: transfer.id,
+        eventType: "transfer.created",
+        payload: { transaction: transfer, fee },
+      });
+
+      return transfer;
+    });
+
+    const detail = await loadDetail(ctx.db, ctx.userId, created.id);
+    if (detail === null) throw new LedgerError("INTERNAL", "Transfer gagal dibaca kembali.");
+    return ok(detail);
+  } catch (error) {
+    if (isUniqueViolation(error) && data.clientRequestId !== null) {
+      const existing = await findByIdempotencyKey(ctx, data.clientRequestId);
+      if (existing !== null) return existing;
+    }
+    return err(toLedgerError(error));
+  }
+}
+
 export async function updateTransaction(
   ctx: UseCaseContext,
   transactionId: string,
@@ -378,6 +537,9 @@ export async function updateTransaction(
       if (before.type === "TRANSFER" || before.type === "ADJUSTMENT") {
         throw new LedgerError("VALIDATION", "Transaksi ini tidak bisa diubah dari halaman ini.");
       }
+      if (before.transferId !== null) {
+        throw new LedgerError("CONFLICT", "Biaya transfer diubah bersama transaksi transfernya.");
+      }
 
       const amount = data.amount ?? before.amount;
       const allocations =
@@ -390,11 +552,15 @@ export async function updateTransaction(
       if (data.categoryId !== undefined) {
         await assertCategoryKind(tx, ctx.userId, data.categoryId, before.type as CashflowType);
       }
+      if (data.planItemId !== undefined) {
+        await assertPlanItem(tx, ctx.userId, data.planItemId, before.type);
+      }
 
       const patch: Record<string, unknown> = {};
       if (data.amount !== undefined) patch.amount = data.amount;
       if (data.accountId !== undefined) patch.accountId = data.accountId;
       if (data.categoryId !== undefined) patch.categoryId = data.categoryId;
+      if (data.planItemId !== undefined) patch.planItemId = data.planItemId;
       if (data.merchant !== undefined) patch.merchant = data.merchant;
       if (data.counterparty !== undefined) patch.counterparty = data.counterparty;
       if (data.note !== undefined) patch.note = data.note;
@@ -466,6 +632,9 @@ export async function softDeleteTransaction(
       }).first();
       if (before === null) throw new LedgerError("NOT_FOUND", "Transaksi tidak ditemukan.");
       if (before.deletedAt !== null) return;
+      if (before.transferId !== null) {
+        throw new LedgerError("CONFLICT", "Hapus transaksi transfernya untuk menghapus biaya ini.");
+      }
 
       const deletedAt = new Date().toISOString();
       const after = await tx.orm.public.Transaction.where({
@@ -473,6 +642,12 @@ export async function softDeleteTransaction(
         userId: ctx.userId,
       }).update({ deletedAt });
       if (after === null) throw new LedgerError("NOT_FOUND", "Transaksi tidak ditemukan.");
+
+      // A fee belongs to its transfer: deleting the transfer deletes the fee in
+      // the same write, so the pair can never be split by accident.
+      if (before.type === "TRANSFER") {
+        await cascadeTransferFeeDeletedAt(tx, ctx.userId, transactionId, deletedAt);
+      }
 
       await writeAudit(tx, {
         userId: ctx.userId,
@@ -509,6 +684,12 @@ export async function restoreTransaction(
       }).first();
       if (before === null) throw new LedgerError("NOT_FOUND", "Transaksi tidak ditemukan.");
       if (before.deletedAt === null) return;
+      if (before.transferId !== null) {
+        throw new LedgerError(
+          "CONFLICT",
+          "Pulihkan transaksi transfernya untuk memulihkan biaya ini.",
+        );
+      }
 
       // The trigger re-checks the allocation sum on restore, so a restored
       // transaction can never exceed an income it already drew from.
@@ -517,6 +698,10 @@ export async function restoreTransaction(
         userId: ctx.userId,
       }).update({ deletedAt: null });
       if (after === null) throw new LedgerError("NOT_FOUND", "Transaksi tidak ditemukan.");
+
+      if (before.type === "TRANSFER") {
+        await cascadeTransferFeeDeletedAt(tx, ctx.userId, transactionId, null);
+      }
 
       await writeAudit(tx, {
         userId: ctx.userId,
@@ -723,6 +908,13 @@ async function loadDetail(
       dest."name" AS "destinationAccountName",
       t."categoryId" AS "categoryId",
       c."name" AS "categoryName",
+      t."planItemId" AS "planItemId",
+      pi."label" AS "planItemLabel",
+      pi."planId" AS "planId",
+      p."name" AS "planName",
+      t."transferId" AS "transferId",
+      fe."id" AS "transferFeeId",
+      fe."amount"::text AS "transferFeeAmount",
       t."merchant" AS merchant,
       t."counterparty" AS counterparty,
       t."note" AS note,
@@ -740,6 +932,9 @@ async function loadDetail(
     JOIN "public"."Account" acc ON acc."id" = t."accountId"
     LEFT JOIN "public"."Account" dest ON dest."id" = t."destinationAccountId"
     LEFT JOIN "public"."Category" c ON c."id" = t."categoryId"
+    LEFT JOIN "public"."PaymentPlanItem" pi ON pi."id" = t."planItemId"
+    LEFT JOIN "public"."PaymentPlan" p ON p."id" = pi."planId"
+    LEFT JOIN "public"."Transaction" fe ON fe."transferId" = t."id" AND fe."deletedAt" IS NULL
     LEFT JOIN (
       SELECT a."expenseId" AS expense_id,
              SUM(a."amount") AS allocated,
@@ -913,6 +1108,108 @@ async function insertAllocations(
   }
 }
 
+async function assertPlanItem(
+  tx: DbTransaction,
+  userId: string,
+  planItemId: string | null,
+  type: string,
+): Promise<void> {
+  if (planItemId === null) return;
+  if (type !== "INCOME") {
+    throw new LedgerError("VALIDATION", "Hanya pemasukan yang bisa dikaitkan ke rencana.");
+  }
+  const item = await tx.orm.public.PaymentPlanItem.where({
+    id: planItemId,
+    userId,
+  }).first();
+  if (item === null) throw new LedgerError("VALIDATION", "Tahap pembayaran tidak ditemukan.");
+  const plan = await tx.orm.public.PaymentPlan.where({
+    id: item.planId,
+    userId,
+  }).first();
+  if (plan === null) throw new LedgerError("VALIDATION", "Rencana tidak ditemukan.");
+  if (plan.archivedAt !== null) {
+    throw new LedgerError("CONFLICT", "Rencana sudah diarsipkan.");
+  }
+}
+
+/** Find (or create) the default EXPENSE category used for transfer fees. */
+async function ensureTransferFeeCategory(
+  tx: DbTransaction,
+  userId: string,
+  categoryId: string | null,
+): Promise<string> {
+  if (categoryId !== null) {
+    const category = await tx.orm.public.Category.where({ id: categoryId, userId }).first();
+    if (category === null) throw new LedgerError("VALIDATION", "Kategori tidak ditemukan.");
+    if (category.kind !== "EXPENSE") {
+      throw new LedgerError("VALIDATION", "Biaya transfer harus memakai kategori pengeluaran.");
+    }
+    return category.id;
+  }
+
+  const existing = await tx.orm.public.Category.where({
+    userId,
+    kind: "EXPENSE",
+    name: "Biaya Transfer",
+  }).first();
+  if (existing !== null) return existing.id;
+
+  const created = await tx.orm.public.Category.create({
+    userId,
+    name: "Biaya Transfer",
+    kind: "EXPENSE",
+  });
+  await writeAudit(tx, {
+    userId,
+    entityType: "Category",
+    entityId: created.id,
+    action: "CREATE",
+    after: created,
+  });
+  await writeOutbox(tx, {
+    userId,
+    aggregateType: "Category",
+    aggregateId: created.id,
+    eventType: "category.created",
+    payload: created,
+  });
+  return created.id;
+}
+
+/** Delete or restore the fee row together with its transfer. */
+async function cascadeTransferFeeDeletedAt(
+  tx: DbTransaction,
+  userId: string,
+  transferId: string,
+  deletedAt: string | null,
+): Promise<void> {
+  const fee = await tx.orm.public.Transaction.where({ transferId, userId }).first();
+  if (fee === null) return;
+  if (fee.deletedAt === deletedAt) return;
+
+  const after = await tx.orm.public.Transaction.where({ id: fee.id, userId }).update({
+    deletedAt,
+  });
+  if (after === null) return;
+
+  await writeAudit(tx, {
+    userId,
+    entityType: "Transaction",
+    entityId: fee.id,
+    action: deletedAt === null ? "RESTORE" : "SOFT_DELETE",
+    before: fee,
+    after,
+  });
+  await writeOutbox(tx, {
+    userId,
+    aggregateType: "Transaction",
+    aggregateId: fee.id,
+    eventType: deletedAt === null ? "transaction.restored" : "transaction.deleted",
+    payload: after,
+  });
+}
+
 async function assertCategoryKind(
   tx: DbTransaction,
   userId: string,
@@ -927,11 +1224,6 @@ async function assertCategoryKind(
   }
 }
 
-async function userTimezone(tx: DbTransaction, userId: string): Promise<string> {
-  const user = await tx.orm.public.User.where({ id: userId }).select("timezone").first();
-  return user?.timezone ?? "Asia/Jakarta";
-}
-
 function mapTransaction(row: TransactionRow): TransactionSummary {
   return {
     id: row.id,
@@ -943,6 +1235,13 @@ function mapTransaction(row: TransactionRow): TransactionSummary {
     destinationAccountName: row.destinationAccountName,
     categoryId: row.categoryId,
     categoryName: row.categoryName,
+    planItemId: row.planItemId,
+    planItemLabel: row.planItemLabel,
+    planId: row.planId,
+    planName: row.planName,
+    transferId: row.transferId,
+    transferFeeId: row.transferFeeId,
+    transferFeeAmount: row.transferFeeAmount === null ? null : BigInt(row.transferFeeAmount),
     merchant: row.merchant,
     counterparty: row.counterparty,
     note: row.note,

@@ -20,12 +20,14 @@ export function TransactionList({
     <ul className="divide-y divide-border">
       {items.map((item) => {
         const income = item.type === "INCOME";
-        const title =
-          item.merchant ??
-          item.counterparty ??
-          item.note ??
-          item.categoryName ??
-          (income ? "Pemasukan" : "Pengeluaran");
+        const transfer = item.type === "TRANSFER";
+        const title = transfer
+          ? (item.note ?? `Transfer ke ${item.destinationAccountName ?? "akun lain"}`)
+          : (item.merchant ??
+            item.counterparty ??
+            item.note ??
+            item.categoryName ??
+            (income ? "Pemasukan" : "Pengeluaran"));
 
         return (
           <li key={item.id}>
@@ -37,15 +39,20 @@ export function TransactionList({
                 aria-hidden="true"
                 className={cn(
                   "mt-0.5 size-2 shrink-0 rounded-full",
-                  income ? "bg-emerald-500" : "bg-rose-500",
+                  income ? "bg-emerald-500" : transfer ? "bg-sky-500" : "bg-rose-500",
                 )}
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{title}</p>
                 <p className="truncate text-xs text-muted-foreground">
                   {displayLocalDate(item.occurredOn)}
-                  {item.categoryName === null ? "" : ` · ${item.categoryName}`}
-                  {item.accountName === "" ? "" : ` · ${item.accountName}`}
+                  {transfer
+                    ? ` · ${item.accountName} → ${item.destinationAccountName ?? "—"}`
+                    : item.categoryName === null
+                      ? ""
+                      : ` · ${item.categoryName}`}
+                  {transfer ? "" : item.accountName === "" ? "" : ` · ${item.accountName}`}
+                  {item.planName === null ? "" : ` · ${item.planName}`}
                 </p>
               </div>
               <div className="shrink-0 text-right">
@@ -55,7 +62,7 @@ export function TransactionList({
                     income ? "text-emerald-600 dark:text-emerald-400" : "text-foreground",
                   )}
                 >
-                  {income ? "+" : "−"}
+                  {income ? "+" : transfer ? "" : "−"}
                   {formatMoney(item.amount)}
                 </p>
                 <p className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">

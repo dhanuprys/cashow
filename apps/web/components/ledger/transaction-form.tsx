@@ -35,12 +35,21 @@ export interface AllocationDraft {
   amount: string;
 }
 
+export interface PlanItemChoice {
+  id: string;
+  label: string;
+  planName: string;
+  outstanding: string;
+  dueOn: string | null;
+}
+
 export interface TransactionFormInitial {
   id: string;
   type: "INCOME" | "EXPENSE";
   amount: string;
   accountId: string;
   categoryId: string | null;
+  planItemId: string | null;
   merchant: string | null;
   counterparty: string | null;
   note: string | null;
@@ -52,7 +61,9 @@ export function TransactionForm({
   accounts,
   categories,
   incomes,
+  planItems,
   initial,
+  defaultPlanItemId,
   defaultType = "EXPENSE",
   defaultOccurredAtLocal,
   timezone,
@@ -60,7 +71,9 @@ export function TransactionForm({
   accounts: AccountOption[];
   categories: CategoryOption[];
   incomes: IncomeOption[];
+  planItems: PlanItemChoice[];
   initial?: TransactionFormInitial;
+  defaultPlanItemId?: string;
   defaultType?: "INCOME" | "EXPENSE";
   defaultOccurredAtLocal: string;
   timezone: string;
@@ -69,6 +82,7 @@ export function TransactionForm({
   const [amount, setAmount] = useState(initial?.amount ?? "");
   const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? "");
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
+  const [planItemId, setPlanItemId] = useState(initial?.planItemId ?? defaultPlanItemId ?? "");
   const [merchant, setMerchant] = useState(initial?.merchant ?? "");
   const [counterparty, setCounterparty] = useState(initial?.counterparty ?? "");
   const [note, setNote] = useState(initial?.note ?? "");
@@ -100,6 +114,7 @@ export function TransactionForm({
 
   function switchType(next: "INCOME" | "EXPENSE") {
     setType(next);
+    if (next === "EXPENSE") setPlanItemId("");
     const selected = categories.find((category) => category.id === categoryId);
     if (selected !== undefined && selected.kind !== next) setCategoryId("");
   }
@@ -216,6 +231,31 @@ export function TransactionForm({
             ))}
           </NativeSelect>
         </div>
+
+        {type === "INCOME" ? (
+          <div>
+            <Label htmlFor="planItemId">
+              Tahap pembayaran <span className="font-normal text-muted-foreground">(opsional)</span>
+            </Label>
+            <NativeSelect
+              id="planItemId"
+              name="planItemId"
+              value={planItemId}
+              onChange={(event) => setPlanItemId(event.target.value)}
+              className="mt-2 w-full"
+            >
+              <NativeSelectOption value="">Tanpa rencana</NativeSelectOption>
+              {planItems.map((item) => (
+                <NativeSelectOption key={item.id} value={item.id}>
+                  {item.planName} · {item.label} · sisa {formatAmount(BigInt(item.outstanding))}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Kaitkan pemasukan ini ke tahap proyek yang sedang dibayar.
+            </p>
+          </div>
+        ) : null}
 
         <div>
           <Label htmlFor="occurredAtLocal">Tanggal &amp; waktu</Label>

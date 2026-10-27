@@ -1,5 +1,11 @@
 import { parseDbTimestamp, toLocalDateTimeInput } from "@cashow/domain";
-import { getTransaction, listAccounts, listCategories, listOpenIncomes } from "@cashow/services";
+import {
+  getTransaction,
+  listAccounts,
+  listCategories,
+  listOpenIncomes,
+  listPlanItemOptions,
+} from "@cashow/services";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -50,10 +56,11 @@ async function EditTransaction({ params }: { params: Promise<{ id: string }> }) 
     );
   }
 
-  const [accounts, categories, incomes] = await Promise.all([
+  const [accounts, categories, incomes, planItems] = await Promise.all([
     listAccounts(ctx),
     listCategories(ctx),
     listOpenIncomes(ctx, { excludeExpenseId: transaction.id, includeFullyAllocated: true }),
+    listPlanItemOptions(ctx, { includeItemId: transaction.planItemId ?? undefined }),
   ]);
 
   const accountList = unwrap(accounts).filter(
@@ -117,12 +124,20 @@ async function EditTransaction({ params }: { params: Promise<{ id: string }> }) 
               occurredOn: displayLocalDate(income.occurredOn),
               free: income.free.toString(),
             }))}
+            planItems={unwrap(planItems).map((item) => ({
+              id: item.id,
+              label: item.label,
+              planName: item.planName,
+              outstanding: item.outstanding.toString(),
+              dueOn: item.dueOn,
+            }))}
             initial={{
               id: transaction.id,
               type: transaction.type,
               amount: transaction.amount.toString(),
               accountId: transaction.accountId,
               categoryId: transaction.categoryId,
+              planItemId: transaction.planItemId,
               merchant: transaction.merchant,
               counterparty: transaction.counterparty,
               note: transaction.note,

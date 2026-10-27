@@ -52,12 +52,17 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
 
   const transaction = result.value;
   const income = transaction.type === "INCOME";
-  const title =
-    transaction.merchant ??
-    transaction.counterparty ??
-    transaction.note ??
-    transaction.categoryName ??
-    (income ? "Pemasukan" : "Pengeluaran");
+  const transfer = transaction.type === "TRANSFER";
+  const feeForTransfer = transaction.transferId !== null;
+  const editable =
+    (transaction.type === "INCOME" || transaction.type === "EXPENSE") && !feeForTransfer;
+  const title = transfer
+    ? (transaction.note ?? `Transfer ke ${transaction.destinationAccountName ?? "akun lain"}`)
+    : (transaction.merchant ??
+      transaction.counterparty ??
+      transaction.note ??
+      transaction.categoryName ??
+      (income ? "Pemasukan" : "Pengeluaran"));
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -84,8 +89,14 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <Badge variant={income ? "default" : "secondary"}>
-                  {income ? "Pemasukan" : "Pengeluaran"}
+                <Badge variant={income ? "default" : transfer ? "outline" : "secondary"}>
+                  {feeForTransfer
+                    ? "Biaya transfer"
+                    : transfer
+                      ? "Transfer"
+                      : income
+                        ? "Pemasukan"
+                        : "Pengeluaran"}
                 </Badge>
                 {transaction.source === "QUICK_ADD" ? (
                   <Badge variant="outline">Catat cepat</Badge>
@@ -98,34 +109,57 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                   income ? "text-emerald-600 dark:text-emerald-400" : "",
                 )}
               >
-                {income ? "+" : "−"}
+                {income ? "+" : transfer ? "" : "−"}
                 {formatMoney(transaction.amount)}
               </p>
+              {transfer && transaction.transferFeeAmount !== null ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Plus biaya {formatMoney(transaction.transferFeeAmount)} di akun asal.
+                </p>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap gap-2">
+              {feeForTransfer && transaction.transferId !== null ? (
+                <LinkButton
+                  href={`/app/transactions/${transaction.transferId}`}
+                  variant="outline"
+                  size="sm"
+                >
+                  Lihat transfer
+                </LinkButton>
+              ) : null}
+
               {transaction.deletedAt === null ? (
                 <>
-                  <LinkButton
-                    href={`/app/transactions/${transaction.id}/edit`}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Pencil aria-hidden="true" />
-                    Ubah
-                  </LinkButton>
-                  <form action={deleteTransactionAction}>
-                    <input type="hidden" name="transactionId" value={transaction.id} />
-                    <ConfirmSubmitButton
+                  {editable ? (
+                    <LinkButton
+                      href={`/app/transactions/${transaction.id}/edit`}
+                      variant="outline"
                       size="sm"
-                      message="Hapus transaksi ini? Catatan tetap tersimpan dan bisa dipulihkan."
                     >
-                      <Trash2 aria-hidden="true" />
-                      Hapus
-                    </ConfirmSubmitButton>
-                  </form>
+                      <Pencil aria-hidden="true" />
+                      Ubah
+                    </LinkButton>
+                  ) : null}
+                  {feeForTransfer ? null : (
+                    <form action={deleteTransactionAction}>
+                      <input type="hidden" name="transactionId" value={transaction.id} />
+                      <ConfirmSubmitButton
+                        size="sm"
+                        message={
+                          transfer
+                            ? "Hapus transfer ini? Biaya transfernya ikut terhapus."
+                            : "Hapus transaksi ini? Catatan tetap tersimpan dan bisa dipulihkan."
+                        }
+                      >
+                        <Trash2 aria-hidden="true" />
+                        Hapus
+                      </ConfirmSubmitButton>
+                    </form>
+                  )}
                 </>
-              ) : (
+              ) : feeForTransfer ? null : (
                 <form action={restoreTransactionAction}>
                   <input type="hidden" name="transactionId" value={transaction.id} />
                   <ConfirmSubmitButton
@@ -145,8 +179,56 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <Row label="Tanggal" value={displayDateTime(transaction.occurredAt, user.timezone)} />
             <Row label="Tanggal buku" value={displayLocalDate(transaction.occurredOn)} />
-            <Row label="Akun" value={transaction.accountName} />
-            <Row label="Kategori" value={transaction.categoryName ?? "Tanpa kategori"} />
+            {transfer ? (
+              <>
+                <Row label="Dari akun" value={transaction.accountName} />
+                <Row label="Ke akun" value={transaction.destinationAccountName ?? "—"} />
+              </>
+            ) : (
+              <Row label="Akun" value={transaction.accountName} />
+            )}
+            {transaction.type === "INCOME" || transaction.type === "EXPENSE" ? (
+              <Row label="Kategori" value={transaction.categoryName ?? "Tanpa kategori"} />
+            ) : null}
+            {transaction.planId === null || transaction.planName === null ? null : (
+              <div>
+                <dt className="text-xs text-muted-foreground">Rencana pembayaran</dt>
+                <dd className="mt-0.5">
+                  <Link href={`/app/plans/${transaction.planId}`} className="hover:underline">
+                    {transaction.planName}
+                    {transaction.planItemLabel === null ? "" : ` · ${transaction.planItemLabel}`}
+                  </Link>
+                </dd>
+              </div>
+            )}
+            {transfer && transaction.transferFeeId !== null ? (
+              <div>
+                <dt className="text-xs text-muted-foreground">Biaya transfer</dt>
+                <dd className="mt-0.5">
+                  <Link
+                    href={`/app/transactions/${transaction.transferFeeId}`}
+                    className="hover:underline"
+                  >
+                    {transaction.transferFeeAmount === null
+                      ? "Lihat biaya"
+                      : formatMoney(transaction.transferFeeAmount)}
+                  </Link>
+                </dd>
+              </div>
+            ) : null}
+            {feeForTransfer && transaction.transferId !== null ? (
+              <div>
+                <dt className="text-xs text-muted-foreground">Untuk transfer</dt>
+                <dd className="mt-0.5">
+                  <Link
+                    href={`/app/transactions/${transaction.transferId}`}
+                    className="hover:underline"
+                  >
+                    Buka transfer
+                  </Link>
+                </dd>
+              </div>
+            ) : null}
             {transaction.merchant === null ? null : (
               <Row label="Toko / penerima" value={transaction.merchant} />
             )}
@@ -166,15 +248,43 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Alokasi</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {transaction.type === "INCOME" ? (
-            transaction.allocations.length === 0 ? (
+      {transfer ? null : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Alokasi</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {transaction.type === "INCOME" ? (
+              transaction.allocations.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Belum ada pengeluaran yang menarik dari pemasukan ini.
+                </p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {transaction.allocations.map((allocation) => (
+                    <li
+                      key={allocation.id}
+                      className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                    >
+                      <Link
+                        href={`/app/transactions/${allocation.expenseId}`}
+                        className="min-w-0 truncate hover:underline"
+                      >
+                        {allocation.counterpartyLabel}
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {displayLocalDate(allocation.counterpartyOccurredOn)}
+                        </span>
+                      </Link>
+                      <span className="shrink-0 tabular-nums">
+                        {formatMoney(allocation.amount)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : transaction.allocations.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Belum ada pengeluaran yang menarik dari pemasukan ini.
+                Pengeluaran ini belum dikaitkan ke pemasukan mana pun.
               </p>
             ) : (
               <ul className="divide-y divide-border">
@@ -184,7 +294,7 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                     className="flex items-center justify-between gap-3 py-2.5 text-sm"
                   >
                     <Link
-                      href={`/app/transactions/${allocation.expenseId}`}
+                      href={`/app/transactions/${allocation.incomeId}`}
                       className="min-w-0 truncate hover:underline"
                     >
                       {allocation.counterpartyLabel}
@@ -196,41 +306,17 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                   </li>
                 ))}
               </ul>
-            )
-          ) : transaction.allocations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Pengeluaran ini belum dikaitkan ke pemasukan mana pun.
-            </p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {transaction.allocations.map((allocation) => (
-                <li
-                  key={allocation.id}
-                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
-                >
-                  <Link
-                    href={`/app/transactions/${allocation.incomeId}`}
-                    className="min-w-0 truncate hover:underline"
-                  >
-                    {allocation.counterpartyLabel}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {displayLocalDate(allocation.counterpartyOccurredOn)}
-                    </span>
-                  </Link>
-                  <span className="shrink-0 tabular-nums">{formatMoney(allocation.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+            )}
 
-          {transaction.type === "EXPENSE" ? (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Dialokasikan {formatMoney(transaction.allocated)} dari{" "}
-              {formatMoney(transaction.amount)}.
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+            {transaction.type === "EXPENSE" ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Dialokasikan {formatMoney(transaction.allocated)} dari{" "}
+                {formatMoney(transaction.amount)}.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

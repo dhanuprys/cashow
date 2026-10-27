@@ -21,6 +21,22 @@ const nullableText = (max: number) =>
     .optional()
     .transform((value) => (value === undefined || value === null || value === "" ? null : value));
 
+/**
+ * Patch variant: an omitted field stays `undefined` (unchanged), while an
+ * explicit empty string or null clears it. Create schemas normalize omitted
+ * fields to null; update schemas must not clear a field the caller omitted.
+ */
+const nullablePatchText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max, `Maksimal ${max} karakter.`)
+    .nullable()
+    .optional()
+    .transform((value) =>
+      value === undefined ? undefined : value === null || value === "" ? null : value,
+    );
+
 /** Money that must be greater than zero (transaction amounts, allocations). */
 export const positiveMoneyText = z
   .string()
@@ -116,6 +132,41 @@ export const localDateTimeSchema = z
     "Tanggal dan waktu tidak valid (contoh: 2026-10-27T09:30).",
   );
 
+/** A calendar date (`YYYY-MM-DD`); empty means "no date". */
+export const localDateSchema = z
+  .string()
+  .trim()
+  .nullable()
+  .optional()
+  .transform((value) => (value === undefined || value === null || value === "" ? null : value))
+  .pipe(
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal tidak valid (contoh: 2026-10-31).")
+      .nullable(),
+  );
+
+/** Money that may be zero but never negative (transfer fees). */
+export const nonNegativeMoneyText = z
+  .string()
+  .trim()
+  .default("0")
+  .transform((value, ctx) => {
+    const amount = parseMoney(value);
+    if (amount === null) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Jumlah tidak dikenali. Contoh: 5rb, 1,5jt, atau kosongkan.",
+      });
+      return z.NEVER;
+    }
+    if (amount < 0n) {
+      ctx.addIssue({ code: "custom", message: "Jumlah tidak boleh negatif." });
+      return z.NEVER;
+    }
+    return amount;
+  });
+
 /** Where a quick-added row came from; manual forms use MANUAL. */
 export const sourceSchema = z.enum(["MANUAL", "QUICK_ADD"]);
 
@@ -124,6 +175,8 @@ export const transactionCreateSchema = z.object({
   amount: positiveMoneyText,
   accountId: idText,
   categoryId: nullableText(64),
+  /** Chained income: which payment-plan item this payment settles. */
+  planItemId: nullableText(64),
   merchant: nullableText(120),
   counterparty: nullableText(120),
   note: nullableText(1000),
@@ -141,10 +194,11 @@ export const transactionCreateSchema = z.object({
 export const transactionUpdateSchema = z.object({
   amount: positiveMoneyText.optional(),
   accountId: idText.optional(),
-  categoryId: nullableText(64),
-  merchant: nullableText(120),
-  counterparty: nullableText(120),
-  note: nullableText(1000),
+  categoryId: nullablePatchText(64),
+  planItemId: nullablePatchText(64),
+  merchant: nullablePatchText(120),
+  counterparty: nullablePatchText(120),
+  note: nullablePatchText(1000),
   occurredAtLocal: localDateTimeSchema.optional(),
   allocations: z.array(allocationInputSchema).max(50, "Maksimal 50 alokasi.").optional(),
 });
@@ -167,6 +221,74 @@ export const attachmentMetaSchema = z.object({
     .min(1, "Nama berkas wajib ada.")
     .max(200, "Nama berkas terlalu panjang."),
   mimeType: z.string().trim().min(1).max(120),
+});
+
+// ---------------------------------------------------------------------------
+// Payment plans (chained project income)
+// ---------------------------------------------------------------------------
+
+const planName = z
+  .string()
+  .trim()
+  .min(1, "Nama rencana wajib diisi.")
+  .max(120, "Maksimal 120 karakter.");
+const planLabel = z.string().trim().min(1, "Label wajib diisi.").max(120, "Maksimal 120 karakter.");
+
+export const planItemInputSchema = z.object({
+  label: planLabel,
+  expectedAmount: positiveMoneyText,
+  dueOn: localDateSchema,
+  note: nullableText(1000),
+});
+
+export const planCreateSchema = z.object({
+  name: planName,
+  description: nullableText(1000),
+  items: z.array(planItemInputSchema).max(50, "Maksimal 50 tahap.").default([]),
+});
+
+export const planUpdateSchema = z.object({
+  name: planName,
+  description: nullableText(1000),
+});
+
+export const planItemUpdateSchema = z.object({
+  label: planLabel,
+  expectedAmount: positiveMoneyText,
+  dueOn: localDateSchema,
+  note: nullableText(1000),
+});
+
+// ---------------------------------------------------------------------------
+// Balance snapshots and reconciliation
+// ---------------------------------------------------------------------------
+
+export const snapshotCreateSchema = z.object({
+  accountId: idText,
+  /** The bank's stated balance; may be negative for a debt account. */
+  amount: signedMoneyText,
+  recordedAtLocal: localDateTimeSchema,
+  note: nullableText(500),
+});
+
+export const checkpointUnlockSchema = z.object({
+  reason: nullableText(500),
+});
+
+// ---------------------------------------------------------------------------
+// Transfers between the owner's own accounts (a fee is its own expense)
+// ---------------------------------------------------------------------------
+
+export const transferCreateSchema = z.object({
+  amount: positiveMoneyText,
+  accountId: idText,
+  destinationAccountId: idText,
+  feeAmount: nonNegativeMoneyText,
+  feeCategoryId: nullableText(64),
+  note: nullableText(1000),
+  occurredAtLocal: localDateTimeSchema,
+  clientRequestId: nullableText(100),
+  source: sourceSchema.default("MANUAL"),
 });
 
 const timeZoneSchema = z
@@ -218,6 +340,13 @@ export type TransactionCreateInput = z.infer<typeof transactionCreateSchema>;
 export type TransactionUpdateInput = z.infer<typeof transactionUpdateSchema>;
 export type QuickAddInput = z.infer<typeof quickAddSchema>;
 export type AttachmentMetaInput = z.infer<typeof attachmentMetaSchema>;
+export type PlanItemInput = z.infer<typeof planItemInputSchema>;
+export type PlanCreateInput = z.infer<typeof planCreateSchema>;
+export type PlanUpdateInput = z.infer<typeof planUpdateSchema>;
+export type PlanItemUpdateInput = z.infer<typeof planItemUpdateSchema>;
+export type SnapshotCreateInput = z.infer<typeof snapshotCreateSchema>;
+export type TransferCreateInput = z.infer<typeof transferCreateSchema>;
+export type CheckpointUnlockInput = z.infer<typeof checkpointUnlockSchema>;
 
 /** Render the first issue of a failed parse as an Indonesian sentence. */
 export function firstIssue(error: z.ZodError): string {
