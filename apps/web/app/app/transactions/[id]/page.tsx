@@ -341,6 +341,8 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                         <img
                           src={source}
                           alt={attachment.fileName}
+                          loading="lazy"
+                          decoding="async"
                           className="h-36 w-full object-cover"
                         />
                       </a>

@@ -2,6 +2,20 @@ import { type NextRequest, NextResponse } from "next/server";
 
 const SESSION_COOKIE = "cashow_session";
 
+// In-memory rate limiter (single instance). Good enough for a self-hosted box;
+// scale out would need a shared store (Redis/pg).
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+function rateLimited(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const bucket = rateBuckets.get(key);
+  if (bucket === undefined || now > bucket.resetAt) {
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+  bucket.count += 1;
+  return bucket.count > limit;
+}
+
 /**
  * Edge-level, optimistic checks only — the real session validation and
  * authorization happen in server components and route handlers.
@@ -16,6 +30,19 @@ const SESSION_COOKIE = "cashow_session";
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Rate limit auth endpoints: 10 attempts per 15 minutes per IP.
+  if (pathname === "/login" || pathname === "/setup" || pathname.startsWith("/api/auth/")) {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    if (rateLimited(`${ip}:${pathname}`, 10, 15 * 60 * 1000)) {
+      return withSecurityHeaders(
+        new NextResponse("Too many requests", {
+          status: 429,
+          headers: { "Retry-After": "900", "Content-Type": "text/plain; charset=utf-8" },
+        }),
+      );
+    }
+  }
 
   if (isProbePath(pathname) && !probeTokenMatches(request)) {
     return withSecurityHeaders(
