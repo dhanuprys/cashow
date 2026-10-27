@@ -41,6 +41,10 @@ yarn-error.log*
 !/secrets/.gitkeep
 /backups/
 
+# local attachment bytes (ADR 0009)
+/data/
+/apps/web/data/
+
 # agent tooling (Prisma skills, editor agents)
 .agents/
 .claude/

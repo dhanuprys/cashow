@@ -31,12 +31,13 @@ echo "restoring $SOURCE -> $TARGET"
 createdb "$TARGET" 2>/dev/null || true
 pg_restore --clean --if-exists --no-owner --no-privileges --dbname "$TARGET" "$PLAIN"
 
-# Integrity smoke: the schema must contain the ledger tables.
+# Integrity smoke: the schema must contain the ledger and capture tables.
 COUNT="$(psql --dbname "$TARGET" --tuples-only --no-align \
-  --command "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('User','Account','Transaction','Allocation','BalanceSnapshot');")"
-if [ "$COUNT" -lt 5 ]; then
-  echo "restore verification failed: only $COUNT/5 ledger tables present" >&2
+  --command "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('User','Account','Category','Transaction','Allocation','Attachment','BalanceSnapshot','OutboxEvent','AuditLog');")"
+if [ "$COUNT" -lt 9 ]; then
+  echo "restore verification failed: only $COUNT/9 ledger tables present" >&2
   exit 1
 fi
 
 echo "restore ok: $TARGET ($COUNT ledger tables)"
+echo "next: restore uploads with deploy/restore-files.sh (ADR 0009)"

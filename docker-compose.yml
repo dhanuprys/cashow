@@ -38,6 +38,8 @@ x-app-env: &app-env
   TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
   SMTP_URL: ${SMTP_URL:-}
   LOG_LEVEL: ${LOG_LEVEL:-info}
+  # Attachment bytes live on the shared `files` volume (ADR 0009).
+  STORAGE_DIR: ${STORAGE_DIR:-/app/data/uploads}
   TZ: UTC
 
 x-app-service: &app-service
@@ -186,6 +188,8 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       PGDATABASE: ${POSTGRES_DB:-cashow}
       BACKUP_DIR: /backups
+      # Attachment bytes live in the shared `files` volume, not in the dump.
+      STORAGE_DIR: /files/uploads
       BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
       BACKUP_AGE_KEY: ${BACKUP_AGE_KEY:-/secrets/age.key}
       BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:-}
@@ -194,6 +198,10 @@ services:
       TZ: UTC
     volumes:
       - backups:/backups
+      - files:/files:ro
+      # Host path of the external drive. `rclone` writes here via a local
+      # remote (BACKUP_RCLONE_REMOTE=local:/external/cashow).
+      - ${BACKUP_EXTERNAL_DIR:-./backups}:/external
       - ./secrets:/secrets:ro
     depends_on:
       postgres:

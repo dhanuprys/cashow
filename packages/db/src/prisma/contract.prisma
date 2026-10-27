@@ -63,6 +63,14 @@ enum AuthChallengePurpose {
   AUTHENTICATION = "AUTHENTICATION"
 }
 
+enum AttachmentKind {
+  @@type("pg/text@1")
+  PROOF    = "PROOF"
+  INVOICE  = "INVOICE"
+  CONTRACT = "CONTRACT"
+  RECEIPT  = "RECEIPT"
+}
+
 // ---------------------------------------------------------------------------
 // Core entities
 // ---------------------------------------------------------------------------
@@ -85,6 +93,7 @@ model User {
   accounts     Account[]
   categories   Category[]
   transactions Transaction[]
+  attachments  Attachment[]
   passkeys     Passkey[]
   sessions     Session[]
 }
@@ -232,11 +241,15 @@ model Transaction {
 
   allocationsOut Allocation[] @relation("AllocExpense")
   allocationsIn  Allocation[] @relation("AllocIncome")
+  attachments    Attachment[]
 
   // One unique outstanding client request per user (idempotency).
   @@unique([userId, clientRequestId])
   @@index([userId, occurredOn])
   @@index([userId, occurredAt])
+  // The transaction list only reads live rows; a partial index keeps the
+  // dashboard's "recent" query from touching soft-deleted history.
+  @@index([userId, occurredAt], where: sql`"deletedAt" IS NULL`, name: "Transaction_live_recent_idx")
   @@index([accountId])
   @@index([categoryId])
   @@index([destinationAccountId])
@@ -245,6 +258,8 @@ model Transaction {
   // Rule 5 — a transfer has exactly one destination, and it differs.
   @@check(expression: sql`("type" = 'TRANSFER') = ("destinationAccountId" IS NOT NULL)`, name: "transfer_destination_consistency")
   @@check(expression: sql`"type" <> 'TRANSFER' OR "destinationAccountId" <> "accountId"`, name: "transfer_accounts_differ")
+  // Only cashflow rows carry a category; a transfer is not spending.
+  @@check(expression: sql`"type" IN ('INCOME', 'EXPENSE') OR "categoryId" IS NULL`, name: "category_only_for_cashflow")
 }
 
 model Allocation {
@@ -269,6 +284,33 @@ model Allocation {
   @@check(expression: sql`"amount" > 0`, name: "amount_positive")
   // An allocation must not point at the same transaction on both sides.
   @@check(expression: sql`"expenseId" <> "incomeId"`, name: "distinct_transactions")
+}
+
+model Attachment {
+  id            String         @id @onCreate(uuid(7))
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Evidence belongs to a transaction now; plans and items get their own
+  // nullable links when Phase 2 lands.
+  transactionId String?
+  transaction   Transaction?   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  kind          AttachmentKind @default(PROOF)
+  // Content-addressed path inside the storage driver, e.g. "<userId>/<sha256>.webp".
+  storageKey    String
+  fileName      String
+  mimeType      String
+  byteSize      BigInt
+  // SHA-256 of the stored bytes, to catch duplicate uploads.
+  contentHash   String
+  createdAt     TimestamptzString @onCreate(now())
+  // Soft delete keeps the audit trail; the bytes are removed when unreferenced.
+  deletedAt     TimestamptzString?
+
+  @@index([userId, transactionId])
+  @@index([userId, contentHash])
+  @@index([storageKey])
+  // Rule 5 — a stored file has a positive size.
+  @@check(expression: sql`"byteSize" > 0`, name: "byte_size_positive")
 }
 
 model BalanceSnapshot {

@@ -1,3 +1,4 @@
+import { ensureDefaultLedger } from "@cashow/services";
 import type { RegistrationResponseJSON } from "@simplewebauthn/server";
 import { verifyRegistrationResponse } from "@simplewebauthn/server";
 import { z } from "zod";
@@ -117,6 +118,10 @@ export async function POST(request: Request) {
           name: payload.name,
           email: payload.email,
         });
+
+        // First run seeds the account and categories the ledger UI needs, in
+        // the same transaction that creates the owner.
+        await ensureDefaultLedger(tx, userId);
       }
 
       await tx.orm.public.Passkey.create({

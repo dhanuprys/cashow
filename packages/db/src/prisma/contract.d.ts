@@ -23,9 +23,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'5c3b75851cca2c0a633f49f374cf85abfa0fd5ccc6285f6afa41dc115d487a58'>;
+  StorageHashBase<'bcbc0ebb82b058d57e4dadab5fa0619cee244c8cfded7b4e35e6660fa0e9c34b'>;
 export type ExecutionHash =
-  ExecutionHashBase<'b170396594a3e1da39a3cd114a2aa67ad27975a5853eb701620e0f899f9740d4'>;
+  ExecutionHashBase<'f3b5d129ae1e64bb6254e992cd1628e5d854dcac5f92a2a3f78e7c063fbef1c4'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -247,6 +247,12 @@ type FieldTypeOverrides = {
           readonly input: 'BANK' | 'EWALLET' | 'CASH' | 'INVESTMENT';
         };
       };
+      readonly Attachment: {
+        readonly kind: {
+          readonly output: 'PROOF' | 'INVOICE' | 'CONTRACT' | 'RECEIPT';
+          readonly input: 'PROOF' | 'INVOICE' | 'CONTRACT' | 'RECEIPT';
+        };
+      };
       readonly AuthChallenge: {
         readonly purpose: {
           readonly output: 'REGISTRATION' | 'AUTHENTICATION';
@@ -312,6 +318,12 @@ type ColumnTypeOverrides = {
       readonly type: {
         readonly output: 'BANK' | 'EWALLET' | 'CASH' | 'INVESTMENT';
         readonly input: 'BANK' | 'EWALLET' | 'CASH' | 'INVESTMENT';
+      };
+    };
+    readonly Attachment: {
+      readonly kind: {
+        readonly output: 'PROOF' | 'INVOICE' | 'CONTRACT' | 'RECEIPT';
+        readonly input: 'PROOF' | 'INVOICE' | 'CONTRACT' | 'RECEIPT';
       };
     };
     readonly AuthChallenge: {
@@ -400,6 +412,22 @@ export namespace Models {
     expense: public_Transaction;
     income: public_Transaction;
     readonly [RelationKeys]?: 'expense' | 'income';
+  };
+  export type public_Attachment = {
+    byteSize: FieldOutputTypes['public']['Attachment']['byteSize'];
+    contentHash: FieldOutputTypes['public']['Attachment']['contentHash'];
+    createdAt: FieldOutputTypes['public']['Attachment']['createdAt'];
+    deletedAt: FieldOutputTypes['public']['Attachment']['deletedAt'];
+    fileName: FieldOutputTypes['public']['Attachment']['fileName'];
+    id: FieldOutputTypes['public']['Attachment']['id'];
+    kind: FieldOutputTypes['public']['Attachment']['kind'];
+    mimeType: FieldOutputTypes['public']['Attachment']['mimeType'];
+    storageKey: FieldOutputTypes['public']['Attachment']['storageKey'];
+    transactionId: FieldOutputTypes['public']['Attachment']['transactionId'];
+    userId: FieldOutputTypes['public']['Attachment']['userId'];
+    transaction: public_Transaction | null;
+    user: public_User;
+    readonly [RelationKeys]?: 'transaction' | 'user';
   };
   export type public_AuditLog = {
     action: FieldOutputTypes['public']['AuditLog']['action'];
@@ -527,11 +555,18 @@ export namespace Models {
     account: public_Account;
     allocationsIn: public_Allocation[];
     allocationsOut: public_Allocation[];
+    attachments: public_Attachment[];
     category: public_Category | null;
     destinationAccount: public_Account | null;
     user: public_User;
     readonly [RelationKeys]?:
-      'account' | 'allocationsIn' | 'allocationsOut' | 'category' | 'destinationAccount' | 'user';
+      | 'account'
+      | 'allocationsIn'
+      | 'allocationsOut'
+      | 'attachments'
+      | 'category'
+      | 'destinationAccount'
+      | 'user';
   };
   export type public_User = {
     budgetMonthStartDay: FieldOutputTypes['public']['User']['budgetMonthStartDay'];
@@ -544,11 +579,13 @@ export namespace Models {
     updatedAt: FieldOutputTypes['public']['User']['updatedAt'];
     weekStartsOn: FieldOutputTypes['public']['User']['weekStartsOn'];
     accounts: public_Account[];
+    attachments: public_Attachment[];
     categories: public_Category[];
     passkeys: public_Passkey[];
     sessions: public_Session[];
     transactions: public_Transaction[];
-    readonly [RelationKeys]?: 'accounts' | 'categories' | 'passkeys' | 'sessions' | 'transactions';
+    readonly [RelationKeys]?:
+      'accounts' | 'attachments' | 'categories' | 'passkeys' | 'sessions' | 'transactions';
   };
 }
 
@@ -556,6 +593,7 @@ export declare const models: {
   public: {
     Account: Models.public_Account;
     Allocation: Models.public_Allocation;
+    Attachment: Models.public_Attachment;
     AuditLog: Models.public_AuditLog;
     AuthChallenge: Models.public_AuthChallenge;
     BalanceSnapshot: Models.public_BalanceSnapshot;
@@ -762,6 +800,140 @@ type ContractBase = Omit<
                     readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'Allocation';
                     readonly columns: readonly ['incomeId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Transaction';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
+            readonly Attachment: {
+              columns: {
+                readonly byteSize: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly contentHash: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly createdAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly deletedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly fileName: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly kind: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'PROOF'>;
+                  };
+                  readonly many: false;
+                };
+                readonly mimeType: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly storageKey: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly transactionId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly userId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'Attachment_storageKey_idx_8c086641';
+                  readonly prefix: 'Attachment_storageKey_idx';
+                  readonly columns: readonly ['storageKey'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Attachment_transactionId_idx_d3180832';
+                  readonly prefix: 'Attachment_transactionId_idx';
+                  readonly columns: readonly ['transactionId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Attachment_userId_contentHash_idx_0c2869d7';
+                  readonly prefix: 'Attachment_userId_contentHash_idx';
+                  readonly columns: readonly ['userId', 'contentHash'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Attachment_userId_idx_a489d58a';
+                  readonly prefix: 'Attachment_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Attachment_userId_transactionId_idx_97becd7c';
+                  readonly prefix: 'Attachment_userId_transactionId_idx';
+                  readonly columns: readonly ['userId', 'transactionId'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Attachment';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Attachment';
+                    readonly columns: readonly ['transactionId'];
                   };
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
@@ -1601,6 +1773,13 @@ type ContractBase = Omit<
                   readonly unique: false;
                 },
                 {
+                  readonly name: 'Transaction_live_recent_idx_cf2432fd';
+                  readonly prefix: 'Transaction_live_recent_idx';
+                  readonly columns: readonly ['userId', 'occurredAt'];
+                  readonly where: '"deletedAt" IS NULL';
+                  readonly unique: false;
+                },
+                {
                   readonly name: 'Transaction_userId_idx_a489d58a';
                   readonly prefix: 'Transaction_userId_idx';
                   readonly columns: readonly ['userId'];
@@ -1754,6 +1933,10 @@ type ContractBase = Omit<
               readonly kind: 'valueSet';
               readonly values: readonly ['BANK', 'EWALLET', 'CASH', 'INVESTMENT'];
             };
+            readonly AttachmentKind: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['PROOF', 'INVOICE', 'CONTRACT', 'RECEIPT'];
+            };
             readonly AuthChallengePurpose: {
               readonly kind: 'valueSet';
               readonly values: readonly ['REGISTRATION', 'AUTHENTICATION'];
@@ -1797,6 +1980,10 @@ type ContractBase = Omit<
     readonly Allocation: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'Allocation';
+    };
+    readonly Attachment: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'Attachment';
     };
     readonly AuditLog: { readonly namespace: 'public' & NamespaceId; readonly model: 'AuditLog' };
     readonly AuthChallenge: {
@@ -2001,6 +2188,100 @@ type ContractBase = Omit<
                 readonly expenseId: { readonly column: 'expenseId' };
                 readonly id: { readonly column: 'id' };
                 readonly incomeId: { readonly column: 'incomeId' };
+                readonly userId: { readonly column: 'userId' };
+              };
+            };
+          };
+          readonly Attachment: {
+            readonly fields: {
+              readonly byteSize: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly contentHash: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly deletedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly fileName: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly kind: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly mimeType: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly storageKey: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly transactionId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: {
+              readonly transaction: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Transaction';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: true;
+                readonly on: {
+                  readonly localFields: readonly ['transactionId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'Attachment';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly byteSize: { readonly column: 'byteSize' };
+                readonly contentHash: { readonly column: 'contentHash' };
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly deletedAt: { readonly column: 'deletedAt' };
+                readonly fileName: { readonly column: 'fileName' };
+                readonly id: { readonly column: 'id' };
+                readonly kind: { readonly column: 'kind' };
+                readonly mimeType: { readonly column: 'mimeType' };
+                readonly storageKey: { readonly column: 'storageKey' };
+                readonly transactionId: { readonly column: 'transactionId' };
                 readonly userId: { readonly column: 'userId' };
               };
             };
@@ -2726,6 +3007,17 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['expenseId'];
                 };
               };
+              readonly attachments: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Attachment';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['transactionId'];
+                };
+              };
               readonly category: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -2841,6 +3133,17 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['userId'];
                 };
               };
+              readonly attachments: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Attachment';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
               readonly categories: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -2913,6 +3216,15 @@ type ContractBase = Omit<
               { readonly name: 'INVESTMENT'; readonly value: 'INVESTMENT' },
             ];
           };
+          readonly AttachmentKind: {
+            readonly codecId: 'pg/text@1';
+            readonly members: readonly [
+              { readonly name: 'PROOF'; readonly value: 'PROOF' },
+              { readonly name: 'INVOICE'; readonly value: 'INVOICE' },
+              { readonly name: 'CONTRACT'; readonly value: 'CONTRACT' },
+              { readonly name: 'RECEIPT'; readonly value: 'RECEIPT' },
+            ];
+          };
           readonly AuthChallengePurpose: {
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
@@ -2963,6 +3275,12 @@ type ContractBase = Omit<
             { readonly name: 'EWALLET'; readonly value: 'EWALLET' },
             { readonly name: 'CASH'; readonly value: 'CASH' },
             { readonly name: 'INVESTMENT'; readonly value: 'INVESTMENT' },
+          ];
+          readonly AttachmentKind: readonly [
+            { readonly name: 'PROOF'; readonly value: 'PROOF' },
+            { readonly name: 'INVOICE'; readonly value: 'INVOICE' },
+            { readonly name: 'CONTRACT'; readonly value: 'CONTRACT' },
+            { readonly name: 'RECEIPT'; readonly value: 'RECEIPT' },
           ];
           readonly AuthChallengePurpose: readonly [
             { readonly name: 'REGISTRATION'; readonly value: 'REGISTRATION' },
@@ -3065,6 +3383,22 @@ type ContractBase = Omit<
           readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
           readonly ref: {
             readonly entry: 'Allocation';
+            readonly field: 'id';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'Attachment';
+            readonly field: 'createdAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'Attachment';
             readonly field: 'id';
             readonly namespace: 'public';
           };

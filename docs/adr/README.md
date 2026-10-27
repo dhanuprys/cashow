@@ -14,3 +14,4 @@ decision changes; do not rewrite history silently.
 | [0006](0006-access-option.md)                | Access option for the server                      | Proposed |
 | [0007](0007-passkey-auth.md)                 | Passkey authentication without an auth framework  | Accepted |
 | [0008](0008-compat-probes.md)                | Token-gated framework compatibility probes        | Accepted |
+| [0009](0009-attachment-storage.md)           | Attachment bytes on local disk behind a port      | Accepted |

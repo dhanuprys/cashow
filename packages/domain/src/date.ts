@@ -120,3 +120,59 @@ export function daysBetween(a: LocalDate, b: LocalDate): number {
 export function freeAmount(incomeAmount: Money, allocatedSum: Money): Money {
   return subMoneyNonNegative(incomeAmount, allocatedSum);
 }
+
+/**
+ * Parse a timestamp as PostgreSQL returns it. `TimestamptzString` columns read
+ * as text (`2026-10-27 01:45:51.602+00`), which is *not* ISO 8601: the space
+ * separator and two-digit offset need normalizing before `Date.parse`.
+ */
+export function parseDbTimestamp(value: string): Date {
+  let normalized = value.trim().replace(" ", "T");
+  if (/[+-]\d{2}$/.test(normalized)) {
+    normalized = `${normalized}:00`;
+  } else if (/[+-]\d{4}$/.test(normalized)) {
+    normalized = normalized.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+  }
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid database timestamp: ${value}`);
+  }
+  return date;
+}
+
+/** A `datetime-local` value (`YYYY-MM-DDTHH:mm`) for an instant in a timezone. */
+export function toLocalDateTimeInput(instant: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(instant);
+  const get = (type: string): string => parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
+/** Convert a `datetime-local` wall clock in `timeZone` to a UTC instant. */
+export function localDateTimeToUtc(value: string, timeZone: string): Date {
+  return zonedToUtc(value, timeZone);
+}
+
+/** Human date/time, e.g. `27 Okt 2026, 08:30` (Indonesian). */
+export function formatDateTime(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone,
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(instant);
+}
+
+/** Human date, e.g. `27 Okt 2026` (Indonesian). */
+export function formatDate(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone,
+    dateStyle: "medium",
+  }).format(instant);
+}

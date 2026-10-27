@@ -1,0 +1,614 @@
+[
+  {
+    "id": "table.Attachment",
+    "label": "Create table \"Attachment\"",
+    "summary": "Creates table \"Attachment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Attachment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Attachment\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"Attachment\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Attachment\"",
+        "sql": "CREATE TABLE \"public\".\"Attachment\" (\n  \"byteSize\" int8 NOT NULL,\n  \"contentHash\" text NOT NULL,\n  \"createdAt\" timestamptz NOT NULL,\n  \"deletedAt\" timestamptz,\n  \"fileName\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"kind\" text DEFAULT 'PROOF' NOT NULL,\n  \"mimeType\" text NOT NULL,\n  \"storageKey\" text NOT NULL,\n  \"transactionId\" text,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"Attachment_kind_check_dbbf4211\" CHECK (\"kind\" IN ('PROOF', 'INVOICE', 'CONTRACT', 'RECEIPT')),\n  CONSTRAINT \"byte_size_positive_1e79ac18\" CHECK (\"byteSize\" > 0)\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Attachment\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"Attachment\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.Transaction.category_only_for_cashflow_53b9b050",
+    "label": "Add check constraint \"category_only_for_cashflow_53b9b050\" on \"Transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "category_only_for_cashflow_53b9b050",
+        "table": "Transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"category_only_for_cashflow_53b9b050\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "category_only_for_cashflow_53b9b050",
+          "public",
+          "\"public\".\"Transaction\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"category_only_for_cashflow_53b9b050\" on \"Transaction\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"category_only_for_cashflow_53b9b050\"",
+        "sql": "ALTER TABLE \"public\".\"Transaction\" ADD CONSTRAINT \"category_only_for_cashflow_53b9b050\" CHECK (\"type\" IN ('INCOME', 'EXPENSE') OR \"categoryId\" IS NULL)"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify check constraint \"category_only_for_cashflow_53b9b050\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4)) AS \"result\"",
+        "params": [
+          "category_only_for_cashflow_53b9b050",
+          "public",
+          "\"public\".\"Transaction\"",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Attachment.Attachment_storageKey_idx_8c086641",
+    "label": "Create index \"Attachment_storageKey_idx_8c086641\" on \"Attachment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Attachment_storageKey_idx_8c086641",
+        "table": "Attachment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Attachment_storageKey_idx_8c086641\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment_storageKey_idx_8c086641\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Attachment_storageKey_idx_8c086641\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Attachment_storageKey_idx_8c086641\"",
+        "sql": "CREATE INDEX \"Attachment_storageKey_idx_8c086641\" ON \"public\".\"Attachment\" (\"storageKey\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Attachment_storageKey_idx_8c086641\" exists on \"Attachment\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment_storageKey_idx_8c086641\"",
+          "i",
+          "I",
+          "\"public\".\"Attachment\"",
+          "btree",
+          "[\"storageKey\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Attachment.Attachment_transactionId_idx_d3180832",
+    "label": "Create index \"Attachment_transactionId_idx_d3180832\" on \"Attachment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Attachment_transactionId_idx_d3180832",
+        "table": "Attachment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Attachment_transactionId_idx_d3180832\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment_transactionId_idx_d3180832\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Attachment_transactionId_idx_d3180832\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Attachment_transactionId_idx_d3180832\"",
+        "sql": "CREATE INDEX \"Attachment_transactionId_idx_d3180832\" ON \"public\".\"Attachment\" (\"transactionId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Attachment_transactionId_idx_d3180832\" exists on \"Attachment\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment_transactionId_idx_d3180832\"",
+          "i",
+          "I",
+          "\"public\".\"Attachment\"",
+          "btree",
+          "[\"transactionId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Attachment.Attachment_userId_contentHash_idx_0c2869d7",
+    "label": "Create index \"Attachment_userId_contentHash_idx_0c2869d7\" on \"Attachment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Attachment_userId_contentHash_idx_0c2869d7",
+        "table": "Attachment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Attachment_userId_contentHash_idx_0c2869d7\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment_userId_contentHash_idx_0c2869d7\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Attachment_userId_contentHash_idx_0c2869d7\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Attachment_userId_contentHash_idx_0c2869d7\"",
+        "sql": "CREATE INDEX \"Attachment_userId_contentHash_idx_0c2869d7\" ON \"public\".\"Attachment\" (\"userId\", \"contentHash\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Attachment_userId_contentHash_idx_0c2869d7\" exists on \"Attachment\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment_userId_contentHash_idx_0c2869d7\"",
+          "i",
+          "I",
+          "\"public\".\"Attachment\"",
+          "btree",
+          "[\"userId\",\"contentHash\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Attachment.Attachment_userId_idx_a489d58a",
+    "label": "Create index \"Attachment_userId_idx_a489d58a\" on \"Attachment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Attachment_userId_idx_a489d58a",
+        "table": "Attachment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Attachment_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Attachment_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Attachment_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"Attachment_userId_idx_a489d58a\" ON \"public\".\"Attachment\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Attachment_userId_idx_a489d58a\" exists on \"Attachment\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"Attachment\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Attachment.Attachment_userId_transactionId_idx_97becd7c",
+    "label": "Create index \"Attachment_userId_transactionId_idx_97becd7c\" on \"Attachment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Attachment_userId_transactionId_idx_97becd7c",
+        "table": "Attachment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Attachment_userId_transactionId_idx_97becd7c\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment_userId_transactionId_idx_97becd7c\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Attachment_userId_transactionId_idx_97becd7c\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Attachment_userId_transactionId_idx_97becd7c\"",
+        "sql": "CREATE INDEX \"Attachment_userId_transactionId_idx_97becd7c\" ON \"public\".\"Attachment\" (\"userId\", \"transactionId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Attachment_userId_transactionId_idx_97becd7c\" exists on \"Attachment\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Attachment_userId_transactionId_idx_97becd7c\"",
+          "i",
+          "I",
+          "\"public\".\"Attachment\"",
+          "btree",
+          "[\"userId\",\"transactionId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Transaction.Transaction_live_recent_idx_cf2432fd",
+    "label": "Create index \"Transaction_live_recent_idx_cf2432fd\" on \"Transaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Transaction_live_recent_idx_cf2432fd",
+        "table": "Transaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Transaction_live_recent_idx_cf2432fd\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Transaction_live_recent_idx_cf2432fd\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Transaction_live_recent_idx_cf2432fd\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Transaction_live_recent_idx_cf2432fd\"",
+        "sql": "CREATE INDEX \"Transaction_live_recent_idx_cf2432fd\" ON \"public\".\"Transaction\" (\"userId\", \"occurredAt\") WHERE (\"deletedAt\" IS NULL)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Transaction_live_recent_idx_cf2432fd\" exists on \"Transaction\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NOT NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Transaction_live_recent_idx_cf2432fd\"",
+          "i",
+          "I",
+          "\"public\".\"Transaction\"",
+          "btree",
+          "[\"userId\",\"occurredAt\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Attachment.Attachment_userId_fkey",
+    "label": "Add foreign key \"Attachment_userId_fkey\" on \"Attachment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Attachment_userId_fkey",
+        "table": "Attachment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Attachment_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Attachment_userId_fkey",
+          "public",
+          "\"public\".\"Attachment\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"Attachment_userId_fkey\" on \"Attachment\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Attachment_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Attachment\"\nADD CONSTRAINT \"Attachment_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Attachment_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "Attachment_userId_fkey",
+          "public",
+          "\"public\".\"Attachment\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Attachment.Attachment_transactionId_fkey",
+    "label": "Add foreign key \"Attachment_transactionId_fkey\" on \"Attachment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Attachment_transactionId_fkey",
+        "table": "Attachment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Attachment_transactionId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Attachment_transactionId_fkey",
+          "public",
+          "\"public\".\"Attachment\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"Attachment_transactionId_fkey\" on \"Attachment\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Attachment_transactionId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Attachment\"\nADD CONSTRAINT \"Attachment_transactionId_fkey\"\nFOREIGN KEY (\"transactionId\")\nREFERENCES \"public\".\"Transaction\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Attachment_transactionId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "Attachment_transactionId_fkey",
+          "public",
+          "\"public\".\"Attachment\"",
+          "f",
+          "[\"transactionId\"]",
+          "\"public\".\"Transaction\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "function.cashow_assert_allocation_sum",
+    "label": "Tighten allocation sums for soft-deleted transactions",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "invariantId": "cashow:allocation-sums:soft-delete",
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Tighten allocation sums for soft-deleted transactions",
+        "sql": "\nCREATE OR REPLACE FUNCTION \"public\".\"cashow_assert_allocation_sum\"(tx_id text)\nRETURNS void\nLANGUAGE plpgsql\nAS $fn$\nDECLARE\n  tx_amount bigint;\n  tx_deleted timestamptz;\n  allocated bigint;\nBEGIN\n  IF tx_id IS NULL THEN\n    RETURN;\n  END IF;\n\n  SELECT \"amount\", \"deletedAt\" INTO tx_amount, tx_deleted\n  FROM \"public\".\"Transaction\" WHERE \"id\" = tx_id;\n  IF NOT FOUND THEN\n    RETURN;\n  END IF;\n\n  -- A deleted transaction's allocations are void, so nothing can exceed it.\n  IF tx_deleted IS NOT NULL THEN\n    RETURN;\n  END IF;\n\n  SELECT COALESCE(SUM(a.\"amount\"), 0) INTO allocated\n  FROM \"public\".\"Allocation\" a\n  JOIN \"public\".\"Transaction\" e ON e.\"id\" = a.\"expenseId\"\n  JOIN \"public\".\"Transaction\" i ON i.\"id\" = a.\"incomeId\"\n  WHERE (a.\"expenseId\" = tx_id OR a.\"incomeId\" = tx_id)\n    AND e.\"deletedAt\" IS NULL\n    AND i.\"deletedAt\" IS NULL;\n\n  IF allocated > tx_amount THEN\n    RAISE EXCEPTION\n      'allocation sum % exceeds transaction % amount %', allocated, tx_id, tx_amount\n      USING ERRCODE = 'check_violation';\n  END IF;\nEND;\n$fn$;\n",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "function.cashow_check_allocation_links",
+    "label": "Create allocation link validation function",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create allocation link validation function",
+        "sql": "\nCREATE OR REPLACE FUNCTION \"public\".\"cashow_check_allocation_links\"()\nRETURNS trigger\nLANGUAGE plpgsql\nAS $fn$\nDECLARE\n  expense_type text;\n  expense_user text;\n  expense_deleted timestamptz;\n  income_type text;\n  income_user text;\n  income_deleted timestamptz;\nBEGIN\n  SELECT \"type\", \"userId\", \"deletedAt\"\n    INTO expense_type, expense_user, expense_deleted\n  FROM \"public\".\"Transaction\" WHERE \"id\" = NEW.\"expenseId\";\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'allocation expense % does not exist', NEW.\"expenseId\"\n      USING ERRCODE = 'foreign_key_violation';\n  END IF;\n\n  SELECT \"type\", \"userId\", \"deletedAt\"\n    INTO income_type, income_user, income_deleted\n  FROM \"public\".\"Transaction\" WHERE \"id\" = NEW.\"incomeId\";\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'allocation income % does not exist', NEW.\"incomeId\"\n      USING ERRCODE = 'foreign_key_violation';\n  END IF;\n\n  IF expense_type <> 'EXPENSE' THEN\n    RAISE EXCEPTION 'allocation expense % is a %', NEW.\"expenseId\", expense_type\n      USING ERRCODE = 'check_violation';\n  END IF;\n  IF income_type <> 'INCOME' THEN\n    RAISE EXCEPTION 'allocation income % is a %', NEW.\"incomeId\", income_type\n      USING ERRCODE = 'check_violation';\n  END IF;\n  IF expense_user <> income_user OR expense_user <> NEW.\"userId\" THEN\n    RAISE EXCEPTION 'allocation crosses users'\n      USING ERRCODE = 'check_violation';\n  END IF;\n  IF expense_deleted IS NOT NULL OR income_deleted IS NOT NULL THEN\n    RAISE EXCEPTION 'allocation references a soft-deleted transaction'\n      USING ERRCODE = 'check_violation';\n  END IF;\n\n  RETURN NEW;\nEND;\n$fn$;\n",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "trigger.Allocation_links_check",
+    "label": "Create allocation link trigger",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "invariantId": "cashow:allocation-links",
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create allocation link trigger",
+        "sql": "\nCREATE TRIGGER \"Allocation_links_check\"\nBEFORE INSERT OR UPDATE OF \"expenseId\", \"incomeId\", \"userId\" ON \"public\".\"Allocation\"\nFOR EACH ROW EXECUTE FUNCTION \"public\".\"cashow_check_allocation_links\"();\n",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "function.cashow_check_transaction_allocation_sums",
+    "label": "Re-check allocation sums on restore",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "invariantId": "cashow:allocation-sums:restore",
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Re-check allocation sums on restore",
+        "sql": "\nCREATE OR REPLACE FUNCTION \"public\".\"cashow_check_transaction_allocation_sums\"()\nRETURNS trigger\nLANGUAGE plpgsql\nAS $fn$\nBEGIN\n  -- Re-check on an amount edit and when a soft-deleted row is restored: the\n  -- allocations survived the delete and must still fit the amount.\n  IF NEW.\"amount\" IS DISTINCT FROM OLD.\"amount\"\n     OR (OLD.\"deletedAt\" IS NOT NULL AND NEW.\"deletedAt\" IS NULL) THEN\n    PERFORM \"public\".\"cashow_assert_allocation_sum\"(NEW.\"id\");\n  END IF;\n  RETURN NULL;\nEND;\n$fn$;\n",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "trigger.Transaction_allocation_sums_check",
+    "label": "Recreate transaction allocation sums trigger",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "invariantId": "cashow:allocation-sums:transactions",
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Recreate transaction allocation sums trigger",
+        "sql": "\nDROP TRIGGER IF EXISTS \"Transaction_allocation_sums_check\" ON \"public\".\"Transaction\";\nCREATE TRIGGER \"Transaction_allocation_sums_check\"\nAFTER UPDATE OF \"amount\", \"deletedAt\" ON \"public\".\"Transaction\"\nFOR EACH ROW EXECUTE FUNCTION \"public\".\"cashow_check_transaction_allocation_sums\"();\n",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "function.cashow_check_transaction_links",
+    "label": "Create transaction link validation function",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create transaction link validation function",
+        "sql": "\nCREATE OR REPLACE FUNCTION \"public\".\"cashow_check_transaction_links\"()\nRETURNS trigger\nLANGUAGE plpgsql\nAS $fn$\nDECLARE\n  account_user text;\n  destination_user text;\n  category_kind text;\n  category_user text;\nBEGIN\n  SELECT \"userId\" INTO account_user FROM \"public\".\"Account\" WHERE \"id\" = NEW.\"accountId\";\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'transaction account % does not exist', NEW.\"accountId\"\n      USING ERRCODE = 'foreign_key_violation';\n  END IF;\n  IF account_user <> NEW.\"userId\" THEN\n    RAISE EXCEPTION 'transaction account belongs to another user'\n      USING ERRCODE = 'check_violation';\n  END IF;\n\n  IF NEW.\"destinationAccountId\" IS NOT NULL THEN\n    SELECT \"userId\" INTO destination_user\n    FROM \"public\".\"Account\" WHERE \"id\" = NEW.\"destinationAccountId\";\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'destination account % does not exist', NEW.\"destinationAccountId\"\n        USING ERRCODE = 'foreign_key_violation';\n    END IF;\n    IF destination_user <> NEW.\"userId\" THEN\n      RAISE EXCEPTION 'destination account belongs to another user'\n        USING ERRCODE = 'check_violation';\n    END IF;\n  END IF;\n\n  IF NEW.\"categoryId\" IS NOT NULL THEN\n    SELECT \"kind\", \"userId\" INTO category_kind, category_user\n    FROM \"public\".\"Category\" WHERE \"id\" = NEW.\"categoryId\";\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'category % does not exist', NEW.\"categoryId\"\n        USING ERRCODE = 'foreign_key_violation';\n    END IF;\n    IF category_user <> NEW.\"userId\" THEN\n      RAISE EXCEPTION 'category belongs to another user'\n        USING ERRCODE = 'check_violation';\n    END IF;\n    IF category_kind <> NEW.\"type\" THEN\n      RAISE EXCEPTION 'category kind % does not match transaction type %',\n        category_kind, NEW.\"type\"\n        USING ERRCODE = 'check_violation';\n    END IF;\n  END IF;\n\n  RETURN NEW;\nEND;\n$fn$;\n",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  },
+  {
+    "id": "trigger.Transaction_links_check",
+    "label": "Create transaction link trigger",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "invariantId": "cashow:transaction-links",
+    "precheck": [],
+    "execute": [
+      {
+        "description": "Create transaction link trigger",
+        "sql": "\nCREATE TRIGGER \"Transaction_links_check\"\nBEFORE INSERT OR UPDATE OF \"accountId\", \"destinationAccountId\", \"categoryId\", \"type\", \"userId\"\nON \"public\".\"Transaction\"\nFOR EACH ROW EXECUTE FUNCTION \"public\".\"cashow_check_transaction_links\"();\n",
+        "params": []
+      }
+    ],
+    "postcheck": []
+  }
+]

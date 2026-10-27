@@ -12,6 +12,10 @@
       "model": "Allocation",
       "namespace": "public"
     },
+    "Attachment": {
+      "model": "Attachment",
+      "namespace": "public"
+    },
     "AuditLog": {
       "model": "AuditLog",
       "namespace": "public"
@@ -75,6 +79,27 @@
               {
                 "name": "INVESTMENT",
                 "value": "INVESTMENT"
+              }
+            ]
+          },
+          "AttachmentKind": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "PROOF",
+                "value": "PROOF"
+              },
+              {
+                "name": "INVOICE",
+                "value": "INVOICE"
+              },
+              {
+                "name": "CONTRACT",
+                "value": "CONTRACT"
+              },
+              {
+                "name": "RECEIPT",
+                "value": "RECEIPT"
               }
             ]
           },
@@ -448,6 +473,166 @@
               },
               "namespaceId": "public",
               "table": "Allocation"
+            }
+          },
+          "Attachment": {
+            "fields": {
+              "byteSize": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "contentHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "deletedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "fileName": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "kind": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AttachmentKind",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "mimeType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "storageKey": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "transactionId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "transaction": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "transactionId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Transaction",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "byteSize": {
+                  "column": "byteSize"
+                },
+                "contentHash": {
+                  "column": "contentHash"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "deletedAt": {
+                  "column": "deletedAt"
+                },
+                "fileName": {
+                  "column": "fileName"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "kind": {
+                  "column": "kind"
+                },
+                "mimeType": {
+                  "column": "mimeType"
+                },
+                "storageKey": {
+                  "column": "storageKey"
+                },
+                "transactionId": {
+                  "column": "transactionId"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Attachment"
             }
           },
           "AuditLog": {
@@ -1593,6 +1778,21 @@
                   "namespace": "public"
                 }
               },
+              "attachments": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "transactionId"
+                  ]
+                },
+                "to": {
+                  "model": "Attachment",
+                  "namespace": "public"
+                }
+              },
               "category": {
                 "cardinality": "N:1",
                 "nullable": true,
@@ -1779,6 +1979,21 @@
                 },
                 "to": {
                   "model": "Account",
+                  "namespace": "public"
+                }
+              },
+              "attachments": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "Attachment",
                   "namespace": "public"
                 }
               },
@@ -2129,6 +2344,179 @@
                   ]
                 }
               ]
+            },
+            "Attachment": {
+              "checks": [
+                {
+                  "expression": "\"kind\" IN ('PROOF', 'INVOICE', 'CONTRACT', 'RECEIPT')",
+                  "name": "Attachment_kind_check_dbbf4211",
+                  "prefix": "Attachment_kind_check"
+                },
+                {
+                  "expression": "\"byteSize\" > 0",
+                  "name": "byte_size_positive_1e79ac18",
+                  "prefix": "byte_size_positive"
+                }
+              ],
+              "columns": {
+                "byteSize": {
+                  "codecId": "pg/int8@1",
+                  "dataType": "pg/int8",
+                  "nullable": false
+                },
+                "contentHash": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "deletedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": true
+                },
+                "fileName": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "kind": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "PROOF"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AttachmentKind",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "mimeType": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "storageKey": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "transactionId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "Attachment_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Attachment"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "Attachment_transactionId_idx_d3180832"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "transactionId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Attachment"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Transaction"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "storageKey"
+                  ],
+                  "name": "Attachment_storageKey_idx_8c086641",
+                  "prefix": "Attachment_storageKey_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "transactionId"
+                  ],
+                  "name": "Attachment_transactionId_idx_d3180832",
+                  "prefix": "Attachment_transactionId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "contentHash"
+                  ],
+                  "name": "Attachment_userId_contentHash_idx_0c2869d7",
+                  "prefix": "Attachment_userId_contentHash_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "Attachment_userId_idx_a489d58a",
+                  "prefix": "Attachment_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "transactionId"
+                  ],
+                  "name": "Attachment_userId_transactionId_idx_97becd7c",
+                  "prefix": "Attachment_userId_transactionId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
             },
             "AuditLog": {
               "columns": {
@@ -2964,6 +3352,11 @@
                   "prefix": "amount_positive"
                 },
                 {
+                  "expression": "\"type\" IN ('INCOME', 'EXPENSE') OR \"categoryId\" IS NULL",
+                  "name": "category_only_for_cashflow_53b9b050",
+                  "prefix": "category_only_for_cashflow"
+                },
+                {
                   "expression": "\"type\" <> 'TRANSFER' OR \"destinationAccountId\" <> \"accountId\"",
                   "name": "transfer_accounts_differ_c65f2c57",
                   "prefix": "transfer_accounts_differ"
@@ -3186,6 +3579,16 @@
                 },
                 {
                   "columns": [
+                    "userId",
+                    "occurredAt"
+                  ],
+                  "name": "Transaction_live_recent_idx_cf2432fd",
+                  "prefix": "Transaction_live_recent_idx",
+                  "unique": false,
+                  "where": "\"deletedAt\" IS NULL"
+                },
+                {
+                  "columns": [
                     "userId"
                   ],
                   "name": "Transaction_userId_idx_a489d58a",
@@ -3315,6 +3718,15 @@
                 "INVESTMENT"
               ]
             },
+            "AttachmentKind": {
+              "kind": "valueSet",
+              "values": [
+                "PROOF",
+                "INVOICE",
+                "CONTRACT",
+                "RECEIPT"
+              ]
+            },
             "AuthChallengePurpose": {
               "kind": "valueSet",
               "values": [
@@ -3364,10 +3776,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "5c3b75851cca2c0a633f49f374cf85abfa0fd5ccc6285f6afa41dc115d487a58"
+    "storageHash": "bcbc0ebb82b058d57e4dadab5fa0619cee244c8cfded7b4e35e6660fa0e9c34b"
   },
   "execution": {
-    "executionHash": "b170396594a3e1da39a3cd114a2aa67ad27975a5853eb701620e0f899f9740d4",
+    "executionHash": "f3b5d129ae1e64bb6254e992cd1628e5d854dcac5f92a2a3f78e7c063fbef1c4",
     "mutations": {
       "defaults": [
         {
@@ -3425,6 +3837,28 @@
           },
           "ref": {
             "entry": "Allocation",
+            "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Attachment",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "Attachment",
             "field": "id",
             "namespace": "public"
           }

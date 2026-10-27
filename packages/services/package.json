@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@cashow/db": "workspace:*",
-    "@cashow/domain": "workspace:*"
+    "@cashow/domain": "workspace:*",
+    "@prisma/orm-postgres": "8.0.0-rc.20"
   }
 }

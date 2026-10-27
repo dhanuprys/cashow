@@ -1,0 +1,13 @@
+{
+  "from": "5c3b75851cca2c0a633f49f374cf85abfa0fd5ccc6285f6afa41dc115d487a58",
+  "to": "bcbc0ebb82b058d57e4dadab5fa0619cee244c8cfded7b4e35e6660fa0e9c34b",
+  "providedInvariants": [
+    "cashow:allocation-links",
+    "cashow:allocation-sums:restore",
+    "cashow:allocation-sums:soft-delete",
+    "cashow:allocation-sums:transactions",
+    "cashow:transaction-links"
+  ],
+  "createdAt": "2026-10-27T02:13:19.395Z",
+  "migrationHash": "17b304391d4dd94a38f3bd6e61bbcf48a8223b88cc5643a1a5c1e4eb045689cd"
+}

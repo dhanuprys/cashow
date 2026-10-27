@@ -4,10 +4,12 @@
 income arrives, expenses draw from it through explicit allocations, and every
 balance is derived rather than stored.
 
-This repository is the Phase 0 foundation: the monorepo, PostgreSQL schema and
-migrations, environment validation, passkey authentication, the deployment
-stack, the seeded performance benchmark, and the test gates. Ledger CRUD,
-rules, notifications and AI build on top.
+This repository is Phase 0 plus the Phase 1 core ledger: the monorepo,
+PostgreSQL schema and migrations, environment validation, passkey
+authentication, the deployment stack, the seeded performance benchmark, the
+account and category pages, income/expense capture with quick add, allocation of
+expenses to incomes, attachments, audit log, soft delete, and a transactional
+outbox. Transfers, snapshots, budgets, rules, notifications and AI build on top.
 
 ## Stack
 
@@ -22,6 +24,7 @@ rules, notifications and AI build on top.
 | Lint / format             | Biome 2                                                          |
 | Deployment                | Docker Compose: Caddy, web, worker, migrate, Postgres, backup    |
 | Money                     | 64-bit integer rupiah (`bigint` / `BigInt`), never floats        |
+| Attachments               | metadata in Postgres, bytes on a local volume (ADR 0009)         |
 
 ## Layout
 
@@ -31,7 +34,7 @@ apps/worker              background worker entrypoint
 packages/domain          money, dates, allocation math, formatters (pure)
 packages/config          Zod env schema + `_FILE` secret loading
 packages/db              Prisma contract, client, migrations, generated types
-packages/services        use cases (wired in later phases)
+packages/services        use cases: accounts, categories, transactions, attachments
 packages/notify          notification channels
 packages/ai              DeepSeek / AI SDK integration
 deploy                   Caddyfile, backup and restore scripts, backup image
@@ -65,6 +68,11 @@ Create the database once if you are not using Compose:
 createdb -h localhost -U default cashow
 ```
 
+Uploaded receipts go to `STORAGE_DIR` (default `./data/uploads`, resolved from
+the web app's working directory). Point it at a persistent path outside the
+repository for a real deployment; Compose uses `/app/data/uploads` on the shared
+`files` volume.
+
 ### Useful commands
 
 | Command                            | What it does                                       |
@@ -75,6 +83,7 @@ createdb -h localhost -U default cashow
 | `bun run lint` / `bun run format`  | Biome check / rewrite                              |
 | `bun run typecheck`                | `tsc` for packages and the web app                 |
 | `bun run test`                     | `bun test` (domain unit tests)                     |
+| `bun run test:ledger`              | Phase 1 gate: allocation rules enforced by the DB  |
 | `bun run smoke`                    | write/read a `BigInt` row through the typed client |
 | `bun run seed`                     | seed 100,000 transactions over three years         |
 | `bun run bench`                    | check the §8 read/write budgets on that seed       |
@@ -111,6 +120,31 @@ passkeys, lets them add another device, and refuses to revoke the last one.
 # End-to-end passkey flow in headless Chrome with a virtual authenticator.
 bun run test:e2e:auth          # CHROME_PATH overrides the browser binary
 ```
+
+### The core ledger (Phase 1)
+
+After setup, `/app` is the daily surface:
+
+| Route                   | What it does                                                          |
+| ----------------------- | --------------------------------------------------------------------- |
+| `/app`                  | Month summary, quick add, recent transactions, balances, top expenses |
+| `/app/transactions`     | Filter, search, paginate; deleted rows are opt-in                     |
+| `/app/transactions/new` | Full form: type, amount, account, category, time, allocations         |
+| `/app/transactions/:id` | Detail, attachments, soft delete/restore                              |
+| `/app/accounts`         | Accounts and opening balances (balance is always derived)             |
+| `/app/categories`       | One-level categories, separate income/expense trees                   |
+| `/app/settings`         | Profile, timezone, week/budget start, passkeys, audit, outbox         |
+
+Amounts are typed as text and parsed once: `35rb`, `1,5jt`, `Rp 35.000`. Money
+stays a positive `bigint` in the database. An expense can draw from one or more
+incomes; the database triggers enforce that allocations never exceed either the
+expense or the income's free amount, that both sides belong to the same owner,
+and that a deleted expense cannot keep live allocations.
+
+Attachments are receipt photos, invoices and contracts. Images are downscaled
+in the browser before upload; metadata is stored in Postgres and bytes on the
+`STORAGE_DIR` volume. Serving is session-scoped (`/api/attachments/:id`) and
+never public. See [ADR 0009](docs/adr/0009-attachment-storage.md).
 
 ### Performance seed and benchmark
 
@@ -192,20 +226,35 @@ age-keygen -o secrets/age.key          # keep the private key offline
 docker compose --profile backup up -d
 ```
 
-It runs nightly at 02:15 UTC: `pg_dump` (custom format) → `age` encryption →
-`rclone` upload, with retention. `deploy/restore.sh` restores a dump into a
-throwaway database and checks that the five ledger tables exist. Run a restore
-drill monthly; a backup that was never restored is a hope, not a backup.
+It runs nightly at 02:15 UTC: `pg_dump` (custom format) **and** a tar of the
+attachment directory (`STORAGE_DIR`, default `/files/uploads`) → `age`
+encryption → `rclone` upload, with retention. Both artifacts are encrypted with
+the same recipient and uploaded together; a database restore without the uploads
+archive leaves every attachment row pointing at a missing blob.
 
-The backup target is an **external drive** (ADR 0006): mount it on the host, set
-`BACKUP_RCLONE_REMOTE` to the mount (or a `local` rclone remote), and make sure
-an unmounted drive fails the job loudly instead of filling the container disk.
-Keep an off-site copy if the data matters beyond fire and theft.
+`deploy/restore.sh` restores a dump into a throwaway database and checks that
+the ledger tables exist. `deploy/restore-files.sh` restores the uploads archive
+into a target directory and fails when it finds no files. Run both drill steps
+monthly; a backup that was never restored is a hope, not a backup.
+
+The backup target is an **external drive** (ADR 0006): set
+`BACKUP_EXTERNAL_DIR` to the host mount, set `BACKUP_RCLONE_REMOTE` to a local
+remote (for example `local:/external/cashow`), and make sure an unmounted drive
+fails the job loudly instead of filling the container disk. The drive is mounted
+read-write at `/external` inside the `backup` service. Keep an off-site copy if
+the data matters beyond fire and theft.
 
 ```bash
-docker compose run --rm backup /usr/local/bin/restore.sh \
-  /backups/cashow-20261027T021500Z.dump.age cashow_drill
+STAMP=20261027T021500Z
+docker compose --profile backup run --rm backup /usr/local/bin/restore.sh \
+  "/backups/cashow-$STAMP.dump.age" cashow_drill
+docker compose --profile backup run --rm backup /usr/local/bin/restore-files.sh \
+  "/backups/cashow-$STAMP-files.tar.gz.age" /tmp/cashow_drill_uploads
 ```
+
+The `files` volume (`/app/data` in `web`/`worker`) holds the attachment bytes.
+Back it up or move it with the database; see
+[ADR 0009](docs/adr/0009-attachment-storage.md).
 
 ### Health endpoints
 
@@ -216,20 +265,27 @@ docker compose run --rm backup /usr/local/bin/restore.sh \
 
 CI runs, in order: frozen install, lint/format, production build, typecheck,
 unit tests, migrations against an empty Postgres, `db verify`, the database
-smoke test, the framework compatibility gates (Server Action, streaming, abort),
-and a Docker build of both runtime targets. A nightly job seeds 100,000
-transactions and runs the §8 performance budgets.
+smoke test, the Phase 1 ledger gate (`test:ledger`: the Rp500.000/Rp250.000 flow
+plus database rejections for over-allocation, wrong direction, cross-user
+references, category-kind mismatch and restore-after-shrink), the framework
+compatibility gates (Server Action, streaming, abort), and a Docker build of
+both runtime targets. A nightly job seeds 100,000 transactions and runs the §8
+performance budgets.
 
-Local-only gates: `bun run test:e2e:auth` (Chrome with a virtual authenticator).
-The passkey gate in plan §6 additionally requires the real HTTPS domain, so run
-it once after the deployment name is final.
+Local-only gates: `bun run test:e2e:auth` (Chrome with a virtual authenticator;
+it now also drives the ledger smoke: defaults, quick add, the
+Rp500.000/Rp250.000 allocation, and an attachment upload/serve). The passkey
+gate in plan §6 additionally requires the real HTTPS domain, so run it once
+after the deployment name is final.
 
 ## Decisions
 
 Architecture decisions live in [docs/adr](docs/adr/). Authentication is recorded
-in [ADR 0007](docs/adr/0007-passkey-auth.md) and the compatibility probes in
-[ADR 0008](docs/adr/0008-compat-probes.md). The open one is the access option and
-permanent domain (ADR 0006); the backup target is settled as an external drive.
+in [ADR 0007](docs/adr/0007-passkey-auth.md), the compatibility probes in
+[ADR 0008](docs/adr/0008-compat-probes.md), and attachment storage in
+[ADR 0009](docs/adr/0009-attachment-storage.md). The open one is the access
+option and permanent domain (ADR 0006); the backup target is settled as an
+external drive.
 
 ## License
 
