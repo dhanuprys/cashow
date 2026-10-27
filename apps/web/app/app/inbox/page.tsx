@@ -39,7 +39,7 @@ async function Inbox() {
         </p>
       </section>
 
-      <PushSubscribe vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""} />
+      <PushSubscribe vapidPublicKey={process.env.VAPID_PUBLIC_KEY ?? ""} />
 
       <Card>
         <CardHeader>
