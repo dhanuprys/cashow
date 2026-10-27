@@ -53,7 +53,9 @@ bun run dev                   # http://localhost:3000
 ```
 
 `packages/db/.env` may hold a separate `DATABASE_URL` for the Prisma CLI; the
-root `.env` is canonical. Both are gitignored.
+root `.env` is canonical and is also the fallback for the CLI. `bun run dev`,
+`start` and `worker` load the root `.env` explicitly (`bun --env-file=.env`),
+so one file configures every local process.
 
 Create the database once if you are not using Compose:
 
