@@ -111,6 +111,9 @@ model User {
   recurringTemplates   RecurringTemplate[]
   channelEndpoints    ChannelEndpoint[]
   notifications       Notification[]
+  rules               Rule[]
+  ruleStates          RuleState[]
+  ruleFirings         RuleFiring[]
 }
 
 // ---------------------------------------------------------------------------
@@ -576,6 +579,67 @@ model NotificationDelivery {
 
   @@index([notificationId])
   @@index([status, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Rules engine (Phase 5)
+// ---------------------------------------------------------------------------
+
+model Rule {
+  id          String  @id @onCreate(uuid(7))
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  // Trigger definition (JSON): type, filters.
+  trigger     Json
+  // Condition tree (JSON): all/any/not, metric comparisons.
+  condition   Json
+  // Actions (JSON): notify, tag, reminder, ai comment, webhook.
+  actions     Json
+  // Settings (JSON): severity, cooldown, activeDays, activeHours, oneShot, snooze.
+  settings    Json
+  active      Boolean @default(true)
+  version     Int     @default(1)
+  createdAt   TimestamptzString @onCreate(now())
+  updatedAt   TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  states      RuleState[]
+  firings     RuleFiring[]
+
+  @@index([userId, active])
+}
+
+model RuleState {
+  id             String  @id @onCreate(uuid(7))
+  userId         String
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleId         String
+  rule           Rule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  // Armed/disarmed and last condition truth for edge-triggered firing.
+  state          Json
+  lastEvaluatedAt TimestamptzString?
+  lastFiredAt    TimestamptzString?
+  createdAt      TimestamptzString @onCreate(now())
+  updatedAt      TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  @@unique([userId, ruleId])
+  @@index([userId])
+}
+
+model RuleFiring {
+  id           String  @id @onCreate(uuid(7))
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleId       String
+  rule         Rule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  dedupeKey    String?
+  firedAt      TimestamptzString @onCreate(now())
+  metricValues Json
+  notificationId String?
+
+  @@index([userId, ruleId, firedAt])
+  @@unique([userId, dedupeKey])
 }
 
 // ---------------------------------------------------------------------------

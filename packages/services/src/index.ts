@@ -20,6 +20,7 @@ export * from "./outbox";
 export * from "./plans";
 export * from "./recurring";
 export * from "./result";
+export * from "./rules";
 export * from "./snapshots";
 export * from "./storage";
 export * from "./summary";

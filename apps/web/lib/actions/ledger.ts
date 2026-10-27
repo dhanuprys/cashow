@@ -8,16 +8,19 @@ import {
   createPlan,
   createPlanItem,
   createRecurring,
+  createRule,
   createSnapshot,
   createTransaction,
   createTransfer,
   deleteBudget,
   deletePlanItem,
   deleteRecurring,
+  deleteRule,
   listAccounts,
   markNotificationRead,
   restoreTransaction,
   runDueRecurring,
+  runRules,
   savePushSubscription,
   setAccountArchived,
   setCategoryArchived,
@@ -41,13 +44,13 @@ import { redirect } from "next/navigation";
 import { nowLocalInput } from "@/lib/format";
 import { requireLedgerSession } from "@/lib/ledger";
 import { attachmentStorage } from "@/lib/storage";
-
 /**
  * Server actions are the only mutation boundary the UI has. Every one resolves
  * the session, calls the shared use case, revalidates the affected paths, and
  * returns an Indonesian message instead of throwing for expected failures.
  */
 import type { ActionState } from "./state";
+import { initialActionState } from "./state";
 
 function text(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -711,6 +714,59 @@ export async function runRecurringAction(_formData: FormData): Promise<void> {
   revalidateLedger();
   revalidatePath("/app/recurring");
   revalidatePath("/app/transactions");
+}
+
+export async function createRuleFormAction(formData: FormData): Promise<void> {
+  await createRuleAction(initialActionState, formData);
+}
+
+export async function createRuleAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  let trigger: unknown = {};
+  let condition: unknown = {};
+  try {
+    trigger = JSON.parse(text(formData, "trigger") || "{}");
+    condition = JSON.parse(text(formData, "condition") || "{}");
+  } catch {
+    return failure("JSON tidak valid.");
+  }
+  const result = await createRule(session.ctx, {
+    name: text(formData, "name"),
+    description: text(formData, "description"),
+    trigger,
+    condition,
+    actions: [],
+    settings: { severity: "INFO", cooldownMinutes: 0, edgeTriggered: true },
+    active: true,
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath("/app/rules");
+  return { status: "success" };
+}
+
+export async function deleteRuleAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "ruleId");
+  if (id === "") return;
+  const result = await deleteRule(session.ctx, id);
+  if (!result.ok) throw result.error;
+  revalidateLedger();
+  revalidatePath("/app/rules");
+}
+
+export async function runRulesAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const triggerType = text(formData, "triggerType") || "manual";
+  const result = await runRules(session.ctx, triggerType);
+  if (!result.ok) throw result.error;
+  revalidateLedger();
+  revalidatePath("/app/rules");
+  revalidatePath("/app/inbox");
 }
 
 export async function subscribePushAction(

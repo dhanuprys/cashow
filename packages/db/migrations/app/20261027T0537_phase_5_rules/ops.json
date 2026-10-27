@@ -1,0 +1,841 @@
+[
+  {
+    "id": "table.Rule",
+    "label": "Create table \"Rule\"",
+    "summary": "Creates table \"Rule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Rule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Rule\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Rule\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"Rule\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Rule\"",
+        "sql": "CREATE TABLE \"public\".\"Rule\" (\n  \"actions\" json NOT NULL,\n  \"active\" bool DEFAULT true NOT NULL,\n  \"condition\" json NOT NULL,\n  \"createdAt\" timestamptz NOT NULL,\n  \"description\" text,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"settings\" json NOT NULL,\n  \"trigger\" json NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" text NOT NULL,\n  \"version\" int4 DEFAULT 1 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Rule\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"Rule\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"Rule\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.RuleFiring",
+    "label": "Create table \"RuleFiring\"",
+    "summary": "Creates table \"RuleFiring\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "RuleFiring"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"RuleFiring\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RuleFiring\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"RuleFiring\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"RuleFiring\"",
+        "sql": "CREATE TABLE \"public\".\"RuleFiring\" (\n  \"dedupeKey\" text,\n  \"firedAt\" timestamptz NOT NULL,\n  \"id\" text NOT NULL,\n  \"metricValues\" json NOT NULL,\n  \"notificationId\" text,\n  \"ruleId\" text NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"RuleFiring\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"RuleFiring\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"RuleFiring\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.RuleState",
+    "label": "Create table \"RuleState\"",
+    "summary": "Creates table \"RuleState\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "RuleState"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"RuleState\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RuleState\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"RuleState\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"RuleState\"",
+        "sql": "CREATE TABLE \"public\".\"RuleState\" (\n  \"createdAt\" timestamptz NOT NULL,\n  \"id\" text NOT NULL,\n  \"lastEvaluatedAt\" timestamptz,\n  \"lastFiredAt\" timestamptz,\n  \"ruleId\" text NOT NULL,\n  \"state\" json NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"RuleState\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"RuleState\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"RuleState\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "unique.RuleFiring.RuleFiring_userId_dedupeKey_key",
+    "label": "Add unique constraint on \"RuleFiring\" (userId, dedupeKey)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "RuleFiring_userId_dedupeKey_key",
+        "table": "RuleFiring"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"RuleFiring_userId_dedupeKey_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "RuleFiring_userId_dedupeKey_key",
+          "public",
+          "\"public\".\"RuleFiring\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"RuleFiring_userId_dedupeKey_key\" on \"RuleFiring\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"RuleFiring_userId_dedupeKey_key\"",
+        "sql": "ALTER TABLE \"public\".\"RuleFiring\" ADD CONSTRAINT \"RuleFiring_userId_dedupeKey_key\" UNIQUE (\"userId\", \"dedupeKey\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify unique constraint \"RuleFiring_userId_dedupeKey_key\" exists on (userId, dedupeKey)",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb)) AS \"result\"",
+        "params": [
+          "RuleFiring_userId_dedupeKey_key",
+          "public",
+          "\"public\".\"RuleFiring\"",
+          "u",
+          "[\"userId\",\"dedupeKey\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.RuleState.RuleState_userId_ruleId_key",
+    "label": "Add unique constraint on \"RuleState\" (userId, ruleId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "RuleState_userId_ruleId_key",
+        "table": "RuleState"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"RuleState_userId_ruleId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "RuleState_userId_ruleId_key",
+          "public",
+          "\"public\".\"RuleState\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"RuleState_userId_ruleId_key\" on \"RuleState\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"RuleState_userId_ruleId_key\"",
+        "sql": "ALTER TABLE \"public\".\"RuleState\" ADD CONSTRAINT \"RuleState_userId_ruleId_key\" UNIQUE (\"userId\", \"ruleId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify unique constraint \"RuleState_userId_ruleId_key\" exists on (userId, ruleId)",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb)) AS \"result\"",
+        "params": [
+          "RuleState_userId_ruleId_key",
+          "public",
+          "\"public\".\"RuleState\"",
+          "u",
+          "[\"userId\",\"ruleId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Rule.Rule_userId_active_idx_749baf02",
+    "label": "Create index \"Rule_userId_active_idx_749baf02\" on \"Rule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Rule_userId_active_idx_749baf02",
+        "table": "Rule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Rule_userId_active_idx_749baf02\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Rule_userId_active_idx_749baf02\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Rule_userId_active_idx_749baf02\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Rule_userId_active_idx_749baf02\"",
+        "sql": "CREATE INDEX \"Rule_userId_active_idx_749baf02\" ON \"public\".\"Rule\" (\"userId\", \"active\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Rule_userId_active_idx_749baf02\" exists on \"Rule\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Rule_userId_active_idx_749baf02\"",
+          "i",
+          "I",
+          "\"public\".\"Rule\"",
+          "btree",
+          "[\"userId\",\"active\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Rule.Rule_userId_idx_a489d58a",
+    "label": "Create index \"Rule_userId_idx_a489d58a\" on \"Rule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Rule_userId_idx_a489d58a",
+        "table": "Rule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Rule_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Rule_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Rule_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Rule_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"Rule_userId_idx_a489d58a\" ON \"public\".\"Rule\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Rule_userId_idx_a489d58a\" exists on \"Rule\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Rule_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"Rule\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.RuleFiring.RuleFiring_ruleId_idx_05e770f7",
+    "label": "Create index \"RuleFiring_ruleId_idx_05e770f7\" on \"RuleFiring\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "RuleFiring_ruleId_idx_05e770f7",
+        "table": "RuleFiring"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"RuleFiring_ruleId_idx_05e770f7\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RuleFiring_ruleId_idx_05e770f7\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"RuleFiring_ruleId_idx_05e770f7\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"RuleFiring_ruleId_idx_05e770f7\"",
+        "sql": "CREATE INDEX \"RuleFiring_ruleId_idx_05e770f7\" ON \"public\".\"RuleFiring\" (\"ruleId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"RuleFiring_ruleId_idx_05e770f7\" exists on \"RuleFiring\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"RuleFiring_ruleId_idx_05e770f7\"",
+          "i",
+          "I",
+          "\"public\".\"RuleFiring\"",
+          "btree",
+          "[\"ruleId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.RuleFiring.RuleFiring_userId_idx_a489d58a",
+    "label": "Create index \"RuleFiring_userId_idx_a489d58a\" on \"RuleFiring\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "RuleFiring_userId_idx_a489d58a",
+        "table": "RuleFiring"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"RuleFiring_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RuleFiring_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"RuleFiring_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"RuleFiring_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"RuleFiring_userId_idx_a489d58a\" ON \"public\".\"RuleFiring\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"RuleFiring_userId_idx_a489d58a\" exists on \"RuleFiring\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"RuleFiring_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"RuleFiring\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.RuleFiring.RuleFiring_userId_ruleId_firedAt_idx_a6541a4d",
+    "label": "Create index \"RuleFiring_userId_ruleId_firedAt_idx_a6541a4d\" on \"RuleFiring\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "RuleFiring_userId_ruleId_firedAt_idx_a6541a4d",
+        "table": "RuleFiring"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"RuleFiring_userId_ruleId_firedAt_idx_a6541a4d\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RuleFiring_userId_ruleId_firedAt_idx_a6541a4d\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"RuleFiring_userId_ruleId_firedAt_idx_a6541a4d\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"RuleFiring_userId_ruleId_firedAt_idx_a6541a4d\"",
+        "sql": "CREATE INDEX \"RuleFiring_userId_ruleId_firedAt_idx_a6541a4d\" ON \"public\".\"RuleFiring\" (\"userId\", \"ruleId\", \"firedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"RuleFiring_userId_ruleId_firedAt_idx_a6541a4d\" exists on \"RuleFiring\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"RuleFiring_userId_ruleId_firedAt_idx_a6541a4d\"",
+          "i",
+          "I",
+          "\"public\".\"RuleFiring\"",
+          "btree",
+          "[\"userId\",\"ruleId\",\"firedAt\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.RuleState.RuleState_ruleId_idx_05e770f7",
+    "label": "Create index \"RuleState_ruleId_idx_05e770f7\" on \"RuleState\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "RuleState_ruleId_idx_05e770f7",
+        "table": "RuleState"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"RuleState_ruleId_idx_05e770f7\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RuleState_ruleId_idx_05e770f7\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"RuleState_ruleId_idx_05e770f7\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"RuleState_ruleId_idx_05e770f7\"",
+        "sql": "CREATE INDEX \"RuleState_ruleId_idx_05e770f7\" ON \"public\".\"RuleState\" (\"ruleId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"RuleState_ruleId_idx_05e770f7\" exists on \"RuleState\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"RuleState_ruleId_idx_05e770f7\"",
+          "i",
+          "I",
+          "\"public\".\"RuleState\"",
+          "btree",
+          "[\"ruleId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.RuleState.RuleState_userId_idx_a489d58a",
+    "label": "Create index \"RuleState_userId_idx_a489d58a\" on \"RuleState\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "RuleState_userId_idx_a489d58a",
+        "table": "RuleState"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"RuleState_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"RuleState_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"RuleState_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"RuleState_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"RuleState_userId_idx_a489d58a\" ON \"public\".\"RuleState\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"RuleState_userId_idx_a489d58a\" exists on \"RuleState\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"RuleState_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"RuleState\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Rule.Rule_userId_fkey",
+    "label": "Add foreign key \"Rule_userId_fkey\" on \"Rule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Rule_userId_fkey",
+        "table": "Rule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Rule_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Rule_userId_fkey",
+          "public",
+          "\"public\".\"Rule\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"Rule_userId_fkey\" on \"Rule\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Rule_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Rule\"\nADD CONSTRAINT \"Rule_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Rule_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "Rule_userId_fkey",
+          "public",
+          "\"public\".\"Rule\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.RuleFiring.RuleFiring_userId_fkey",
+    "label": "Add foreign key \"RuleFiring_userId_fkey\" on \"RuleFiring\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "RuleFiring_userId_fkey",
+        "table": "RuleFiring"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"RuleFiring_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "RuleFiring_userId_fkey",
+          "public",
+          "\"public\".\"RuleFiring\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"RuleFiring_userId_fkey\" on \"RuleFiring\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"RuleFiring_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"RuleFiring\"\nADD CONSTRAINT \"RuleFiring_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"RuleFiring_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "RuleFiring_userId_fkey",
+          "public",
+          "\"public\".\"RuleFiring\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.RuleFiring.RuleFiring_ruleId_fkey",
+    "label": "Add foreign key \"RuleFiring_ruleId_fkey\" on \"RuleFiring\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "RuleFiring_ruleId_fkey",
+        "table": "RuleFiring"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"RuleFiring_ruleId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "RuleFiring_ruleId_fkey",
+          "public",
+          "\"public\".\"RuleFiring\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"RuleFiring_ruleId_fkey\" on \"RuleFiring\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"RuleFiring_ruleId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"RuleFiring\"\nADD CONSTRAINT \"RuleFiring_ruleId_fkey\"\nFOREIGN KEY (\"ruleId\")\nREFERENCES \"public\".\"Rule\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"RuleFiring_ruleId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "RuleFiring_ruleId_fkey",
+          "public",
+          "\"public\".\"RuleFiring\"",
+          "f",
+          "[\"ruleId\"]",
+          "\"public\".\"Rule\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.RuleState.RuleState_userId_fkey",
+    "label": "Add foreign key \"RuleState_userId_fkey\" on \"RuleState\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "RuleState_userId_fkey",
+        "table": "RuleState"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"RuleState_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "RuleState_userId_fkey",
+          "public",
+          "\"public\".\"RuleState\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"RuleState_userId_fkey\" on \"RuleState\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"RuleState_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"RuleState\"\nADD CONSTRAINT \"RuleState_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"RuleState_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "RuleState_userId_fkey",
+          "public",
+          "\"public\".\"RuleState\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.RuleState.RuleState_ruleId_fkey",
+    "label": "Add foreign key \"RuleState_ruleId_fkey\" on \"RuleState\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "RuleState_ruleId_fkey",
+        "table": "RuleState"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"RuleState_ruleId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "RuleState_ruleId_fkey",
+          "public",
+          "\"public\".\"RuleState\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"RuleState_ruleId_fkey\" on \"RuleState\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"RuleState_ruleId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"RuleState\"\nADD CONSTRAINT \"RuleState_ruleId_fkey\"\nFOREIGN KEY (\"ruleId\")\nREFERENCES \"public\".\"Rule\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"RuleState_ruleId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "RuleState_ruleId_fkey",
+          "public",
+          "\"public\".\"RuleState\"",
+          "f",
+          "[\"ruleId\"]",
+          "\"public\".\"Rule\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  }
+]

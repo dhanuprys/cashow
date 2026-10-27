@@ -23,9 +23,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'0fe8759d4f7362e94a6d87e27b1019996c36b7564118a226a1b529c4bff039cc'>;
+  StorageHashBase<'98a6daaff18f110dd647a93ca619f208def898e6ed3dfb5286b3150209286d14'>;
 export type ExecutionHash =
-  ExecutionHashBase<'d89b9f8ed7a05b18397693f2cf26f6cfac56b936f142f1bf5315ba9e09b9d792'>;
+  ExecutionHashBase<'4d08824eda028a0cdc9ae1998c4d01f883f2cbf065833195728b05ffccffcbe2'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -675,6 +675,49 @@ export namespace Models {
     user: public_User;
     readonly [RelationKeys]?: 'account' | 'category' | 'destinationAccount' | 'user';
   };
+  export type public_Rule = {
+    actions: FieldOutputTypes['public']['Rule']['actions'];
+    active: FieldOutputTypes['public']['Rule']['active'];
+    condition: FieldOutputTypes['public']['Rule']['condition'];
+    createdAt: FieldOutputTypes['public']['Rule']['createdAt'];
+    description: FieldOutputTypes['public']['Rule']['description'];
+    id: FieldOutputTypes['public']['Rule']['id'];
+    name: FieldOutputTypes['public']['Rule']['name'];
+    settings: FieldOutputTypes['public']['Rule']['settings'];
+    trigger: FieldOutputTypes['public']['Rule']['trigger'];
+    updatedAt: FieldOutputTypes['public']['Rule']['updatedAt'];
+    userId: FieldOutputTypes['public']['Rule']['userId'];
+    version: FieldOutputTypes['public']['Rule']['version'];
+    firings: public_RuleFiring[];
+    states: public_RuleState[];
+    user: public_User;
+    readonly [RelationKeys]?: 'firings' | 'states' | 'user';
+  };
+  export type public_RuleFiring = {
+    dedupeKey: FieldOutputTypes['public']['RuleFiring']['dedupeKey'];
+    firedAt: FieldOutputTypes['public']['RuleFiring']['firedAt'];
+    id: FieldOutputTypes['public']['RuleFiring']['id'];
+    metricValues: FieldOutputTypes['public']['RuleFiring']['metricValues'];
+    notificationId: FieldOutputTypes['public']['RuleFiring']['notificationId'];
+    ruleId: FieldOutputTypes['public']['RuleFiring']['ruleId'];
+    userId: FieldOutputTypes['public']['RuleFiring']['userId'];
+    rule: public_Rule;
+    user: public_User;
+    readonly [RelationKeys]?: 'rule' | 'user';
+  };
+  export type public_RuleState = {
+    createdAt: FieldOutputTypes['public']['RuleState']['createdAt'];
+    id: FieldOutputTypes['public']['RuleState']['id'];
+    lastEvaluatedAt: FieldOutputTypes['public']['RuleState']['lastEvaluatedAt'];
+    lastFiredAt: FieldOutputTypes['public']['RuleState']['lastFiredAt'];
+    ruleId: FieldOutputTypes['public']['RuleState']['ruleId'];
+    state: FieldOutputTypes['public']['RuleState']['state'];
+    updatedAt: FieldOutputTypes['public']['RuleState']['updatedAt'];
+    userId: FieldOutputTypes['public']['RuleState']['userId'];
+    rule: public_Rule;
+    user: public_User;
+    readonly [RelationKeys]?: 'rule' | 'user';
+  };
   export type public_Session = {
     createdAt: FieldOutputTypes['public']['Session']['createdAt'];
     expiresAt: FieldOutputTypes['public']['Session']['expiresAt'];
@@ -750,6 +793,9 @@ export namespace Models {
     passkeys: public_Passkey[];
     paymentPlans: public_PaymentPlan[];
     recurringTemplates: public_RecurringTemplate[];
+    ruleFirings: public_RuleFiring[];
+    ruleStates: public_RuleState[];
+    rules: public_Rule[];
     sessions: public_Session[];
     snapshots: public_BalanceSnapshot[];
     transactions: public_Transaction[];
@@ -764,6 +810,9 @@ export namespace Models {
       | 'passkeys'
       | 'paymentPlans'
       | 'recurringTemplates'
+      | 'ruleFirings'
+      | 'ruleStates'
+      | 'rules'
       | 'sessions'
       | 'snapshots'
       | 'transactions';
@@ -789,6 +838,9 @@ export declare const models: {
     PaymentPlanItem: Models.public_PaymentPlanItem;
     ReconciliationCheckpoint: Models.public_ReconciliationCheckpoint;
     RecurringTemplate: Models.public_RecurringTemplate;
+    Rule: Models.public_Rule;
+    RuleFiring: Models.public_RuleFiring;
+    RuleState: Models.public_RuleState;
     Session: Models.public_Session;
     Transaction: Models.public_Transaction;
     User: Models.public_User;
@@ -2710,6 +2762,308 @@ type ContractBase = Omit<
                 },
               ];
             };
+            readonly Rule: {
+              columns: {
+                readonly actions: {
+                  readonly dataType: 'pg/json';
+                  readonly codecId: 'pg/json@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly active: {
+                  readonly dataType: 'pg/bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                  readonly many: false;
+                };
+                readonly condition: {
+                  readonly dataType: 'pg/json';
+                  readonly codecId: 'pg/json@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly createdAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly description: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly name: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly settings: {
+                  readonly dataType: 'pg/json';
+                  readonly codecId: 'pg/json@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly trigger: {
+                  readonly dataType: 'pg/json';
+                  readonly codecId: 'pg/json@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly updatedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly userId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly version: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 1>;
+                  };
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'Rule_userId_active_idx_749baf02';
+                  readonly prefix: 'Rule_userId_active_idx';
+                  readonly columns: readonly ['userId', 'active'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Rule_userId_idx_a489d58a';
+                  readonly prefix: 'Rule_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Rule';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
+            readonly RuleFiring: {
+              columns: {
+                readonly dedupeKey: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly firedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly metricValues: {
+                  readonly dataType: 'pg/json';
+                  readonly codecId: 'pg/json@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly notificationId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly ruleId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly userId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [{ readonly columns: readonly ['userId', 'dedupeKey'] }];
+              indexes: readonly [
+                {
+                  readonly name: 'RuleFiring_ruleId_idx_05e770f7';
+                  readonly prefix: 'RuleFiring_ruleId_idx';
+                  readonly columns: readonly ['ruleId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'RuleFiring_userId_idx_a489d58a';
+                  readonly prefix: 'RuleFiring_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'RuleFiring_userId_ruleId_firedAt_idx_a6541a4d';
+                  readonly prefix: 'RuleFiring_userId_ruleId_firedAt_idx';
+                  readonly columns: readonly ['userId', 'ruleId', 'firedAt'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'RuleFiring';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'RuleFiring';
+                    readonly columns: readonly ['ruleId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Rule';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
+            readonly RuleState: {
+              columns: {
+                readonly createdAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly lastEvaluatedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly lastFiredAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly ruleId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly state: {
+                  readonly dataType: 'pg/json';
+                  readonly codecId: 'pg/json@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly updatedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly userId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [{ readonly columns: readonly ['userId', 'ruleId'] }];
+              indexes: readonly [
+                {
+                  readonly name: 'RuleState_ruleId_idx_05e770f7';
+                  readonly prefix: 'RuleState_ruleId_idx';
+                  readonly columns: readonly ['ruleId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'RuleState_userId_idx_a489d58a';
+                  readonly prefix: 'RuleState_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'RuleState';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'RuleState';
+                    readonly columns: readonly ['ruleId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Rule';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
             readonly Session: {
               columns: {
                 readonly createdAt: {
@@ -3234,6 +3588,12 @@ type ContractBase = Omit<
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'RecurringTemplate';
     };
+    readonly Rule: { readonly namespace: 'public' & NamespaceId; readonly model: 'Rule' };
+    readonly RuleFiring: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'RuleFiring';
+    };
+    readonly RuleState: { readonly namespace: 'public' & NamespaceId; readonly model: 'RuleState' };
     readonly Session: { readonly namespace: 'public' & NamespaceId; readonly model: 'Session' };
     readonly Transaction: {
       readonly namespace: 'public' & NamespaceId;
@@ -4888,6 +5248,265 @@ type ContractBase = Omit<
               };
             };
           };
+          readonly Rule: {
+            readonly fields: {
+              readonly actions: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/json@1' };
+              };
+              readonly active: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly condition: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/json@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly description: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly name: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly settings: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/json@1' };
+              };
+              readonly trigger: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/json@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly version: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+            };
+            readonly relations: {
+              readonly firings: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'RuleFiring';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['ruleId'];
+                };
+              };
+              readonly states: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'RuleState';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['ruleId'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'Rule';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly actions: { readonly column: 'actions' };
+                readonly active: { readonly column: 'active' };
+                readonly condition: { readonly column: 'condition' };
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly description: { readonly column: 'description' };
+                readonly id: { readonly column: 'id' };
+                readonly name: { readonly column: 'name' };
+                readonly settings: { readonly column: 'settings' };
+                readonly trigger: { readonly column: 'trigger' };
+                readonly updatedAt: { readonly column: 'updatedAt' };
+                readonly userId: { readonly column: 'userId' };
+                readonly version: { readonly column: 'version' };
+              };
+            };
+          };
+          readonly RuleFiring: {
+            readonly fields: {
+              readonly dedupeKey: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly firedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly metricValues: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/json@1' };
+              };
+              readonly notificationId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly ruleId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: {
+              readonly rule: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'Rule' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['ruleId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'RuleFiring';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly dedupeKey: { readonly column: 'dedupeKey' };
+                readonly firedAt: { readonly column: 'firedAt' };
+                readonly id: { readonly column: 'id' };
+                readonly metricValues: { readonly column: 'metricValues' };
+                readonly notificationId: { readonly column: 'notificationId' };
+                readonly ruleId: { readonly column: 'ruleId' };
+                readonly userId: { readonly column: 'userId' };
+              };
+            };
+          };
+          readonly RuleState: {
+            readonly fields: {
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly lastEvaluatedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly lastFiredAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly ruleId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly state: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/json@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: {
+              readonly rule: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'Rule' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['ruleId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'RuleState';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly id: { readonly column: 'id' };
+                readonly lastEvaluatedAt: { readonly column: 'lastEvaluatedAt' };
+                readonly lastFiredAt: { readonly column: 'lastFiredAt' };
+                readonly ruleId: { readonly column: 'ruleId' };
+                readonly state: { readonly column: 'state' };
+                readonly updatedAt: { readonly column: 'updatedAt' };
+                readonly userId: { readonly column: 'userId' };
+              };
+            };
+          };
           readonly Session: {
             readonly fields: {
               readonly createdAt: {
@@ -5349,6 +5968,36 @@ type ContractBase = Omit<
                   readonly namespace: 'public' & NamespaceId;
                   readonly model: 'RecurringTemplate';
                 };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
+              readonly ruleFirings: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'RuleFiring';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
+              readonly ruleStates: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'RuleState';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
+              readonly rules: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'Rule' };
                 readonly cardinality: '1:N';
                 readonly on: {
                   readonly localFields: readonly ['id'];
@@ -5900,6 +6549,72 @@ type ContractBase = Omit<
           readonly onUpdate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
           readonly ref: {
             readonly entry: 'RecurringTemplate';
+            readonly field: 'updatedAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'Rule';
+            readonly field: 'createdAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'Rule';
+            readonly field: 'id';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly onUpdate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'Rule';
+            readonly field: 'updatedAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'RuleFiring';
+            readonly field: 'firedAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'RuleFiring';
+            readonly field: 'id';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'RuleState';
+            readonly field: 'createdAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'RuleState';
+            readonly field: 'id';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly onUpdate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'RuleState';
             readonly field: 'updatedAt';
             readonly namespace: 'public';
           };
