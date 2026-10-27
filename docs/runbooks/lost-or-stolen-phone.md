@@ -43,7 +43,7 @@ and a push subscription. Revoke both.
    DELETE FROM "Passkey" WHERE "userId" = '<owner-user-id>';
    ```
 
-   Keep any passkey you registered on a *different* device if you know its
+   Keep any passkey you registered on a _different_ device if you know its
    credential id; otherwise remove all and re-enrol.
 
 5. Re-enrol a new passkey from a trusted device at `/setup` (or `/app/settings`

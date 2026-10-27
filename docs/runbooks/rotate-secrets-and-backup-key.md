@@ -4,13 +4,13 @@ Rotate on a schedule, after a leak, or when a device that held a secret is lost.
 
 ## Inventory
 
-| Secret | Where | Rotating invalidates |
-| --- | --- | --- |
-| `POSTGRES_PASSWORD` | `.env` / Docker secret | nothing, but update `DATABASE_URL` too |
-| VAPID private key | `.env` (`VAPID_PRIVATE_KEY`) | every push subscription |
-| `DEEPSEEK_API_KEY` | `.env` | nothing |
-| `BACKUP_AGE_RECIPIENT` / `secrets/age.key` | `.env` + offline file | nothing (new backups only) |
-| `SETUP_TOKEN` | `.env` | nothing |
+| Secret                                     | Where                        | Rotating invalidates                   |
+| ------------------------------------------ | ---------------------------- | -------------------------------------- |
+| `POSTGRES_PASSWORD`                        | `.env` / Docker secret       | nothing, but update `DATABASE_URL` too |
+| VAPID private key                          | `.env` (`VAPID_PRIVATE_KEY`) | every push subscription                |
+| `DEEPSEEK_API_KEY`                         | `.env`                       | nothing                                |
+| `BACKUP_AGE_RECIPIENT` / `secrets/age.key` | `.env` + offline file        | nothing (new backups only)             |
+| `SETUP_TOKEN`                              | `.env`                       | nothing                                |
 
 ## Rotate a database password
 

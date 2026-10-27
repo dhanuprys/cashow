@@ -14,12 +14,12 @@ cannot be written.
 
 2. Common culprits on this host:
 
-   | Path | What | Safe to remove |
-   | --- | --- | --- |
-   | `/var/lib/docker/containers/*/*.log` | container logs | truncate, not delete |
-   | `backups/` | old artifacts | anything past `BACKUP_RETENTION_DAYS`, after a drill |
-   | Postgres WAL in `pgdata` | uncheckpointed WAL | **never** delete by hand |
-   | `/var/lib/docker/overlay2` | dangling images/volumes | `docker image prune`, `docker volume prune` (verify names first) |
+   | Path                                 | What                    | Safe to remove                                                   |
+   | ------------------------------------ | ----------------------- | ---------------------------------------------------------------- |
+   | `/var/lib/docker/containers/*/*.log` | container logs          | truncate, not delete                                             |
+   | `backups/`                           | old artifacts           | anything past `BACKUP_RETENTION_DAYS`, after a drill             |
+   | Postgres WAL in `pgdata`             | uncheckpointed WAL      | **never** delete by hand                                         |
+   | `/var/lib/docker/overlay2`           | dangling images/volumes | `docker image prune`, `docker volume prune` (verify names first) |
 
 3. Truncate runaway container logs safely:
 
@@ -52,13 +52,13 @@ cannot be written.
 
 2. Match the message:
 
-   | Message | Cause | Fix |
-   | --- | --- | --- |
-   | `could not write to file ... No space left on device` | disk full | do A first |
-   | `database files are incompatible with server` | major version mismatch | see `postgres-major-upgrade.md` |
-   | `PANIC: could not locate a valid checkpoint record` | corrupted WAL | restore from backup |
-   | `FATAL: the database system is starting up` | normal warm-up | wait, then re-check |
-   | `permission denied` on `pgdata` | volume ownership changed | fix ownership to the `postgres` uid |
+   | Message                                               | Cause                    | Fix                                 |
+   | ----------------------------------------------------- | ------------------------ | ----------------------------------- |
+   | `could not write to file ... No space left on device` | disk full                | do A first                          |
+   | `database files are incompatible with server`         | major version mismatch   | see `postgres-major-upgrade.md`     |
+   | `PANIC: could not locate a valid checkpoint record`   | corrupted WAL            | restore from backup                 |
+   | `FATAL: the database system is starting up`           | normal warm-up           | wait, then re-check                 |
+   | `permission denied` on `pgdata`                       | volume ownership changed | fix ownership to the `postgres` uid |
 
 3. If the data directory is corrupt, do **not** try to repair it in place.
    Restore into a fresh database using `restore-from-bare-server.md` steps 2–4.
