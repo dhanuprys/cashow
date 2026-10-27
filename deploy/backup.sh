@@ -1,16 +1,19 @@
 #!/bin/sh
-# Nightly backup: database dump + attachment bytes -> age encryption -> rclone.
+# Nightly backup: database dump + attachment bytes -> age encryption -> local dir.
 #
 # A backup that leaves out `STORAGE_DIR` restores an empty ledger of receipts
 # (ADR 0009), so the two artifacts are always produced together.
 #
+# Artifacts stay on this machine, under `BACKUP_DIR` (a plain local path, no
+# dedicated volume and no third-party upload tool). Sync that directory to
+# another disk yourself if you want an offsite copy.
+#
 # Required:
 #   BACKUP_AGE_RECIPIENT   age public key (age1...)
 # Optional:
-#   BACKUP_RCLONE_REMOTE   rclone target, e.g. "b2:cashow-backups"
-#   BACKUP_DIR             local staging directory (default /backups)
+#   BACKUP_DIR             where artifacts are written (default /backups)
 #   STORAGE_DIR            attachment directory (default /files/uploads)
-#   BACKUP_RETENTION_DAYS  local/remote retention (default 30)
+#   BACKUP_RETENTION_DAYS  local retention (default 30)
 #   BACKUP_ALLOW_UNENCRYPTED=1  explicit opt-out for local-only drills
 set -eu
 
@@ -63,18 +66,11 @@ else
   fail "BACKUP_AGE_RECIPIENT is not set"
 fi
 
-if [ -n "${BACKUP_RCLONE_REMOTE:-}" ]; then
-  echo "uploading to $BACKUP_RCLONE_REMOTE"
-  rclone copy "$DB_ARTIFACT" "$BACKUP_RCLONE_REMOTE" || fail "rclone upload dump"
-  rclone copy "$FILES_ARTIFACT" "$BACKUP_RCLONE_REMOTE" || fail "rclone upload uploads"
-  rclone delete --min-age "${RETENTION_DAYS}d" "$BACKUP_RCLONE_REMOTE" || fail "rclone prune"
-fi
-
 find "$BACKUP_DIR" -maxdepth 1 -type f \
   \( -name 'cashow-*.dump*' -o -name 'cashow-*-files.tar.gz*' \) \
   -mtime "+$RETENTION_DAYS" -delete
 
 DB_SIZE="$(wc -c <"$DB_ARTIFACT" | tr -d ' ')"
 FILES_SIZE="$(wc -c <"$FILES_ARTIFACT" | tr -d ' ')"
-printf '%s\n' "{\"ok\":true,\"at\":\"$STAMP\",\"dump\":\"$(basename "$DB_ARTIFACT")\",\"dumpBytes\":$DB_SIZE,\"files\":\"$(basename "$FILES_ARTIFACT")\",\"filesBytes\":$FILES_SIZE,\"uploaded\":$([ -n "${BACKUP_RCLONE_REMOTE:-}" ] && echo true || echo false)}" >"$STATUS"
+printf '%s\n' "{\"ok\":true,\"at\":\"$STAMP\",\"dump\":\"$(basename "$DB_ARTIFACT")\",\"dumpBytes\":$DB_SIZE,\"files\":\"$(basename "$FILES_ARTIFACT")\",\"filesBytes\":$FILES_SIZE,\"dir\":\"$BACKUP_DIR\"}" >"$STATUS"
 echo "backup ok: $DB_ARTIFACT ($DB_SIZE bytes) + $FILES_ARTIFACT ($FILES_SIZE bytes)"

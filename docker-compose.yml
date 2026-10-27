@@ -5,7 +5,7 @@
 #   worker    background jobs on the same image              (backend)
 #   migrate   one-shot schema migration before web/worker     (backend)
 #   postgres  pinned major, internal only, named volume       (backend)
-#   backup    nightly pg_dump + age + rclone (profile: backup)
+#   backup    nightly pg_dump + age -> local BACKUP_DIR (profile: backup)
 #
 # Postgres is never published to the host. Only the proxy binds host ports.
 # Start:   docker compose up -d --build
@@ -192,16 +192,12 @@ services:
       STORAGE_DIR: /files/uploads
       BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
       BACKUP_AGE_KEY: ${BACKUP_AGE_KEY:-/secrets/age.key}
-      BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:-}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
-      RCLONE_CONFIG: ${RCLONE_CONFIG:-/secrets/rclone.conf}
       TZ: UTC
     volumes:
-      - backups:/backups
+      # Plain local relative path on the host; nothing third-party involved.
+      - ${BACKUP_DIR:-./backups}:/backups
       - files:/files:ro
-      # Host path of the external drive. `rclone` writes here via a local
-      # remote (BACKUP_RCLONE_REMOTE=local:/external/cashow).
-      - ${BACKUP_EXTERNAL_DIR:-./backups}:/external
       - ./secrets:/secrets:ro
     depends_on:
       postgres:
@@ -214,7 +210,6 @@ services:
 volumes:
   pgdata:
   files:
-  backups:
   next_cache:
   caddy_data:
   caddy_config:

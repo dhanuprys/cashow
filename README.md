@@ -236,21 +236,21 @@ docker compose --profile backup up -d
 
 It runs nightly at 02:15 UTC: `pg_dump` (custom format) **and** a tar of the
 attachment directory (`STORAGE_DIR`, default `/files/uploads`) → `age`
-encryption → `rclone` upload, with retention. Both artifacts are encrypted with
-the same recipient and uploaded together; a database restore without the uploads
-archive leaves every attachment row pointing at a missing blob.
+encryption → a local directory, with retention. Both artifacts are encrypted
+with the same recipient and written together; a database restore without the
+uploads archive leaves every attachment row pointing at a missing blob.
 
 `deploy/restore.sh` restores a dump into a throwaway database and checks that
 the ledger tables exist. `deploy/restore-files.sh` restores the uploads archive
 into a target directory and fails when it finds no files. Run both drill steps
 monthly; a backup that was never restored is a hope, not a backup.
 
-The backup target is an **external drive** (ADR 0006): set
-`BACKUP_EXTERNAL_DIR` to the host mount, set `BACKUP_RCLONE_REMOTE` to a local
-remote (for example `local:/external/cashow`), and make sure an unmounted drive
-fails the job loudly instead of filling the container disk. The drive is mounted
-read-write at `/external` inside the `backup` service. Keep an off-site copy if
-the data matters beyond fire and theft.
+The backup target is a **plain local path** (ADR 0006): `BACKUP_DIR` in `.env`
+(default `./backups`) is bind-mounted into the `backup` service, so the artifacts
+are ordinary files on the host. There is no dedicated volume, no rclone remote,
+and no third-party upload tool. Point `BACKUP_DIR` at a directory that survives
+losing the machine — an attached disk or a synced folder — and keep an off-site
+copy if the data matters beyond fire and theft.
 
 ```bash
 STAMP=20261027T021500Z

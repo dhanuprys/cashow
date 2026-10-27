@@ -21,16 +21,17 @@ before the first passkey is created.
 
 ## Decisions so far
 
-- **Backup target: external drive.** The nightly job keeps its `pg_dump` →
-  `age` → `rclone` chain, with the destination configured as a local/remote
-  path on an attached disk (`BACKUP_RCLONE_REMOTE` pointing at the mount, or a
-  `local` rclone remote). Two consequences are recorded in the deployment docs:
-  - The drive must be mounted on the host and included in the Compose volume /
-    bind mount; an unmounted drive must fail the backup loudly rather than
-    write to the container filesystem.
+- **Backup target: a plain local path.** The nightly job writes its `pg_dump`
+  and uploads tar, encrypted with `age`, straight into `BACKUP_DIR` — a local
+  relative path bind-mounted from the host (default `./backups`). There is no
+  dedicated volume, no rclone remote, and no third-party upload tool. Two
+  consequences are recorded in the deployment docs:
+  - Because the artifacts are ordinary files on the host, point `BACKUP_DIR` at
+    a directory that survives losing the machine (an attached disk or a synced
+    folder) and make sure the path exists before enabling the profile.
   - An off-site copy is still recommended for fire/theft, but it is not a
-    Phase 0 requirement. The restore drill in `docs/` already covers restoring
-    from the archive.
+    Phase 0 requirement. The monthly restore drill restores into a throwaway
+    database and never touches the live one.
 - **Access option and permanent domain remain undecided.** Default to
   **option A** until the server is chosen. Keep `proxy` so A can be served over
   a private name, and keep B/C possible without changing the app.

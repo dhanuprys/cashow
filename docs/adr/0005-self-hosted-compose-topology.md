@@ -20,7 +20,7 @@ Ship one `docker-compose.yml` with:
 | `web`      | Next.js standalone output on Bun, non-root, read-only rootfs   | internal; localhost port for debugging |
 | `worker`   | same image, worker entrypoint                                  | internal                               |
 | `proxy`    | Caddy: TLS, headers, body cap, health-aware upstream           | host 80/443                            |
-| `backup`   | nightly `pg_dump` → `age` → `rclone` (profile `backup`)        | internal                               |
+| `backup`   | nightly `pg_dump` + uploads tar → `age` → local dir (profile `backup`) | internal                       |
 
 Two networks: `backend` for Postgres/web/worker/migrate and `edge` for
 proxy/web. Postgres never joins `edge` and never publishes a port.

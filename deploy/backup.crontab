@@ -1,2 +1,4 @@
 # Cashow backup schedule (UTC). Nightly at 02:15.
 15 2 * * * /usr/local/bin/backup.sh >>/proc/1/fd/1 2>&1
+# Monthly restore drill (UTC). 03:30 on the 1st, into a throwaway database only.
+30 3 1 * * /usr/local/bin/restore-drill.sh >>/proc/1/fd/1 2>&1
