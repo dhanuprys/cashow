@@ -381,6 +381,24 @@ export function TransactionForm({
         </p>
       ) : null}
 
+      {initial === undefined ? (
+        <div>
+          <Label htmlFor="attachment">
+            Bukti <span className="font-normal text-muted-foreground">(opsional)</span>
+          </Label>
+          <Input
+            id="attachment"
+            name="attachment"
+            type="file"
+            accept="image/*,application/pdf"
+            className="mt-2"
+          />
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Foto struk atau PDF. Maksimal 10 MB.
+          </p>
+        </div>
+      ) : null}
+
       <SubmitButton className="w-full" size="lg">
         {initial === undefined ? "Simpan transaksi" : "Simpan perubahan"}
       </SubmitButton>

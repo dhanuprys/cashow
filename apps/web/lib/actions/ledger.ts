@@ -37,6 +37,7 @@ import {
   updateProfile,
   updateRecurring,
   updateTransaction,
+  uploadAttachment,
   verifyCheckpoint,
 } from "@cashow/services";
 import { revalidatePath } from "next/cache";
@@ -127,6 +128,18 @@ export async function createTransactionAction(
   });
 
   if (!result.ok) return failure(result.error.message);
+
+  const file = formData.get("attachment");
+  if (file instanceof File && file.size > 0) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    await uploadAttachment(session.ctx, attachmentStorage, {
+      transactionId: result.value.id,
+      kind: text(formData, "attachmentKind") || "PROOF",
+      fileName: file.name,
+      mimeType: file.type || "application/octet-stream",
+      bytes,
+    });
+  }
 
   revalidateLedger();
   redirect(`/app/transactions/${result.value.id}`);
