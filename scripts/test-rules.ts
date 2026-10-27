@@ -91,14 +91,14 @@ async function main(): Promise<void> {
   // --- End to end: outbox claim → rule → notification → push delivery --------
 
   // 1. The ledger write left a `transaction.created` event behind.
-  // Clear stale PENDING rows from earlier failed runs so the claim batch is
-  // deterministic; other test users accumulate rows faster than this one.
-  const stale = await db.orm.public.OutboxEvent.where({ status: "PENDING" }).all();
-  const staleIds = stale
-    .filter((row) => row.userId !== userId)
-    .map((row) => row.id);
-  for (const id of staleIds) {
-    await db.orm.public.OutboxEvent.where({ id }).deleteAll();
+  // Purge every outbox row left by earlier gate runs so the claim batch is
+  // deterministic: other test users otherwise accumulate rows faster than
+  // this one and crowd ours out of the `LIMIT`.
+  const stale = await db.orm.public.OutboxEvent.where({}).all();
+  for (const row of stale) {
+    if (row.userId !== userId) {
+      await db.orm.public.OutboxEvent.where({ id: row.id }).deleteAll();
+    }
   }
 
   const outbox = await db.orm.public.OutboxEvent.where({ userId }).all();
@@ -151,6 +151,7 @@ async function main(): Promise<void> {
   assert.ok(notifications.ok, "listNotifications");
   equal(notifications.value.length, 1, "one notification created");
   const notification = notifications.value[0];
+  assert.ok(notification, "notification exists");
 
   const deliveries = await db.orm.public.NotificationDelivery.where({
     notificationId: notification.id,
@@ -231,7 +232,8 @@ async function main(): Promise<void> {
   const snoozed = await snoozeNotification(ctx, notification.id, 60);
   assert.ok(snoozed.ok, "snoozeNotification");
   const snoozedRow = await db.orm.public.Notification.where({ id: notification.id }).first();
-  assert.ok(snoozedRow?.snoozedUntil !== null, "snoozedUntil recorded");
+  assert.ok(snoozedRow, "snoozed notification exists");
+  assert.ok(snoozedRow.snoozedUntil !== null, "snoozedUntil recorded");
   const deltaMinutes = snoozedRow.snoozedUntil
     ? (parseDbTimestamp(snoozedRow.snoozedUntil).getTime() - ctx.now.getTime()) / 60_000
     : 0;
