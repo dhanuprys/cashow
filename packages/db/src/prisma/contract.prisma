@@ -114,6 +114,9 @@ model User {
   rules               Rule[]
   ruleStates          RuleState[]
   ruleFirings         RuleFiring[]
+  chatThreads         ChatThread[]
+  chatMessages        ChatMessage[]
+  aiFacts             AiFact[]
 }
 
 // ---------------------------------------------------------------------------
@@ -640,6 +643,48 @@ model RuleFiring {
 
   @@index([userId, ruleId, firedAt])
   @@unique([userId, dedupeKey])
+}
+
+// ---------------------------------------------------------------------------
+// AI chat (Phase 6)
+// ---------------------------------------------------------------------------
+
+model ChatThread {
+  id        String  @id @onCreate(uuid(7))
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt TimestamptzString @onCreate(now())
+  updatedAt TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  messages ChatMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model ChatMessage {
+  id        String  @id @onCreate(uuid(7))
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  threadId  String
+  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  toolCalls Json?
+  toolResults Json?
+  createdAt TimestamptzString @onCreate(now())
+
+  @@index([threadId, createdAt])
+}
+
+model AiFact {
+  id        String  @id @onCreate(uuid(7))
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fact      String
+  createdAt TimestamptzString @onCreate(now())
+
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------------------

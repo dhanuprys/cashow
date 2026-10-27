@@ -36,9 +36,11 @@ async function main(): Promise<void> {
   });
 
   const accounts = await listAccounts(ctx);
-  const cash = accounts.value.find((a) => a.name === "Tunai")!;
+  assert.ok(accounts.ok, "listAccounts");
+  const cash = accounts.value.find((a: { name: string }) => a.name === "Tunai")!;
   const categories = await listCategories(ctx);
-  const expenseCategory = categories.value.find((c) => c.kind === "EXPENSE")!;
+  assert.ok(categories.ok, "listCategories");
+  const expenseCategory = categories.value.find((c: { kind: string }) => c.kind === "EXPENSE")!;
 
   await createTransaction(ctx, {
     type: "EXPENSE",

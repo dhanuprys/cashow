@@ -47,6 +47,7 @@
     "unrs-resolver"
   ],
   "dependencies": {
+    "ai": "^7.0.154",
     "web-push": "^3.6.7"
   }
 }

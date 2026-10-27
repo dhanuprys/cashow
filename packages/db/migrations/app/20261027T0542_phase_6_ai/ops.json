@@ -1,0 +1,645 @@
+[
+  {
+    "id": "table.AiFact",
+    "label": "Create table \"AiFact\"",
+    "summary": "Creates table \"AiFact\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "AiFact"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"AiFact\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AiFact\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"AiFact\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"AiFact\"",
+        "sql": "CREATE TABLE \"public\".\"AiFact\" (\n  \"createdAt\" timestamptz NOT NULL,\n  \"fact\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"AiFact\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"AiFact\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"AiFact\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.ChatMessage",
+    "label": "Create table \"ChatMessage\"",
+    "summary": "Creates table \"ChatMessage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "ChatMessage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"ChatMessage\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChatMessage\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"ChatMessage\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"ChatMessage\"",
+        "sql": "CREATE TABLE \"public\".\"ChatMessage\" (\n  \"content\" text NOT NULL,\n  \"createdAt\" timestamptz NOT NULL,\n  \"id\" text NOT NULL,\n  \"role\" text NOT NULL,\n  \"threadId\" text NOT NULL,\n  \"toolCalls\" json,\n  \"toolResults\" json,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"ChatMessage\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"ChatMessage\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"ChatMessage\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.ChatThread",
+    "label": "Create table \"ChatThread\"",
+    "summary": "Creates table \"ChatThread\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "ChatThread"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"ChatThread\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChatThread\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"ChatThread\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"ChatThread\"",
+        "sql": "CREATE TABLE \"public\".\"ChatThread\" (\n  \"createdAt\" timestamptz NOT NULL,\n  \"id\" text NOT NULL,\n  \"title\" text,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"ChatThread\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"ChatThread\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"ChatThread\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "index.AiFact.AiFact_userId_idx_a489d58a",
+    "label": "Create index \"AiFact_userId_idx_a489d58a\" on \"AiFact\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "AiFact_userId_idx_a489d58a",
+        "table": "AiFact"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"AiFact_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AiFact_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"AiFact_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"AiFact_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"AiFact_userId_idx_a489d58a\" ON \"public\".\"AiFact\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"AiFact_userId_idx_a489d58a\" exists on \"AiFact\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"AiFact_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"AiFact\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChatMessage.ChatMessage_threadId_createdAt_idx_9edadbce",
+    "label": "Create index \"ChatMessage_threadId_createdAt_idx_9edadbce\" on \"ChatMessage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChatMessage_threadId_createdAt_idx_9edadbce",
+        "table": "ChatMessage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChatMessage_threadId_createdAt_idx_9edadbce\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChatMessage_threadId_createdAt_idx_9edadbce\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChatMessage_threadId_createdAt_idx_9edadbce\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChatMessage_threadId_createdAt_idx_9edadbce\"",
+        "sql": "CREATE INDEX \"ChatMessage_threadId_createdAt_idx_9edadbce\" ON \"public\".\"ChatMessage\" (\"threadId\", \"createdAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChatMessage_threadId_createdAt_idx_9edadbce\" exists on \"ChatMessage\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChatMessage_threadId_createdAt_idx_9edadbce\"",
+          "i",
+          "I",
+          "\"public\".\"ChatMessage\"",
+          "btree",
+          "[\"threadId\",\"createdAt\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChatMessage.ChatMessage_threadId_idx_6deac339",
+    "label": "Create index \"ChatMessage_threadId_idx_6deac339\" on \"ChatMessage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChatMessage_threadId_idx_6deac339",
+        "table": "ChatMessage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChatMessage_threadId_idx_6deac339\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChatMessage_threadId_idx_6deac339\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChatMessage_threadId_idx_6deac339\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChatMessage_threadId_idx_6deac339\"",
+        "sql": "CREATE INDEX \"ChatMessage_threadId_idx_6deac339\" ON \"public\".\"ChatMessage\" (\"threadId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChatMessage_threadId_idx_6deac339\" exists on \"ChatMessage\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChatMessage_threadId_idx_6deac339\"",
+          "i",
+          "I",
+          "\"public\".\"ChatMessage\"",
+          "btree",
+          "[\"threadId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChatMessage.ChatMessage_userId_idx_a489d58a",
+    "label": "Create index \"ChatMessage_userId_idx_a489d58a\" on \"ChatMessage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChatMessage_userId_idx_a489d58a",
+        "table": "ChatMessage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChatMessage_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChatMessage_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChatMessage_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChatMessage_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"ChatMessage_userId_idx_a489d58a\" ON \"public\".\"ChatMessage\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChatMessage_userId_idx_a489d58a\" exists on \"ChatMessage\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChatMessage_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"ChatMessage\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChatThread.ChatThread_userId_idx_a489d58a",
+    "label": "Create index \"ChatThread_userId_idx_a489d58a\" on \"ChatThread\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChatThread_userId_idx_a489d58a",
+        "table": "ChatThread"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChatThread_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChatThread_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChatThread_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChatThread_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"ChatThread_userId_idx_a489d58a\" ON \"public\".\"ChatThread\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChatThread_userId_idx_a489d58a\" exists on \"ChatThread\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChatThread_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"ChatThread\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.ChatThread.ChatThread_userId_updatedAt_idx_42f5280d",
+    "label": "Create index \"ChatThread_userId_updatedAt_idx_42f5280d\" on \"ChatThread\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "ChatThread_userId_updatedAt_idx_42f5280d",
+        "table": "ChatThread"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"ChatThread_userId_updatedAt_idx_42f5280d\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"ChatThread_userId_updatedAt_idx_42f5280d\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"ChatThread_userId_updatedAt_idx_42f5280d\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"ChatThread_userId_updatedAt_idx_42f5280d\"",
+        "sql": "CREATE INDEX \"ChatThread_userId_updatedAt_idx_42f5280d\" ON \"public\".\"ChatThread\" (\"userId\", \"updatedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"ChatThread_userId_updatedAt_idx_42f5280d\" exists on \"ChatThread\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"ChatThread_userId_updatedAt_idx_42f5280d\"",
+          "i",
+          "I",
+          "\"public\".\"ChatThread\"",
+          "btree",
+          "[\"userId\",\"updatedAt\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.AiFact.AiFact_userId_fkey",
+    "label": "Add foreign key \"AiFact_userId_fkey\" on \"AiFact\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "AiFact_userId_fkey",
+        "table": "AiFact"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"AiFact_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "AiFact_userId_fkey",
+          "public",
+          "\"public\".\"AiFact\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"AiFact_userId_fkey\" on \"AiFact\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"AiFact_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"AiFact\"\nADD CONSTRAINT \"AiFact_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"AiFact_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "AiFact_userId_fkey",
+          "public",
+          "\"public\".\"AiFact\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ChatMessage.ChatMessage_userId_fkey",
+    "label": "Add foreign key \"ChatMessage_userId_fkey\" on \"ChatMessage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ChatMessage_userId_fkey",
+        "table": "ChatMessage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ChatMessage_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ChatMessage_userId_fkey",
+          "public",
+          "\"public\".\"ChatMessage\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"ChatMessage_userId_fkey\" on \"ChatMessage\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ChatMessage_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ChatMessage\"\nADD CONSTRAINT \"ChatMessage_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ChatMessage_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "ChatMessage_userId_fkey",
+          "public",
+          "\"public\".\"ChatMessage\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ChatMessage.ChatMessage_threadId_fkey",
+    "label": "Add foreign key \"ChatMessage_threadId_fkey\" on \"ChatMessage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ChatMessage_threadId_fkey",
+        "table": "ChatMessage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ChatMessage_threadId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ChatMessage_threadId_fkey",
+          "public",
+          "\"public\".\"ChatMessage\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"ChatMessage_threadId_fkey\" on \"ChatMessage\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ChatMessage_threadId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ChatMessage\"\nADD CONSTRAINT \"ChatMessage_threadId_fkey\"\nFOREIGN KEY (\"threadId\")\nREFERENCES \"public\".\"ChatThread\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ChatMessage_threadId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "ChatMessage_threadId_fkey",
+          "public",
+          "\"public\".\"ChatMessage\"",
+          "f",
+          "[\"threadId\"]",
+          "\"public\".\"ChatThread\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.ChatThread.ChatThread_userId_fkey",
+    "label": "Add foreign key \"ChatThread_userId_fkey\" on \"ChatThread\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "ChatThread_userId_fkey",
+        "table": "ChatThread"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"ChatThread_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "ChatThread_userId_fkey",
+          "public",
+          "\"public\".\"ChatThread\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"ChatThread_userId_fkey\" on \"ChatThread\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"ChatThread_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"ChatThread\"\nADD CONSTRAINT \"ChatThread_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"ChatThread_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "ChatThread_userId_fkey",
+          "public",
+          "\"public\".\"ChatThread\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  }
+]
