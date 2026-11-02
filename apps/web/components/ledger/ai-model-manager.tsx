@@ -370,63 +370,77 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
     <div className="space-y-4">
       {/* Aggregate KPI Strip */}
       {configs.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-xl border border-border/80 bg-card/60 p-3.5 shadow-2xs">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Coins className="size-3.5 text-primary" aria-hidden="true" />
-              <span className="font-medium">Total Token</span>
+        <div className="rounded-xl border border-border/80 bg-card/60 p-3 sm:p-4 shadow-2xs space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+            <div className="rounded-lg border border-border/60 bg-background/80 p-3 flex flex-row sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
+              <div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Coins className="size-3.5 text-primary" aria-hidden="true" />
+                  <span className="font-medium">Total Token</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground hidden sm:block mt-0.5">
+                  Semua koneksi aktif
+                </p>
+              </div>
+              <p className="font-mono text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                {aggregateTokens.total.toLocaleString("id-ID")}
+              </p>
             </div>
-            <p className="mt-1.5 font-mono text-xl font-bold tracking-tight text-foreground">
-              {aggregateTokens.total.toLocaleString("id-ID")}
-            </p>
-            <p className="text-[11px] text-muted-foreground">Semua koneksi aktif</p>
+
+            <div className="rounded-lg border border-border/60 bg-background/80 p-3 flex flex-row sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
+              <div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <ArrowDownRight
+                    className="size-3.5 text-blue-600 dark:text-blue-400"
+                    aria-hidden="true"
+                  />
+                  <span className="font-medium">Input Tokens</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground hidden sm:block mt-0.5">
+                  Prompt & konteks
+                </p>
+              </div>
+              <p className="font-mono text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                {aggregateTokens.input.toLocaleString("id-ID")}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border/60 bg-background/80 p-3 flex flex-row sm:flex-col justify-between sm:justify-start items-center sm:items-start gap-1">
+              <div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <ArrowUpRight
+                    className="size-3.5 text-emerald-600 dark:text-emerald-400"
+                    aria-hidden="true"
+                  />
+                  <span className="font-medium">Output Tokens</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground hidden sm:block mt-0.5">
+                  Generasi jawaban AI
+                </p>
+              </div>
+              <p className="font-mono text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                {aggregateTokens.output.toLocaleString("id-ID")}
+              </p>
+            </div>
           </div>
 
-          <div className="rounded-xl border border-border/80 bg-card/60 p-3.5 shadow-2xs">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ArrowDownRight
-                className="size-3.5 text-blue-600 dark:text-blue-400"
-                aria-hidden="true"
-              />
-              <span className="font-medium">Input Tokens</span>
-            </div>
-            <p className="mt-1.5 font-mono text-xl font-bold tracking-tight text-foreground">
-              {aggregateTokens.input.toLocaleString("id-ID")}
-            </p>
-            <p className="text-[11px] text-muted-foreground">Prompt & konteks data</p>
-          </div>
-
-          <div className="rounded-xl border border-border/80 bg-card/60 p-3.5 shadow-2xs">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ArrowUpRight
-                className="size-3.5 text-emerald-600 dark:text-emerald-400"
-                aria-hidden="true"
-              />
-              <span className="font-medium">Output Tokens</span>
-            </div>
-            <p className="mt-1.5 font-mono text-xl font-bold tracking-tight text-foreground">
-              {aggregateTokens.output.toLocaleString("id-ID")}
-            </p>
-            <p className="text-[11px] text-muted-foreground">Generasi jawaban AI</p>
-          </div>
-
-          <div className="flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-3.5 shadow-2xs">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-1 border-t border-border/40 gap-2">
+            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
               <History
                 className="size-3.5 text-purple-600 dark:text-purple-400"
                 aria-hidden="true"
               />
-              <span className="font-medium">Riwayat Token</span>
-            </div>
+              <span>Detail per panggilan chat dan model</span>
+            </span>
             <Button
               type="button"
               variant="outline"
-              size="xs"
+              size="sm"
               onClick={() => void openUsageHistory()}
-              className="mt-2 w-full gap-1.5 text-xs font-medium cursor-pointer"
+              className="gap-1.5 text-xs font-medium cursor-pointer w-full sm:w-auto"
             >
-              <Clock className="size-3" aria-hidden="true" />
-              Lihat Detail Riwayat
+              <Clock className="size-3.5" aria-hidden="true" />
+              Lihat Detail Riwayat Pemanggilan
             </Button>
           </div>
         </div>
@@ -844,215 +858,217 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
             const info = PROVIDER_INFO[config.provider] ?? PROVIDER_INFO.DEEPSEEK;
 
             return (
-              <div
-                key={config.id}
-                className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Cpu className="size-4" aria-hidden="true" />
-                  </div>
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold">{config.name}</p>
-                      <Badge variant={info.badgeVariant} className="text-[10px]">
-                        {info.label}
-                      </Badge>
-                      {config.isDefault && (
-                        <Badge variant="default" className="gap-1 text-[10px]">
-                          <Check className="size-2.5" aria-hidden="true" />
-                          Utama
-                        </Badge>
-                      )}
+              <div key={config.id} className="flex flex-col gap-3 p-3.5 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Cpu className="size-4" aria-hidden="true" />
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1 font-mono text-[11px]">
-                        <Key className="size-3" aria-hidden="true" />
-                        {config.maskedApiKey}
-                      </span>
-                      {config.baseUrl && (
-                        <>
-                          <span>•</span>
-                          <span className="flex items-center gap-1 truncate text-[11px]">
-                            <Globe className="size-3" aria-hidden="true" />
-                            {config.baseUrl}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                      {PROVIDER_MODELS[config.provider]?.map((p) => (
-                        <Badge
-                          key={p.id}
-                          variant="secondary"
-                          className="text-[10px] py-0 px-1.5 font-mono"
-                        >
-                          {p.label}
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold">{config.name}</p>
+                        <Badge variant={info.badgeVariant} className="text-[10px]">
+                          {info.label}
                         </Badge>
-                      ))}
-                      {config.customModels?.map((cm) => (
-                        <Badge
-                          key={cm}
-                          variant="outline"
-                          className="text-[10px] py-0 px-1.5 font-mono border-primary/40 text-primary bg-primary/5"
-                        >
-                          {cm}{" "}
-                          <span className="text-[9px] text-muted-foreground ml-0.5">(kustom)</span>
-                        </Badge>
-                      ))}
-                      {(!PROVIDER_MODELS[config.provider] ||
-                        PROVIDER_MODELS[config.provider].length === 0) &&
-                        (!config.customModels || config.customModels.length === 0) &&
-                        config.model && (
+                        {config.isDefault && (
+                          <Badge variant="default" className="gap-1 text-[10px]">
+                            <Check className="size-2.5" aria-hidden="true" />
+                            Utama
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1 font-mono text-[11px]">
+                          <Key className="size-3" aria-hidden="true" />
+                          {config.maskedApiKey}
+                        </span>
+                        {config.baseUrl && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center gap-1 truncate text-[11px]">
+                              <Globe className="size-3" aria-hidden="true" />
+                              {config.baseUrl}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                        {PROVIDER_MODELS[config.provider]?.map((p) => (
                           <Badge
+                            key={p.id}
+                            variant="secondary"
+                            className="text-[10px] py-0 px-1.5 font-mono"
+                          >
+                            {p.label}
+                          </Badge>
+                        ))}
+                        {config.customModels?.map((cm) => (
+                          <Badge
+                            key={cm}
                             variant="outline"
                             className="text-[10px] py-0 px-1.5 font-mono border-primary/40 text-primary bg-primary/5"
                           >
-                            {config.model}
+                            {cm}{" "}
+                            <span className="text-[9px] text-muted-foreground ml-0.5">
+                              (kustom)
+                            </span>
                           </Badge>
-                        )}
-                    </div>
+                        ))}
+                        {(!PROVIDER_MODELS[config.provider] ||
+                          PROVIDER_MODELS[config.provider].length === 0) &&
+                          (!config.customModels || config.customModels.length === 0) &&
+                          config.model && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 px-1.5 font-mono border-primary/40 text-primary bg-primary/5"
+                            >
+                              {config.model}
+                            </Badge>
+                          )}
+                      </div>
 
-                    {/* Per-Provider Token Usage Metrics */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => void openUsageHistory(config)}
-                        className="group inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted/70 hover:border-border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        aria-label={`Lihat detail riwayat token akun ${config.name}`}
-                        title="Klik untuk melihat detail riwayat token akun ini"
-                      >
-                        <Coins
-                          className="size-3 text-primary group-hover:scale-105 transition-transform"
-                          aria-hidden="true"
-                        />
-                        <span className="font-mono">
-                          {(config.totalTokens || 0).toLocaleString("id-ID")} token
-                        </span>
-                        <span className="text-[10px] text-muted-foreground font-normal font-mono">
-                          (in: {(config.totalInputTokens || 0).toLocaleString("id-ID")} · out:{" "}
-                          {(config.totalOutputTokens || 0).toLocaleString("id-ID")})
-                        </span>
-                      </button>
+                      {/* Per-Provider Token Usage Metrics */}
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => void openUsageHistory(config)}
+                          className="group inline-flex flex-wrap items-center gap-1.5 rounded-md border border-border/70 bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-muted/70 hover:border-border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-left"
+                          aria-label={`Lihat detail riwayat token akun ${config.name}`}
+                          title="Klik untuk melihat detail riwayat token akun ini"
+                        >
+                          <Coins
+                            className="size-3.5 text-primary group-hover:scale-105 transition-transform shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span className="font-mono font-semibold">
+                            {(config.totalTokens || 0).toLocaleString("id-ID")} token
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-normal font-mono">
+                            (in: {(config.totalInputTokens || 0).toLocaleString("id-ID")} · out:{" "}
+                            {(config.totalOutputTokens || 0).toLocaleString("id-ID")})
+                          </span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex flex-wrap items-center justify-end gap-1.5 self-end sm:self-center">
-                  {/* Live connectivity status badge */}
-                  {testResults[config.id]?.status === "testing" && (
-                    <Badge
-                      variant="outline"
-                      className="gap-1 border-primary/30 text-primary animate-pulse text-[10px]"
-                    >
-                      <Loader2 className="size-2.5 animate-spin" aria-hidden="true" />
-                      Menguji...
-                    </Badge>
-                  )}
-                  {testResults[config.id]?.status === "success" && (
-                    <Badge
-                      variant="secondary"
-                      className="gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px]"
-                    >
-                      <CheckCircle2 className="size-2.5" aria-hidden="true" />
-                      {testResults[config.id]?.message}
-                    </Badge>
-                  )}
-                  {testResults[config.id]?.status === "error" && (
-                    <Badge
-                      variant="destructive"
-                      className="gap-1 text-[10px] max-w-[200px] truncate"
-                      title={testResults[config.id]?.message}
-                    >
-                      <XCircle className="size-2.5 shrink-0" aria-hidden="true" />
-                      <span className="truncate">{testResults[config.id]?.message}</span>
-                    </Badge>
-                  )}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    disabled={testingId === config.id}
-                    onClick={() => void runConnectivityTest(config)}
-                    className="gap-1 text-xs font-medium"
-                    title="Uji kirim prompt ke endpoint model AI ini"
-                  >
-                    {testingId === config.id ? (
-                      <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                    ) : (
-                      <PlugZap className="size-3 text-primary" aria-hidden="true" />
-                    )}
-                    {testingId === config.id ? "Menguji…" : "Uji Koneksi"}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => openDuplicate(config)}
-                    className="gap-1 text-xs text-muted-foreground hover:text-foreground"
-                    title="Daftarkan model lain menggunakan kunci dan endpoint ini"
-                  >
-                    <CopyPlus className="size-3" aria-hidden="true" />+ Model Serupa
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => openEdit(config)}
-                    className="gap-1 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <Pencil className="size-3" aria-hidden="true" />
-                    Ubah
-                  </Button>
-
-                  {!config.isDefault && (
-                    <form action={setDefaultAiProviderConfigAction}>
-                      <input type="hidden" name="id" value={config.id} />
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="xs"
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                  {/* Actions & Status */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40 justify-start sm:justify-end">
+                    {/* Live connectivity status badge */}
+                    {testResults[config.id]?.status === "testing" && (
+                      <Badge
+                        variant="outline"
+                        className="gap-1 border-primary/30 text-primary animate-pulse text-[10px]"
                       >
-                        Jadikan Utama
-                      </Button>
-                    </form>
-                  )}
+                        <Loader2 className="size-2.5 animate-spin" aria-hidden="true" />
+                        Menguji...
+                      </Badge>
+                    )}
+                    {testResults[config.id]?.status === "success" && (
+                      <Badge
+                        variant="secondary"
+                        className="gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[10px]"
+                      >
+                        <CheckCircle2 className="size-2.5" aria-hidden="true" />
+                        {testResults[config.id]?.message}
+                      </Badge>
+                    )}
+                    {testResults[config.id]?.status === "error" && (
+                      <Badge
+                        variant="destructive"
+                        className="gap-1 text-[10px] max-w-[200px] truncate"
+                        title={testResults[config.id]?.message}
+                      >
+                        <XCircle className="size-2.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">{testResults[config.id]?.message}</span>
+                      </Badge>
+                    )}
 
-                  <AlertDialog>
-                    <AlertDialogTrigger
-                      render={
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-xs"
-                          className="text-muted-foreground hover:text-destructive"
-                          aria-label={`Hapus ${config.name}`}
-                        />
-                      }
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      disabled={testingId === config.id}
+                      onClick={() => void runConnectivityTest(config)}
+                      className="gap-1 text-xs font-medium"
+                      title="Uji kirim prompt ke endpoint model AI ini"
                     >
-                      <Trash2 className="size-3.5" aria-hidden="true" />
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Hapus token model AI ini?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Token <strong>{config.name}</strong> akan dihapus dari akun Anda. Anda
-                          bisa menambahkannya kembali sewaktu-waktu.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <form action={deleteAiProviderConfigAction}>
-                          <input type="hidden" name="id" value={config.id} />
-                          <AlertDialogAction type="submit">Hapus</AlertDialogAction>
-                        </form>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                      {testingId === config.id ? (
+                        <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                      ) : (
+                        <PlugZap className="size-3 text-primary" aria-hidden="true" />
+                      )}
+                      {testingId === config.id ? "Menguji…" : "Uji Koneksi"}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => openDuplicate(config)}
+                      className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                      title="Daftarkan model lain menggunakan kunci dan endpoint ini"
+                    >
+                      <CopyPlus className="size-3" aria-hidden="true" />+ Model Serupa
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => openEdit(config)}
+                      className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="size-3" aria-hidden="true" />
+                      Ubah
+                    </Button>
+
+                    {!config.isDefault && (
+                      <form action={setDefaultAiProviderConfigAction}>
+                        <input type="hidden" name="id" value={config.id} />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="xs"
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Jadikan Utama
+                        </Button>
+                      </form>
+                    )}
+
+                    <AlertDialog>
+                      <AlertDialogTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-muted-foreground hover:text-destructive"
+                            aria-label={`Hapus ${config.name}`}
+                          />
+                        }
+                      >
+                        <Trash2 className="size-3.5" aria-hidden="true" />
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Hapus token model AI ini?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Token <strong>{config.name}</strong> akan dihapus dari akun Anda. Anda
+                            bisa menambahkannya kembali sewaktu-waktu.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Batal</AlertDialogCancel>
+                          <form action={deleteAiProviderConfigAction}>
+                            <input type="hidden" name="id" value={config.id} />
+                            <AlertDialogAction type="submit">Hapus</AlertDialogAction>
+                          </form>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </div>
             );
@@ -1062,14 +1078,14 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
 
       {/* Token Usage History Dialog */}
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-w-2xl max-h-[min(90dvh,700px)] flex flex-col gap-0 p-0 overflow-hidden">
-          <DialogHeader className="shrink-0 p-6 pb-4 border-b border-border/40 pr-12">
-            <DialogTitle className="flex items-center gap-2">
-              <History className="size-5 text-primary" aria-hidden="true" />
-              <span>
+        <DialogContent className="w-full max-w-2xl max-h-[min(92dvh,720px)] flex flex-col gap-0 p-0 overflow-hidden sm:rounded-xl">
+          <DialogHeader className="shrink-0 p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border/40 pr-12">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <History className="size-4 sm:size-5 text-primary shrink-0" aria-hidden="true" />
+              <span className="truncate">
                 {selectedHistoryConfig
-                  ? `Riwayat Penggunaan Token: ${selectedHistoryConfig.name}`
-                  : "Riwayat Penggunaan Token Keseluruhan"}
+                  ? `Riwayat: ${selectedHistoryConfig.name}`
+                  : "Riwayat Penggunaan Token"}
               </span>
             </DialogTitle>
             <DialogDescription className="text-xs">
@@ -1078,34 +1094,34 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
           </DialogHeader>
 
           {/* Quick Stats Header */}
-          <div className="grid grid-cols-3 gap-2.5 p-4 bg-muted/20 border-b border-border/40 text-center">
-            <div className="rounded-lg bg-background p-2.5 border border-border/70 shadow-2xs">
-              <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">
-                Total Token
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 p-3 sm:p-4 bg-muted/20 border-b border-border/40 text-center">
+            <div className="rounded-lg bg-background p-2 sm:p-2.5 border border-border/70 shadow-2xs">
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-semibold tracking-wider truncate">
+                Total
               </p>
-              <p className="mt-0.5 font-mono text-base font-bold text-foreground">
+              <p className="mt-0.5 font-mono text-sm sm:text-base font-bold text-foreground truncate">
                 {usageStats?.totalTokens.toLocaleString("id-ID") ?? "0"}
               </p>
             </div>
-            <div className="rounded-lg bg-background p-2.5 border border-border/70 shadow-2xs">
-              <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold tracking-wider">
-                Input Tokens
+            <div className="rounded-lg bg-background p-2 sm:p-2.5 border border-border/70 shadow-2xs">
+              <p className="text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold tracking-wider truncate">
+                Input
               </p>
-              <p className="mt-0.5 font-mono text-base font-bold text-foreground">
+              <p className="mt-0.5 font-mono text-sm sm:text-base font-bold text-foreground truncate">
                 {usageStats?.totalInputTokens.toLocaleString("id-ID") ?? "0"}
               </p>
             </div>
-            <div className="rounded-lg bg-background p-2.5 border border-border/70 shadow-2xs">
-              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-semibold tracking-wider">
-                Output Tokens
+            <div className="rounded-lg bg-background p-2 sm:p-2.5 border border-border/70 shadow-2xs">
+              <p className="text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-semibold tracking-wider truncate">
+                Output
               </p>
-              <p className="mt-0.5 font-mono text-base font-bold text-foreground">
+              <p className="mt-0.5 font-mono text-sm sm:text-base font-bold text-foreground truncate">
                 {usageStats?.totalOutputTokens.toLocaleString("id-ID") ?? "0"}
               </p>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
             {historyLoading ? (
               <div
                 className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2"
@@ -1134,11 +1150,11 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
                 {usageStats.logs.map((log) => (
                   <div
                     key={log.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border border-border/70 bg-card/50 hover:bg-card/90 transition-colors gap-2.5 shadow-2xs"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border border-border/70 bg-card/50 hover:bg-card/90 transition-colors gap-2 sm:gap-2.5 shadow-2xs"
                   >
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs font-semibold text-foreground truncate max-w-[220px]">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono text-xs font-semibold text-foreground break-all sm:truncate sm:max-w-[260px]">
                           {log.modelId}
                         </span>
                         {log.providerName && (
@@ -1148,7 +1164,7 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
                         )}
                       </div>
                       <p className="text-[11px] text-muted-foreground flex items-center gap-1 font-mono">
-                        <Clock className="size-3" aria-hidden="true" />
+                        <Clock className="size-3 shrink-0" aria-hidden="true" />
                         <span>
                           {new Date(log.createdAt).toLocaleString("id-ID", {
                             dateStyle: "medium",
@@ -1158,30 +1174,28 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2 sm:self-center self-end">
-                      <div className="flex items-center gap-1.5 text-xs font-mono">
-                        <Badge
-                          variant="secondary"
-                          className="font-mono text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-300 border-none px-1.5 py-0.5"
-                          title="Input tokens (prompt & context)"
-                        >
-                          +{log.inputTokens.toLocaleString("id-ID")} in
-                        </Badge>
-                        <Badge
-                          variant="secondary"
-                          className="font-mono text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-none px-1.5 py-0.5"
-                          title="Output tokens (respons)"
-                        >
-                          +{log.outputTokens.toLocaleString("id-ID")} out
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className="font-mono text-[10px] border-border/80 font-semibold px-1.5 py-0.5"
-                          title="Total tokens"
-                        >
-                          {log.totalTokens.toLocaleString("id-ID")} total
-                        </Badge>
-                      </div>
+                    <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap pt-1 sm:pt-0 border-t sm:border-t-0 border-border/40">
+                      <Badge
+                        variant="secondary"
+                        className="font-mono text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-300 border-none px-1.5 py-0.5"
+                        title="Input tokens (prompt & context)"
+                      >
+                        +{log.inputTokens.toLocaleString("id-ID")} in
+                      </Badge>
+                      <Badge
+                        variant="secondary"
+                        className="font-mono text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-none px-1.5 py-0.5"
+                        title="Output tokens (respons)"
+                      >
+                        +{log.outputTokens.toLocaleString("id-ID")} out
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="font-mono text-[10px] border-border/80 font-semibold px-1.5 py-0.5"
+                        title="Total tokens"
+                      >
+                        {log.totalTokens.toLocaleString("id-ID")} total
+                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -1189,8 +1203,14 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
             )}
           </div>
 
-          <DialogFooter className="p-4 border-t border-border/40 bg-muted/10 shrink-0">
-            <Button type="button" variant="outline" size="sm" onClick={() => setHistoryOpen(false)}>
+          <DialogFooter className="p-3 sm:p-4 border-t border-border/40 bg-muted/10 shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setHistoryOpen(false)}
+              className="w-full sm:w-auto"
+            >
               Tutup
             </Button>
           </DialogFooter>
