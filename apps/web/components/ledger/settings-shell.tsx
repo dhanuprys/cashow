@@ -266,13 +266,26 @@ export function SettingsShell({
           aria-labelledby={`tab-${activeTab}`}
           className="transition-opacity duration-150"
         >
-          {activeTab === "profile" && profileSlot}
-          {activeTab === "ai" && aiSlot}
-          {activeTab === "passkey" && passkeySlot}
-          {activeTab === "appearance" && appearanceSlot}
-          {activeTab === "notifications" && notificationsSlot}
-          {activeTab === "backup" && backupSlot}
-          {activeTab === "audit" && auditSlot}
+          {(() => {
+            switch (activeTab) {
+              case "profile":
+                return profileSlot;
+              case "ai":
+                return aiSlot;
+              case "passkey":
+                return passkeySlot;
+              case "appearance":
+                return appearanceSlot;
+              case "notifications":
+                return notificationsSlot;
+              case "backup":
+                return backupSlot;
+              case "audit":
+                return auditSlot;
+              default:
+                return null;
+            }
+          })()}
         </div>
 
         {footerInfo}
