@@ -892,40 +892,35 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
                           </>
                         )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                        {PROVIDER_MODELS[config.provider]?.map((p) => (
-                          <Badge
-                            key={p.id}
-                            variant="secondary"
-                            className="text-[10px] py-0 px-1.5 font-mono"
-                          >
-                            {p.label}
-                          </Badge>
-                        ))}
-                        {config.customModels?.map((cm) => (
-                          <Badge
-                            key={cm}
-                            variant="outline"
-                            className="text-[10px] py-0 px-1.5 font-mono border-primary/40 text-primary bg-primary/5"
-                          >
-                            {cm}{" "}
-                            <span className="text-[9px] text-muted-foreground ml-0.5">
-                              (kustom)
-                            </span>
-                          </Badge>
-                        ))}
-                        {(!PROVIDER_MODELS[config.provider] ||
-                          PROVIDER_MODELS[config.provider].length === 0) &&
-                          (!config.customModels || config.customModels.length === 0) &&
-                          config.model && (
+                      {/* Active Model / Custom Models if any */}
+                      {(config.model ||
+                        (config.customModels && config.customModels.length > 0)) && (
+                        <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                          {config.model && (
                             <Badge
-                              variant="outline"
-                              className="text-[10px] py-0 px-1.5 font-mono border-primary/40 text-primary bg-primary/5"
+                              variant="secondary"
+                              className="text-[10px] py-0 px-1.5 font-mono"
+                              title="Model aktif"
                             >
                               {config.model}
                             </Badge>
                           )}
-                      </div>
+                          {config.customModels
+                            ?.filter((cm) => cm !== config.model)
+                            .map((cm) => (
+                              <Badge
+                                key={cm}
+                                variant="outline"
+                                className="text-[10px] py-0 px-1.5 font-mono border-primary/40 text-primary bg-primary/5"
+                              >
+                                {cm}{" "}
+                                <span className="text-[9px] text-muted-foreground ml-0.5">
+                                  (kustom)
+                                </span>
+                              </Badge>
+                            ))}
+                        </div>
+                      )}
 
                       {/* Per-Provider Token Usage Metrics */}
                       <div className="pt-1">
