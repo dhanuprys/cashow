@@ -42,6 +42,24 @@ describe("accountInputSchema", () => {
     expect(parsed.openingBalance).toBe(-250_000n);
     expect(parsed.currency).toBe("IDR");
   });
+
+  test("accepts USD and rejects unsupported currencies", () => {
+    const parsed = accountInputSchema.parse({
+      name: "US Dollar Account",
+      type: "BANK",
+      openingBalance: "100",
+      currency: "usd",
+    });
+    expect(parsed.currency).toBe("USD");
+
+    const invalid = accountInputSchema.safeParse({
+      name: "Euro Account",
+      type: "BANK",
+      openingBalance: "100",
+      currency: "EUR",
+    });
+    expect(invalid.success).toBe(false);
+  });
 });
 
 describe("categoryInputSchema", () => {

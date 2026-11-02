@@ -88,6 +88,17 @@ export const attachmentKindSchema = z.enum(["PROOF", "INVOICE", "CONTRACT", "REC
   message: "Jenis lampiran tidak dikenal.",
 });
 
+export const SUPPORTED_CURRENCIES = [
+  { code: "IDR", label: "IDR - Rupiah Indonesia (Rp)", symbol: "Rp" },
+  { code: "USD", label: "USD - US Dollar ($)", symbol: "$" },
+] as const;
+
+export type SupportedCurrencyCode = (typeof SUPPORTED_CURRENCIES)[number]["code"];
+
+export const currencySchema = z.enum(["IDR", "USD"], {
+  message: "Mata uang harus IDR atau USD.",
+});
+
 export const accountInputSchema = z.object({
   name: z.string().trim().min(1, "Nama akun wajib diisi.").max(80, "Maksimal 80 karakter."),
   type: accountTypeSchema,
@@ -97,7 +108,7 @@ export const accountInputSchema = z.object({
     .trim()
     .default("IDR")
     .transform((value) => value.toUpperCase())
-    .pipe(z.string().regex(/^[A-Z]{3}$/, "Kode mata uang harus tiga huruf, misalnya IDR.")),
+    .pipe(currencySchema),
 });
 
 export const categoryInputSchema = z.object({
@@ -346,7 +357,7 @@ export const profileUpdateSchema = z.object({
     .string()
     .trim()
     .transform((value) => value.toUpperCase())
-    .pipe(z.string().regex(/^[A-Z]{3}$/, "Kode mata uang harus tiga huruf, misalnya IDR."))
+    .pipe(currencySchema)
     .optional(),
 });
 

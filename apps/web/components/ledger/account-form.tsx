@@ -1,5 +1,6 @@
 "use client";
 
+import { SUPPORTED_CURRENCIES } from "@cashow/domain";
 import { useActionState, useEffect } from "react";
 import { CurrencyInput } from "@/components/ledger/currency-input";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -83,13 +84,18 @@ export function AccountForm({ account }: { account?: AccountFormValues }) {
 
         <Field>
           <FieldLabel htmlFor={`account-currency-${account?.id ?? "new"}`}>Mata uang</FieldLabel>
-          <Input
+          <NativeSelect
             id={`account-currency-${account?.id ?? "new"}`}
             name="currency"
             defaultValue={account?.currency ?? "IDR"}
-            maxLength={3}
-            className="mt-2 uppercase"
-          />
+            className="mt-2 w-full"
+          >
+            {SUPPORTED_CURRENCIES.map((c) => (
+              <NativeSelectOption key={c.code} value={c.code}>
+                {c.label}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
         </Field>
       </FieldGroup>
 

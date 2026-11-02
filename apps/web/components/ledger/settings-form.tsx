@@ -1,5 +1,6 @@
 "use client";
 
+import { SUPPORTED_CURRENCIES } from "@cashow/domain";
 import { Clock, Sparkles, UserCheck } from "lucide-react";
 import { useActionState, useEffect, useId, useState } from "react";
 import { AvatarPicker } from "@/components/ui/avatar-picker";
@@ -11,7 +12,6 @@ import { toast } from "@/components/ui/toast";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { updateSettingsAction } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
-import { cn } from "@/lib/utils";
 import { SubmitButton } from "./submit-button";
 
 export interface ProfileValues {
@@ -35,15 +35,6 @@ const WEEK_STARTS = [
   { value: "1", label: "Senin (Standar ISO / Indonesia)" },
   { value: "0", label: "Minggu" },
   { value: "6", label: "Sabtu" },
-];
-
-const CURRENCY_PRESETS = [
-  { code: "IDR", label: "Rp (IDR)" },
-  { code: "USD", label: "$ (USD)" },
-  { code: "EUR", label: "€ (EUR)" },
-  { code: "SGD", label: "S$ (SGD)" },
-  { code: "MYR", label: "RM (MYR)" },
-  { code: "JPY", label: "¥ (JPY)" },
 ];
 
 function getTimeInZone(timeZone: string): string {
@@ -181,35 +172,22 @@ export function SettingsForm({ profile }: { profile: ProfileValues }) {
           </FieldDescription>
         </Field>
 
-        {/* Currency Field + Presets */}
+        {/* Currency Field */}
         <Field>
           <FieldLabel htmlFor={currencyId}>Mata Uang Buku</FieldLabel>
-          <Input
+          <NativeSelect
             id={currencyId}
             name="currency"
             value={currency}
-            onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-            maxLength={3}
-            className="mt-1.5 font-mono uppercase"
-            placeholder="IDR"
-          />
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {CURRENCY_PRESETS.map((preset) => (
-              <button
-                key={preset.code}
-                type="button"
-                onClick={() => setCurrency(preset.code)}
-                className={cn(
-                  "rounded-md border px-2 py-0.5 text-[11px] font-mono transition-colors",
-                  currency === preset.code
-                    ? "border-primary bg-primary text-primary-foreground font-semibold shadow-2xs"
-                    : "border-border bg-card text-muted-foreground hover:border-foreground/40 hover:text-foreground",
-                )}
-              >
-                {preset.code}
-              </button>
+            onChange={(e) => setCurrency(e.target.value)}
+            className="mt-1.5 w-full"
+          >
+            {SUPPORTED_CURRENCIES.map((c) => (
+              <NativeSelectOption key={c.code} value={c.code}>
+                {c.label}
+              </NativeSelectOption>
             ))}
-          </div>
+          </NativeSelect>
           <FieldDescription>
             Standar mata uang seluruh akun keuangan dan mutasi transaksi.
           </FieldDescription>
