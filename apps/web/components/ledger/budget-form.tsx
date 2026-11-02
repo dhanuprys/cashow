@@ -1,5 +1,6 @@
 "use client";
 
+import { Pencil } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { CurrencyInput } from "@/components/ledger/currency-input";
 import {
@@ -14,6 +15,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -38,9 +46,11 @@ export interface BudgetFormValues {
 export function BudgetForm({
   categories,
   budget,
+  onSuccess,
 }: {
   categories: BudgetFormCategory[];
   budget?: BudgetFormValues;
+  onSuccess?: () => void;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(
     budget === undefined ? createBudgetAction : updateBudgetAction,
@@ -49,8 +59,12 @@ export function BudgetForm({
 
   useEffect(() => {
     if (state.status !== "success") return;
-    toast.add({ title: "Tersimpan", description: state.message ?? "Perubahan tersimpan." });
-  }, [state]);
+    toast.add({
+      title: budget === undefined ? "Anggaran Dibuat" : "Anggaran Diperbarui",
+      description: state.message ?? "Perubahan tersimpan.",
+    });
+    onSuccess?.();
+  }, [state, budget, onSuccess]);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -164,6 +178,52 @@ export function DeleteBudgetButton({ budgetId }: { budgetId: string }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </>
+  );
+}
+
+export function EditBudgetDialog({
+  budget,
+  categories,
+}: {
+  budget: BudgetFormValues;
+  categories: BudgetFormCategory[];
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen(true)}
+        className="h-8 gap-1 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+      >
+        <Pencil className="size-3" aria-hidden="true" />
+        <span>Ubah</span>
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="w-full max-w-lg sm:rounded-xl">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base sm:text-lg flex items-center gap-2">
+              <Pencil className="size-4 text-primary" aria-hidden="true" />
+              <span>Ubah Anggaran</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Sesuaikan nama, target kategori, atau batas nominal pengeluaran.
+            </DialogDescription>
+          </DialogHeader>
+
+          <BudgetForm
+            key={budget.id}
+            budget={budget}
+            categories={categories}
+            onSuccess={() => setOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

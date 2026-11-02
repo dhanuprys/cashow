@@ -4,7 +4,7 @@ import { ArrowUpRight, Clock } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { BudgetForm, DeleteBudgetButton } from "@/components/ledger/budget-form";
+import { BudgetForm, DeleteBudgetButton, EditBudgetDialog } from "@/components/ledger/budget-form";
 import { ContentSkeleton } from "@/components/ledger/page-skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -145,7 +145,17 @@ async function Budgets() {
                           </span>
                         </p>
                       </div>
-                      <div className="shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
+                        <EditBudgetDialog
+                          budget={{
+                            id: budget.id,
+                            name: budget.name,
+                            categoryId: budget.categoryId,
+                            amount: String(budget.amount),
+                            active: budget.active,
+                          }}
+                          categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+                        />
                         <DeleteBudgetButton budgetId={budget.id} />
                       </div>
                     </div>
