@@ -1,11 +1,11 @@
 "use client";
 
-import { AlertCircle, Clock, Power, Trash2 } from "lucide-react";
+import { AlertCircle, Clock, Pencil, Power, Trash2 } from "lucide-react";
 import { ConfirmSubmitButton } from "@/components/ledger/confirm-submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { deleteRuleAction, updateRuleAction } from "@/lib/actions/ledger";
+import { deleteRuleAction, toggleRuleActiveAction } from "@/lib/actions/ledger";
 import { displayDateTime } from "@/lib/format";
 import { describeRuleCondition, describeRuleTrigger, RULE_SEVERITY } from "@/lib/rule-helpers";
 
@@ -26,9 +26,10 @@ export interface RuleItem {
 interface RuleCardItemProps {
   rule: RuleItem;
   timezone?: string;
+  onEdit?: (rule: RuleItem) => void;
 }
 
-export function RuleCardItem({ rule, timezone = "Asia/Jakarta" }: RuleCardItemProps) {
+export function RuleCardItem({ rule, timezone = "Asia/Jakarta", onEdit }: RuleCardItemProps) {
   const triggerText = describeRuleTrigger(rule.trigger);
   const conditionText = describeRuleCondition(rule.condition);
 
@@ -40,12 +41,14 @@ export function RuleCardItem({ rule, timezone = "Asia/Jakarta" }: RuleCardItemPr
   const severityInfo = RULE_SEVERITY[settings.severity ?? "INFO"] ?? RULE_SEVERITY.INFO;
 
   return (
-    <Card className={!rule.active ? "opacity-70 bg-muted/20" : undefined}>
+    <Card className={!rule.active ? "opacity-75 bg-muted/20" : undefined}>
       <CardContent className="p-4 space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div className="space-y-1 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium text-base text-foreground">{rule.name}</span>
+              <span className="font-semibold text-sm sm:text-base text-foreground break-words">
+                {rule.name}
+              </span>
               <Badge variant={rule.active ? "default" : "outline"} className="text-[10px]">
                 {rule.active ? "Aktif" : "Nonaktif"}
               </Badge>
@@ -58,24 +61,37 @@ export function RuleCardItem({ rule, timezone = "Asia/Jakarta" }: RuleCardItemPr
               )}
             </div>
             {rule.description && (
-              <p className="text-xs text-muted-foreground">{rule.description}</p>
+              <p className="text-xs text-muted-foreground break-words">{rule.description}</p>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40 w-full sm:w-auto justify-end">
+            {onEdit && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                onClick={() => onEdit(rule)}
+                className="gap-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <Pencil className="size-3" aria-hidden="true" />
+                Ubah
+              </Button>
+            )}
+
             {/* Toggle Active Form */}
-            <form action={updateRuleAction}>
+            <form action={toggleRuleActiveAction}>
               <input type="hidden" name="ruleId" value={rule.id} />
               <input type="hidden" name="active" value={rule.active ? "false" : "true"} />
               <Button
                 type="submit"
                 variant="outline"
-                size="sm"
-                className="h-8 gap-1 px-2.5 text-xs"
+                size="xs"
+                className="gap-1 text-xs"
                 title={rule.active ? "Jeda aturan" : "Aktifkan aturan"}
               >
                 <Power
-                  className={`size-3.5 ${rule.active ? "text-emerald-600" : "text-muted-foreground"}`}
+                  className={`size-3 ${rule.active ? "text-emerald-600" : "text-muted-foreground"}`}
                 />
                 {rule.active ? "Jeda" : "Nyalakan"}
               </Button>
@@ -87,9 +103,11 @@ export function RuleCardItem({ rule, timezone = "Asia/Jakarta" }: RuleCardItemPr
               <ConfirmSubmitButton
                 message={`Hapus aturan "${rule.name}"?`}
                 variant="ghost"
-                size="sm"
+                size="icon-xs"
+                className="text-muted-foreground hover:text-destructive"
               >
-                <Trash2 className="size-3.5 text-destructive" />
+                <Trash2 className="size-3.5" aria-hidden="true" />
+                <span className="sr-only">Hapus {rule.name}</span>
               </ConfirmSubmitButton>
             </form>
           </div>

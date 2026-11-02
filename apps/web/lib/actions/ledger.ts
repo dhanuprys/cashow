@@ -842,7 +842,64 @@ export async function createRuleAction(
   return { status: "success" };
 }
 
-export async function updateRuleAction(formData: FormData): Promise<void> {
+export async function updateRuleAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "ruleId");
+  if (id === "") return failure("Aturan tidak ditemukan.");
+
+  // If toggling active status only
+  const activeRaw = text(formData, "active");
+  const name = text(formData, "name");
+
+  if (!name && activeRaw !== "") {
+    const result = await updateRule(session.ctx, id, {
+      active: activeRaw === "true",
+    });
+    if (!result.ok) throw result.error;
+    revalidateLedger();
+    revalidatePath("/app/rules");
+    return { status: "success" };
+  }
+
+  // Full rule update
+  let trigger: unknown;
+  let condition: unknown;
+  try {
+    const triggerText = text(formData, "trigger");
+    const conditionText = text(formData, "condition");
+    if (triggerText) trigger = JSON.parse(triggerText);
+    if (conditionText) condition = JSON.parse(conditionText);
+  } catch {
+    return failure("JSON tidak valid.");
+  }
+
+  const severity = text(formData, "severity") || "INFO";
+  const cooldownMinutes = Number(text(formData, "cooldownMinutes")) || 0;
+  const edgeTriggered = formData.get("edgeTriggered") !== "false";
+
+  const result = await updateRule(session.ctx, id, {
+    name: name || undefined,
+    description: text(formData, "description"),
+    trigger,
+    condition,
+    settings: {
+      severity: severity === "ALERT" || severity === "WARNING" ? severity : "INFO",
+      cooldownMinutes,
+      edgeTriggered,
+    },
+    active: activeRaw === "" ? undefined : activeRaw === "true",
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath("/app/rules");
+  return { status: "success" };
+}
+
+export async function toggleRuleActiveAction(formData: FormData): Promise<void> {
   const session = await requireLedgerSession();
   const id = text(formData, "ruleId");
   if (id === "") return;
