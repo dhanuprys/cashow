@@ -1,9 +1,9 @@
 "use client";
 
-import { ImagePlus, Loader2, Paperclip } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { DropzoneFileInput } from "@/components/ledger/dropzone-file-input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
 const MAX_INPUT_BYTES = 20 * 1024 * 1024;
@@ -50,14 +50,12 @@ async function compressImage(file: File): Promise<File> {
 
 export function AttachmentUploader({ transactionId }: { transactionId: string }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState("PROOF");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const original = event.target.files?.[0];
-    if (original === undefined) return;
+  async function onUpload(original: File | null) {
+    if (original === null) return;
     if (original.size > MAX_INPUT_BYTES) {
       setError("Berkas maksimal 20 MB sebelum dikompres.");
       return;
@@ -78,7 +76,6 @@ export function AttachmentUploader({ transactionId }: { transactionId: string })
         throw new Error(payload.message ?? "Unggahan gagal.");
       }
 
-      if (inputRef.current !== null) inputRef.current.value = "";
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unggahan gagal.");
@@ -89,47 +86,43 @@ export function AttachmentUploader({ transactionId }: { transactionId: string })
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor={`attachment-kind-${transactionId}`}
+          className="text-xs font-medium text-muted-foreground"
+        >
+          Jenis Lampiran
+        </label>
         <NativeSelect
+          id={`attachment-kind-${transactionId}`}
           aria-label="Jenis lampiran"
           value={kind}
           onChange={(event) => setKind(event.target.value)}
           size="sm"
+          className="w-auto"
         >
           <NativeSelectOption value="PROOF">Bukti</NativeSelectOption>
           <NativeSelectOption value="RECEIPT">Struk</NativeSelectOption>
           <NativeSelectOption value="INVOICE">Faktur</NativeSelectOption>
           <NativeSelectOption value="CONTRACT">Kontrak</NativeSelectOption>
         </NativeSelect>
-
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
-          className="sr-only"
-          id={`attachment-${transactionId}`}
-          onChange={onUpload}
-          disabled={busy}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => inputRef.current?.click()}
-        >
-          {busy ? (
-            <Loader2 className="animate-spin" aria-hidden="true" />
-          ) : (
-            <Paperclip aria-hidden="true" />
-          )}
-          {busy ? "Mengunggah…" : "Lampirkan berkas"}
-        </Button>
-        <span className="text-xs text-muted-foreground">
-          <ImagePlus className="mr-1 inline size-3.5" aria-hidden="true" />
-          JPG, PNG, WebP, HEIC, atau PDF · foto dikompres otomatis
-        </span>
       </div>
+
+      <DropzoneFileInput
+        id={`attachment-${transactionId}`}
+        accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+        maxSizeBytes={MAX_INPUT_BYTES}
+        description="Tarik lampiran ke sini atau klik untuk unggah"
+        disabled={busy}
+        onFileSelect={(file) => void onUpload(file)}
+      />
+
+      {busy ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-live="polite">
+          <Loader2 className="size-3.5 animate-spin" />
+          <span>Mengompresi dan mengunggah lampiran…</span>
+        </div>
+      ) : null}
 
       {error === null ? null : (
         <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">

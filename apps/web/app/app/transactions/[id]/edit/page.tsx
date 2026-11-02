@@ -12,6 +12,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { LinkButton } from "@/components/ledger/link-button";
+import { PageSkeleton } from "@/components/ledger/page-skeleton";
 import { TransactionForm } from "@/components/ledger/transaction-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -19,9 +20,13 @@ import { getDb } from "@/lib/db";
 import { displayLocalDate } from "@/lib/format";
 import { ledgerErrorCode, unwrap } from "@/lib/ledger";
 
+export const metadata = {
+  title: "Ubah transaksi",
+};
+
 export default function EditTransactionPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-4xl bg-muted" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <EditTransaction params={params} />
     </Suspense>
   );

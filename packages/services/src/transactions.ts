@@ -95,6 +95,8 @@ export interface TransactionListFilter {
 export interface TransactionListResult {
   items: TransactionSummary[];
   total: number;
+  totalIncome: bigint;
+  totalExpense: bigint;
 }
 
 export interface OpenIncome {
@@ -202,7 +204,7 @@ export async function listTransactions(
   ctx: UseCaseContext,
   filter: TransactionListFilter = {},
 ): Promise<Result<TransactionListResult>> {
-  const limit = Math.min(Math.max(filter.limit ?? 50, 1), 200);
+  const limit = Math.min(Math.max(filter.limit ?? 50, 1), 5000);
   const offset = Math.max(filter.offset ?? 0, 0);
   const pattern =
     filter.search === undefined || filter.search.trim() === "" ? "" : `%${filter.search.trim()}%`;
@@ -245,7 +247,9 @@ export async function listTransactions(
         COALESCE(al.allocated, 0)::text AS allocated,
         COALESCE(al.cnt, 0)::bigint AS "allocationCount",
         COALESCE(att.cnt, 0)::bigint AS "attachmentCount",
-        count(*) OVER ()::bigint AS "totalCount"
+        count(*) OVER ()::bigint AS "totalCount",
+        COALESCE(SUM(CASE WHEN t."type" = 'INCOME' THEN t."amount" ELSE 0 END) OVER (), 0)::text AS "totalIncome",
+        COALESCE(SUM(CASE WHEN t."type" = 'EXPENSE' THEN t."amount" ELSE 0 END) OVER (), 0)::text AS "totalExpense"
       FROM "public"."Transaction" t
       JOIN "public"."Account" acc ON acc."id" = t."accountId"
       LEFT JOIN "public"."Account" dest ON dest."id" = t."destinationAccountId"
@@ -289,13 +293,17 @@ export async function listTransactions(
       .returnsRow({
         ...TRANSACTION_ROW_CODECS,
         totalCount: "pg/int8@1",
+        totalIncome: "pg/text@1",
+        totalExpense: "pg/text@1",
       })
       .build();
 
     const rows = await ctx.db.query(plan);
     const items = rows.map((row) => mapTransaction(row));
     const total = rows.length === 0 ? 0 : Number(rows[0]?.totalCount ?? 0n);
-    return ok({ items, total });
+    const totalIncome = rows.length === 0 ? 0n : BigInt(rows[0]?.totalIncome ?? "0");
+    const totalExpense = rows.length === 0 ? 0n : BigInt(rows[0]?.totalExpense ?? "0");
+    return ok({ items, total, totalIncome, totalExpense });
   } catch (error) {
     return err(toLedgerError(error));
   }

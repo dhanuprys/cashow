@@ -2,6 +2,7 @@ import { listNotifications } from "@cashow/services";
 import { Bell } from "lucide-react";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { ContentSkeleton } from "@/components/ledger/page-skeleton";
 import { NotificationActions, PushSubscribe } from "@/components/ledger/push-subscribe";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -10,11 +11,33 @@ import { getDb } from "@/lib/db";
 import { displayDateTime } from "@/lib/format";
 import { unwrap } from "@/lib/ledger";
 
+export const metadata = {
+  title: "Kotak masuk",
+};
+
 export default function InboxPage() {
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-4xl bg-muted" />}>
-      <Inbox />
-    </Suspense>
+    <div className="space-y-6">
+      <section>
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+          Kotak masuk
+        </p>
+        <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+          Notifikasi
+        </h1>
+      </section>
+
+      <Suspense
+        fallback={
+          <div className="space-y-4">
+            <div className="-mt-3 h-4 w-40 animate-pulse rounded-md bg-muted" />
+            <ContentSkeleton twoColumn={false} />
+          </div>
+        }
+      >
+        <Inbox />
+      </Suspense>
+    </div>
   );
 }
 
@@ -27,17 +50,9 @@ async function Inbox() {
 
   return (
     <div className="space-y-6">
-      <section>
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-          Kotak masuk
-        </p>
-        <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-          Notifikasi
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {notifications.filter((n) => n.readAt === null).length} belum dibaca.
-        </p>
-      </section>
+      <p className="-mt-3 text-sm text-muted-foreground">
+        {notifications.filter((n) => n.readAt === null).length} belum dibaca.
+      </p>
 
       <PushSubscribe vapidPublicKey={process.env.VAPID_PUBLIC_KEY ?? ""} />
 

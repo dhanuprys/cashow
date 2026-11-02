@@ -7,10 +7,12 @@
  */
 
 export * from "./accounts";
+export * from "./ai-providers";
 export * from "./attachments";
 export * from "./audit";
 export * from "./budgets";
 export * from "./categories";
+export * from "./chat-threads";
 export * from "./context";
 export * from "./context-pack";
 export * from "./defaults";

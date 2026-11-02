@@ -1,63 +1,237 @@
 "use client";
 
-import { useActionState } from "react";
+import { Clock, Sparkles, UserCheck } from "lucide-react";
+import { useActionState, useEffect, useId, useState } from "react";
+import { AvatarPicker } from "@/components/ui/avatar-picker";
+import { Badge } from "@/components/ui/badge";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { toast } from "@/components/ui/toast";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { updateSettingsAction } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
+import { cn } from "@/lib/utils";
 import { SubmitButton } from "./submit-button";
 
 export interface ProfileValues {
   name: string;
+  avatar?: string | null;
+  bio?: string | null;
   timezone: string;
   weekStartsOn: number;
   budgetMonthStartDay: number;
   currency: string;
+  email?: string | null;
 }
 
 const ZONES = [
-  { value: "Asia/Jakarta", label: "WIB · Asia/Jakarta" },
-  { value: "Asia/Makassar", label: "WITA · Asia/Makassar" },
-  { value: "Asia/Jayapura", label: "WIT · Asia/Jayapura" },
+  { value: "Asia/Jakarta", label: "WIB · Asia/Jakarta (UTC+7)" },
+  { value: "Asia/Makassar", label: "WITA · Asia/Makassar (UTC+8)" },
+  { value: "Asia/Jayapura", label: "WIT · Asia/Jayapura (UTC+9)" },
 ];
 
 const WEEK_STARTS = [
-  { value: "1", label: "Senin" },
+  { value: "1", label: "Senin (Standar ISO / Indonesia)" },
   { value: "0", label: "Minggu" },
   { value: "6", label: "Sabtu" },
 ];
 
+const CURRENCY_PRESETS = [
+  { code: "IDR", label: "Rp (IDR)" },
+  { code: "USD", label: "$ (USD)" },
+  { code: "EUR", label: "€ (EUR)" },
+  { code: "SGD", label: "S$ (SGD)" },
+  { code: "MYR", label: "RM (MYR)" },
+  { code: "JPY", label: "¥ (JPY)" },
+];
+
+function getTimeInZone(timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat("id-ID", {
+      timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(new Date());
+  } catch {
+    return "";
+  }
+}
+
 export function SettingsForm({ profile }: { profile: ProfileValues }) {
+  const [currency, setCurrency] = useState(profile.currency);
+  const [selectedZone, setSelectedZone] = useState(profile.timezone);
+  const [budgetDay, setBudgetDay] = useState(profile.budgetMonthStartDay);
+  const [avatar, setAvatar] = useState(profile.avatar || "alex");
+  const [name, setName] = useState(profile.name || "");
+  const [bio, setBio] = useState(profile.bio || "");
+  const [currentTime, setCurrentTime] = useState("");
+
   const [state, formAction] = useActionState<ActionState, FormData>(
     updateSettingsAction,
     initialActionState,
   );
+
+  const nameId = useId();
+  const bioId = useId();
+  const timezoneId = useId();
+  const currencyId = useId();
+  const weekId = useId();
+  const budgetDayId = useId();
+
+  // Update current time display every 5 seconds
+  useEffect(() => {
+    const updateTime = () => setCurrentTime(getTimeInZone(selectedZone));
+    updateTime();
+    const timer = setInterval(updateTime, 5000);
+    return () => clearInterval(timer);
+  }, [selectedZone]);
+
+  useEffect(() => {
+    if (state.status !== "success") return;
+    toast.add({
+      title: "Pengaturan Tersimpan",
+      description: state.message ?? "Preferensi profil dan buku kas berhasil diperbarui.",
+    });
+  }, [state]);
+
   const knownZone = ZONES.some((zone) => zone.value === profile.timezone);
 
-  return (
-    <form action={formAction} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <Label htmlFor="settings-name">
-            Nama <span className="font-normal text-muted-foreground">(opsional)</span>
-          </Label>
-          <Input
-            id="settings-name"
-            name="name"
-            defaultValue={profile.name}
-            maxLength={80}
-            className="mt-2"
-          />
-        </div>
+  // Calculate budget period preview
+  const budgetDayNumber = Number(budgetDay) || 1;
+  const prevDay = budgetDayNumber === 1 ? "akhir bulan" : `tanggal ${budgetDayNumber - 1}`;
 
-        <div>
-          <Label htmlFor="settings-timezone">Zona waktu</Label>
+  return (
+    <form action={formAction} className="space-y-6">
+      <input type="hidden" name="avatar" value={avatar} />
+
+      {/* Account Identity Summary Card with Live Avatar Preview */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-border/80 bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3.5">
+          <UserAvatar avatar={avatar} name={name} size="lg" className="shadow-sm" />
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-base font-semibold text-foreground">
+                {name || "Pemilik Buku Kas"}
+              </p>
+              <Badge variant="outline" className="gap-1 text-[10px] font-medium">
+                <UserCheck
+                  className="size-3 text-emerald-600 dark:text-emerald-400"
+                  aria-hidden="true"
+                />
+                Terverifikasi
+              </Badge>
+            </div>
+            <p className="truncate text-xs text-muted-foreground">
+              {profile.email ?? "Tanpa email terdaftar"}
+            </p>
+            {bio ? (
+              <p className="line-clamp-1 text-xs italic text-muted-foreground/90">"{bio}"</p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {/* Flat Illustrated Avatar Selector */}
+      <div className="space-y-2">
+        <FieldLabel>Pilih Ilustrasi Avatar</FieldLabel>
+        <AvatarPicker value={avatar} onChange={setAvatar} />
+      </div>
+
+      <FieldGroup className="grid gap-5 sm:grid-cols-2">
+        {/* Full Name Field */}
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor={nameId}>
+            Nama Lengkap / Panggilan{" "}
+            <span className="font-normal text-muted-foreground">(opsional)</span>
+          </FieldLabel>
+          <Input
+            id={nameId}
+            name="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+            placeholder="misal: Dhanu Pratama"
+            className="mt-1.5"
+          />
+          <FieldDescription>
+            Nama lengkap atau nama panggilan yang ditampilkan pada dasbor dan laporan.
+          </FieldDescription>
+        </Field>
+
+        {/* Bio / Catatan Profil (Optional) */}
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor={bioId}>
+            Bio / Catatan Pribadi{" "}
+            <span className="font-normal text-muted-foreground">(opsional)</span>
+          </FieldLabel>
+          <Input
+            id={bioId}
+            name="bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            maxLength={250}
+            placeholder="misal: Menabung untuk dana darurat & investasi masa depan."
+            className="mt-1.5"
+          />
+          <FieldDescription>
+            Catatan singkat motivasi finansial atau status personal Anda.
+          </FieldDescription>
+        </Field>
+
+        {/* Currency Field + Presets */}
+        <Field>
+          <FieldLabel htmlFor={currencyId}>Mata Uang Buku</FieldLabel>
+          <Input
+            id={currencyId}
+            name="currency"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+            maxLength={3}
+            className="mt-1.5 font-mono uppercase"
+            placeholder="IDR"
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {CURRENCY_PRESETS.map((preset) => (
+              <button
+                key={preset.code}
+                type="button"
+                onClick={() => setCurrency(preset.code)}
+                className={cn(
+                  "rounded-md border px-2 py-0.5 text-[11px] font-mono transition-colors",
+                  currency === preset.code
+                    ? "border-primary bg-primary text-primary-foreground font-semibold shadow-2xs"
+                    : "border-border bg-card text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+                )}
+              >
+                {preset.code}
+              </button>
+            ))}
+          </div>
+          <FieldDescription>
+            Standar mata uang seluruh akun keuangan dan mutasi transaksi.
+          </FieldDescription>
+        </Field>
+
+        {/* Timezone Field + Live Clock */}
+        <Field>
+          <div className="flex items-center justify-between">
+            <FieldLabel htmlFor={timezoneId}>Zona Waktu</FieldLabel>
+            {currentTime && (
+              <span className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
+                <Clock className="size-3" aria-hidden="true" />
+                {currentTime}
+              </span>
+            )}
+          </div>
           <NativeSelect
-            id="settings-timezone"
+            id={timezoneId}
             name="timezone"
-            defaultValue={profile.timezone}
-            className="mt-2 w-full"
+            value={selectedZone}
+            onChange={(e) => setSelectedZone(e.target.value)}
+            className="mt-1.5 w-full"
           >
             {knownZone ? null : (
               <NativeSelectOption value={profile.timezone}>{profile.timezone}</NativeSelectOption>
@@ -68,29 +242,19 @@ export function SettingsForm({ profile }: { profile: ProfileValues }) {
               </NativeSelectOption>
             ))}
           </NativeSelect>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Dipakai untuk tanggal buku dan laporan. Tanggal lama tidak ditulis ulang.
-          </p>
-        </div>
+          <FieldDescription>
+            Menentukan penanggalan entri mutasi dan filter periode laporan.
+          </FieldDescription>
+        </Field>
 
-        <div>
-          <Label htmlFor="settings-currency">Mata uang</Label>
-          <Input
-            id="settings-currency"
-            name="currency"
-            defaultValue={profile.currency}
-            maxLength={3}
-            className="mt-2 uppercase"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="settings-week">Awal minggu</Label>
+        {/* Week Starts On */}
+        <Field>
+          <FieldLabel htmlFor={weekId}>Hari Awal Minggu</FieldLabel>
           <NativeSelect
-            id="settings-week"
+            id={weekId}
             name="weekStartsOn"
             defaultValue={String(profile.weekStartsOn)}
-            className="mt-2 w-full"
+            className="mt-1.5 w-full"
           >
             {WEEK_STARTS.map((day) => (
               <NativeSelectOption key={day.value} value={day.value}>
@@ -98,23 +262,39 @@ export function SettingsForm({ profile }: { profile: ProfileValues }) {
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
+          <FieldDescription>
+            Menentukan kolom awal kalender dan perhitungan rekap mingguan.
+          </FieldDescription>
+        </Field>
 
-        <div>
-          <Label htmlFor="settings-budget-day">Tanggal mulai bulan anggaran</Label>
+        {/* Budget Month Start Day + Interactive Preview */}
+        <Field>
+          <FieldLabel htmlFor={budgetDayId}>Tanggal Awal Siklus Anggaran</FieldLabel>
           <Input
-            id="settings-budget-day"
+            id={budgetDayId}
             name="budgetMonthStartDay"
             type="number"
             min={1}
             max={28}
-            defaultValue={profile.budgetMonthStartDay}
-            className="mt-2"
+            value={budgetDay}
+            onChange={(e) => setBudgetDay(Number(e.target.value))}
+            className="mt-1.5"
           />
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Misalnya 25 kalau gajian tanggal 25.
-          </p>
-        </div>
+          <FieldDescription>
+            Siklus anggaran berjalan dari <strong>tgl {budgetDayNumber}</strong> hingga{" "}
+            <strong>{prevDay}</strong>.
+          </FieldDescription>
+        </Field>
+      </FieldGroup>
+
+      {/* Cycle Highlight Card */}
+      <div className="rounded-xl border border-border/80 bg-muted/30 p-3.5 text-xs text-muted-foreground flex items-center gap-2.5">
+        <Sparkles className="size-4 text-primary shrink-0" aria-hidden="true" />
+        <p className="leading-relaxed">
+          Tip: Jika tanggal gajian Anda adalah tanggal 25, atur tanggal mulai anggaran ke{" "}
+          <strong>25</strong> agar batas alokasi bulanan akurat mengikuti siklus arus kas masuk
+          Anda.
+        </p>
       </div>
 
       {state.status === "error" ? (
@@ -122,11 +302,12 @@ export function SettingsForm({ profile }: { profile: ProfileValues }) {
           {state.message}
         </p>
       ) : null}
-      {state.status === "success" ? (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">Pengaturan tersimpan.</p>
-      ) : null}
 
-      <SubmitButton size="sm">Simpan pengaturan</SubmitButton>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none flex items-center justify-end">
+        <SubmitButton size="sm" className="w-full sm:w-auto font-medium shadow-2xs">
+          Simpan Perubahan
+        </SubmitButton>
+      </div>
     </form>
   );
 }

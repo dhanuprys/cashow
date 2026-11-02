@@ -12,7 +12,7 @@ const idrPlain = new Intl.NumberFormat("id-ID", {
 
 /** Format whole rupiah as Indonesian currency, e.g. `Rp1.500.000`. */
 export function formatMoney(amount: Money): string {
-  return idr.format(amount);
+  return idr.format(amount).replace(/\u00a0/g, "");
 }
 
 /** Format whole rupiah without the currency symbol, e.g. `1.500.000`. */

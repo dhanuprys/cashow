@@ -1,39 +1,56 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { AppNav } from "@/components/ledger/app-nav";
+import { AppNavFallback } from "@/components/ledger/app-nav-fallback";
+import { AppMain, AppShell } from "@/components/ledger/app-shell";
 import { CommandPalette } from "@/components/ledger/command-palette";
+import { MobileQuickAdd } from "@/components/ledger/mobile-quick-add";
+import { UserHeaderAvatar } from "@/components/ledger/user-header-avatar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
+    <AppShell>
+      <header className="sticky top-0 z-30 border-b border-border bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl flex-col">
-          {/* Top row: logo + command palette + logout */}
-          <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
-            <Link href="/app" className="flex items-center gap-2">
-              <span className="grid size-8 place-items-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
-                C
+          {/* Top row: logo + command palette + user avatar + logout */}
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3">
+            <Link href="/app" className="flex min-w-0 items-center gap-2">
+              <Image
+                src="/logo.png"
+                alt="Cashow"
+                width={32}
+                height={32}
+                className="size-8 shrink-0 rounded-xl"
+                priority
+              />
+              <span className="truncate font-heading text-base font-semibold tracking-tight">
+                Cashow
               </span>
-              <span className="font-heading text-base font-semibold tracking-tight">Cashow</span>
             </Link>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <CommandPalette />
+              <Suspense fallback={<div className="size-8 rounded-xl bg-muted/60 animate-pulse" />}>
+                <UserHeaderAvatar />
+              </Suspense>
               <LogoutButton />
             </div>
           </div>
-          {/* Navigation row */}
-          <div className="px-4 pb-3 sm:px-6">
-            <Suspense fallback={<div aria-hidden="true" className="h-10" />}>
+          {/* Navigation row: rendered inside the header on md/lg screens */}
+          <div className="md:px-6 md:pb-2.5">
+            <Suspense fallback={<AppNavFallback />}>
               <AppNav />
             </Suspense>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-28 pt-6 sm:px-6 sm:pb-12 lg:pb-6">
-        {children}
-      </main>
-    </div>
+      <AppMain>{children}</AppMain>
+
+      <Suspense fallback={null}>
+        <MobileQuickAdd />
+      </Suspense>
+    </AppShell>
   );
 }

@@ -1,19 +1,53 @@
 import { listRules } from "@cashow/services";
+import { Play } from "lucide-react";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { ConfirmSubmitButton } from "@/components/ledger/confirm-submit-button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ContentSkeleton } from "@/components/ledger/page-skeleton";
+import { RuleBuilderForm } from "@/components/ledger/rule-builder-form";
+import { RuleCardItem } from "@/components/ledger/rule-card-item";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import { createRuleFormAction, deleteRuleAction, runRulesAction } from "@/lib/actions/ledger";
+import { runRulesAction } from "@/lib/actions/ledger";
 import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { unwrap } from "@/lib/ledger";
 
+export const metadata = {
+  title: "Aturan otomatis",
+};
+
 export default function RulesPage() {
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-4xl bg-muted" />}>
-      <Rules />
-    </Suspense>
+    <div className="space-y-6">
+      <section className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Automasi &amp; Peringatan
+          </p>
+          <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+            Aturan Keuangan
+          </h1>
+        </div>
+        <form action={runRulesAction}>
+          <Button type="submit" variant="outline" size="sm" className="gap-2">
+            <Play className="size-3.5 fill-current" />
+            Evaluasi sekarang
+          </Button>
+        </form>
+      </section>
+
+      <Suspense
+        fallback={
+          <div className="space-y-4">
+            <div className="-mt-3 h-4 w-52 animate-pulse rounded-md bg-muted" />
+            <ContentSkeleton twoColumn />
+          </div>
+        }
+      >
+        <Rules />
+      </Suspense>
+    </div>
   );
 }
 
@@ -23,170 +57,52 @@ async function Rules() {
   const db = await getDb();
   const ctx = { db, userId: user.id };
   const rules = unwrap(await listRules(ctx));
+  const activeCount = rules.filter((r) => r.active).length;
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Aturan
-          </p>
-          <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            Aturan & notifikasi
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {rules.filter((r) => r.active).length} aturan aktif.
-          </p>
-        </div>
-        <form action={runRulesAction}>
-          <button
-            type="submit"
-            className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm hover:bg-muted"
-          >
-            Jalankan aturan
-          </button>
-        </form>
-      </section>
+      <p className="-mt-3 text-sm text-muted-foreground">
+        {activeCount} aturan aktif dari total {rules.length} aturan terdaftar.
+      </p>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+        {/* Left Column: Rules list */}
         <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Daftar Aturan
+            </h2>
+            <span className="text-xs text-muted-foreground">{rules.length} terpasang</span>
+          </div>
+
           {rules.length === 0 ? (
             <Card>
-              <CardContent>
-                <Empty className="border">
+              <CardContent className="pt-6">
+                <Empty className="border-0">
                   <EmptyHeader>
-                    <EmptyTitle>Belum ada aturan</EmptyTitle>
-                    <EmptyDescription>Buat aturan dari JSON trigger dan kondisi.</EmptyDescription>
+                    <EmptyTitle>Belum ada aturan aktif</EmptyTitle>
+                    <EmptyDescription>
+                      Gunakan formulir atau pilih template di samping untuk membuat peringatan
+                      otomatis (misal batas harian atau saldo minim).
+                    </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
               </CardContent>
             </Card>
           ) : (
-            rules.map((rule) => (
-              <Card key={rule.id}>
-                <CardContent className="space-y-2">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium">{rule.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {rule.active ? "Aktif" : "Nonaktif"} · v{rule.version}
-                      </p>
-                    </div>
-                    <form action={deleteRuleAction}>
-                      <input type="hidden" name="ruleId" value={rule.id} />
-                      <ConfirmSubmitButton message="Hapus aturan ini?" variant="ghost" size="sm">
-                        Hapus
-                      </ConfirmSubmitButton>
-                    </form>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+            <div className="space-y-3">
+              {rules.map((rule) => (
+                <RuleCardItem key={rule.id} rule={rule} timezone={user.timezone} />
+              ))}
+            </div>
           )}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Aturan baru</CardTitle>
-            <CardDescription>Definisikan trigger dan kondisi dalam JSON.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={createRuleFormAction} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium" htmlFor="rule-name">
-                  Nama
-                </label>
-                <input
-                  id="rule-name"
-                  name="name"
-                  required
-                  maxLength={120}
-                  className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium" htmlFor="rule-trigger">
-                  Trigger (JSON)
-                </label>
-                <textarea
-                  id="rule-trigger"
-                  name="trigger"
-                  defaultValue='{"type":"transaction"}'
-                  className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-xs"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium" htmlFor="rule-condition">
-                  Kondisi (JSON)
-                </label>
-                <textarea
-                  id="rule-condition"
-                  name="condition"
-                  defaultValue='{"metric":"expenseToday","op":"gt","value":100000}'
-                  className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-xs"
-                  rows={4}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium" htmlFor="rule-description">
-                  Keterangan
-                </label>
-                <input
-                  id="rule-description"
-                  name="description"
-                  maxLength={500}
-                  className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <button
-                type="submit"
-                className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground"
-              >
-                Buat aturan
-              </button>
-            </form>
-          </CardContent>
-        </Card>
+        {/* Right Column: Visual Form Builder */}
+        <div className="space-y-4">
+          <RuleBuilderForm />
+        </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Presets</CardTitle>
-          <CardDescription>Buat aturan umum dalam satu klik.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          {[
-            {
-              name: "Batas harian 150rb",
-              trigger: '{"type":"transaction"}',
-              condition: '{"metric":"expenseToday","op":"gt","value":150000}',
-            },
-            {
-              name: "Pengeluaran besar",
-              trigger: '{"type":"transaction"}',
-              condition: '{"metric":"expenseToday","op":"gt","value":500000}',
-            },
-            {
-              name: "Saldo rendah",
-              trigger: '{"type":"schedule"}',
-              condition: '{"metric":"totalBalance","op":"lt","value":100000}',
-            },
-          ].map((preset) => (
-            <form key={preset.name} action={createRuleFormAction} className="contents">
-              <input type="hidden" name="name" value={preset.name} />
-              <input type="hidden" name="trigger" value={preset.trigger} />
-              <input type="hidden" name="condition" value={preset.condition} />
-              <button
-                type="submit"
-                className="inline-flex h-9 items-center rounded-md border border-border px-3 text-sm hover:bg-muted"
-              >
-                {preset.name}
-              </button>
-            </form>
-          ))}
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -279,6 +279,14 @@ export const snapshotCreateSchema = z.object({
   note: nullableText(500),
 });
 
+export const snapshotUpdateSchema = z.object({
+  snapshotId: idText,
+  /** The bank's stated balance; may be negative for a debt account. */
+  amount: signedMoneyText,
+  recordedAtLocal: localDateTimeSchema,
+  note: nullableText(500),
+});
+
 export const checkpointUnlockSchema = z.object({
   reason: nullableText(500),
 });
@@ -319,6 +327,8 @@ const timeZoneSchema = z
  */
 export const profileUpdateSchema = z.object({
   name: nullableText(80),
+  avatar: nullableText(64),
+  bio: nullableText(250),
   timezone: timeZoneSchema.optional(),
   weekStartsOn: z.coerce
     .number()
@@ -353,6 +363,7 @@ export type PlanCreateInput = z.infer<typeof planCreateSchema>;
 export type PlanUpdateInput = z.infer<typeof planUpdateSchema>;
 export type PlanItemUpdateInput = z.infer<typeof planItemUpdateSchema>;
 export type SnapshotCreateInput = z.infer<typeof snapshotCreateSchema>;
+export type SnapshotUpdateInput = z.infer<typeof snapshotUpdateSchema>;
 export type TransferCreateInput = z.infer<typeof transferCreateSchema>;
 export type CheckpointUnlockInput = z.infer<typeof checkpointUnlockSchema>;
 
@@ -407,6 +418,369 @@ export const recurringUpdateSchema = z.object({
   dayOfWeek: z.coerce.number().int().min(0).max(6).optional().nullable(),
   active: z.boolean().optional(),
 });
+
+/** Input for username/password registration and login. */
+export const passwordInputSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3, "Username minimal 3 karakter.")
+    .max(64, "Maksimal 64 karakter."),
+  password: z
+    .string()
+    .trim()
+    .min(6, "Kata sandi minimal 6 karakter.")
+    .max(128, "Maksimal 128 karakter."),
+});
+
+export type PasswordInput = z.infer<typeof passwordInputSchema>;
+
+// ---------------------------------------------------------------------------
+// Rules & Alerts
+// ---------------------------------------------------------------------------
+
+export const ruleOpSchema = z.enum(["eq", "ne", "gt", "gte", "lt", "lte"], {
+  message: "Operator aturan tidak valid.",
+});
+
+export const ruleConditionSchema: z.ZodType<unknown> = z.lazy(() =>
+  z.union([
+    z.object({
+      all: z.array(ruleConditionSchema).min(1, "Minimal satu kondisi."),
+    }),
+    z.object({
+      any: z.array(ruleConditionSchema).min(1, "Minimal satu kondisi."),
+    }),
+    z.object({
+      not: ruleConditionSchema,
+    }),
+    z.object({
+      metric: z.string().trim().min(1, "Metrik wajib diisi."),
+      op: ruleOpSchema,
+      value: z.union([
+        z.number(),
+        z.object({ metric: z.string() }),
+        z.object({ percentOf: z.string(), percent: z.number().optional() }),
+        z.object({ multipleOf: z.string(), times: z.number().optional() }),
+      ]),
+    }),
+  ]),
+);
+
+export const ruleTriggerSchema = z.object({
+  type: z.string().trim().min(1, "Tipe trigger wajib diisi."),
+  filters: z.record(z.string(), z.unknown()).optional(),
+  cron: z.string().optional(),
+});
+
+export const ruleSettingsSchema = z.object({
+  severity: z.enum(["INFO", "WARNING", "ALERT"]).default("INFO"),
+  cooldownMinutes: z.number().int().min(0).default(0),
+  edgeTriggered: z.boolean().default(true),
+});
+
+export const ruleInputSchema = z.object({
+  name: z.string().trim().min(1, "Nama aturan wajib diisi.").max(120, "Maksimal 120 karakter."),
+  description: nullableText(500),
+  trigger: ruleTriggerSchema,
+  condition: ruleConditionSchema,
+  actions: z.array(z.unknown()).default([]),
+  settings: ruleSettingsSchema.default({
+    severity: "INFO",
+    cooldownMinutes: 0,
+    edgeTriggered: true,
+  }),
+  active: z.boolean().default(true),
+});
+
+export const ruleUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  description: nullablePatchText(500),
+  trigger: ruleTriggerSchema.optional(),
+  condition: ruleConditionSchema.optional(),
+  actions: z.array(z.unknown()).optional(),
+  settings: ruleSettingsSchema.partial().optional(),
+  active: z.boolean().optional(),
+});
+
+export type RuleInput = z.infer<typeof ruleInputSchema>;
+export type RuleUpdateInput = z.infer<typeof ruleUpdateSchema>;
+
+export const aiProviderTypeSchema = z.enum(["GOOGLE", "DEEPSEEK", "OPENAI", "OPENAI_COMPATIBLE"], {
+  message: "Penyedia AI tidak valid.",
+});
+
+export type AiProviderType = z.infer<typeof aiProviderTypeSchema>;
+
+export const DEEPSEEK_MODELS = [
+  { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash" },
+  { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro" },
+  { id: "deepseek-chat", label: "DeepSeek Chat (Alias)" },
+  { id: "deepseek-reasoner", label: "DeepSeek Reasoner (Alias)" },
+] as const;
+
+export const GOOGLE_MODELS = [
+  { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash (Stabil & Cepat)" },
+  { id: "gemini-3.5-flash-lite", label: "Gemini 3.5 Flash Lite" },
+  { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash" },
+  { id: "gemini-flash-latest", label: "Gemini Flash Latest" },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+] as const;
+
+export const OPENAI_MODELS = [
+  { id: "gpt-4o-mini", label: "GPT-4o Mini" },
+  { id: "gpt-4o", label: "GPT-4o" },
+  { id: "o3-mini", label: "o3-mini" },
+] as const;
+
+export const OPENAI_COMPATIBLE_MODELS = [] as const;
+
+export const PROVIDER_MODELS = {
+  DEEPSEEK: DEEPSEEK_MODELS,
+  GOOGLE: GOOGLE_MODELS,
+  OPENAI: OPENAI_MODELS,
+  OPENAI_COMPATIBLE: OPENAI_COMPATIBLE_MODELS,
+} as const;
+
+/**
+ * Validates that the requested model is supported or valid for the selected AI provider.
+ * Enforces:
+ * - Common: non-empty, max 80 chars, valid identifier characters.
+ * - GOOGLE: Presets (gemini-3.8-flash, gemini-3.5-flash) or custom models (e.g. gemini-3.8-pro).
+ *           If the model name contains a Gemini version, minimum version must be 3.5.
+ * - DEEPSEEK: Presets (deepseek-v4-pro, deepseek-v4-flash) or custom models (e.g. deepseek-reasoner).
+ *             Rejects deprecated legacy models (deepseek-chat, deepseek-v3, deepseek-v2).
+ * - OPENAI: Presets (gpt-4o-mini, gpt-4o, o3-mini) or custom models (fine-tuned, proxy, o1, etc.).
+ */
+export function validateProviderModel(provider: AiProviderType, model: string): string | null {
+  const trimmed = model.trim();
+  if (trimmed === "") {
+    return "Nama model wajib diisi.";
+  }
+
+  if (trimmed.length > 80) {
+    return "Nama model maksimal 80 karakter.";
+  }
+
+  if (!/^[a-zA-Z0-9_./:@#-]+$/.test(trimmed)) {
+    return "Format nama model tidak valid. Gunakan huruf, angka, tanda hubung (-), titik (.), garis miring (/), titik dua (:), atau karakter (@/#).";
+  }
+
+  if (provider === "GOOGLE") {
+    if (trimmed === "gemini-flash-latest" || trimmed === "gemini-flash-lite-latest") {
+      return null;
+    }
+    const match = trimmed.match(/gemini-(\d+(?:\.\d+)?)/i);
+    if (match?.[1]) {
+      const version = Number.parseFloat(match[1]);
+      if (!Number.isNaN(version) && version < 2.5) {
+        return "Versi model Gemini minimal 2.5 (contoh: gemini-flash-latest, gemini-3.8-flash, gemini-2.5-flash). Versi di bawah 2.5 tidak lagi didukung.";
+      }
+    }
+    return null;
+  }
+
+  if (provider === "DEEPSEEK") {
+    const lower = trimmed.toLowerCase();
+    if (lower === "deepseek-v3" || lower === "deepseek-v2") {
+      return "Model DeepSeek versi lama ('deepseek-v3', 'deepseek-v2') tidak lagi didukung. Gunakan DeepSeek V4 (deepseek-v4-flash, deepseek-v4-pro) atau deepseek-chat/deepseek-reasoner.";
+    }
+    return null;
+  }
+
+  if (provider === "OPENAI" || provider === "OPENAI_COMPATIBLE") {
+    // Allows presets as well as custom / fine-tuned / proxy models
+    return null;
+  }
+
+  return null;
+}
+
+export const aiProviderConfigCreateSchema = z
+  .object({
+    provider: aiProviderTypeSchema,
+    name: z.string().trim().min(1, "Nama label wajib diisi.").max(60, "Nama maksimal 60 karakter."),
+    apiKey: z.string().trim().max(256, "API Key terlalu panjang.").optional().default(""),
+    copyApiKeyFromId: z.string().trim().optional().nullable(),
+    baseUrl: z
+      .string()
+      .trim()
+      .url("Base URL harus berupa URL valid.")
+      .optional()
+      .nullable()
+      .or(z.literal("")),
+    model: z.string().trim().max(80, "Model maksimal 80 karakter.").optional().default(""),
+    customModels: z
+      .array(z.string().trim().min(1, "Nama model kustom tidak boleh kosong.").max(80))
+      .or(
+        z.string().transform((val) =>
+          val
+            .split(/[\n,]+/)
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0),
+        ),
+      )
+      .optional()
+      .default([]),
+    isDefault: z.boolean().default(false),
+  })
+  .superRefine((data, ctx) => {
+    const hasKey = data.apiKey && data.apiKey.trim() !== "";
+    const hasCopy = data.copyApiKeyFromId && data.copyApiKeyFromId.trim() !== "";
+    if (!hasKey && !hasCopy) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["apiKey"],
+        message: "API Key wajib diisi atau pilih gunakan kunci tersimpan.",
+      });
+    }
+
+    if (data.provider === "OPENAI_COMPATIBLE") {
+      if (!data.baseUrl || data.baseUrl.trim() === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["baseUrl"],
+          message: "Base URL wajib diisi untuk penyedia OpenAI Compatible.",
+        });
+      }
+
+      const hasModel =
+        (data.model && data.model.trim() !== "") ||
+        (Array.isArray(data.customModels) && data.customModels.length > 0);
+      if (!hasModel) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["customModels"],
+          message: "Masukkan minimal satu model untuk penyedia OpenAI Compatible.",
+        });
+      }
+    }
+
+    // Default the primary model if empty for preset providers
+    if ((!data.model || data.model.trim() === "") && data.provider !== "OPENAI_COMPATIBLE") {
+      const presets = PROVIDER_MODELS[data.provider];
+      if (presets && presets.length > 0) {
+        data.model = presets[0].id;
+      }
+    } else if (
+      (!data.model || data.model.trim() === "") &&
+      Array.isArray(data.customModels) &&
+      data.customModels.length > 0 &&
+      typeof data.customModels[0] === "string"
+    ) {
+      data.model = data.customModels[0];
+    }
+
+    if (data.model && data.model.trim() !== "") {
+      const errorMsg = validateProviderModel(data.provider, data.model);
+      if (errorMsg) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["model"],
+          message: errorMsg,
+        });
+      }
+    }
+
+    if (Array.isArray(data.customModels)) {
+      for (let i = 0; i < data.customModels.length; i++) {
+        const cm = data.customModels[i];
+        if (typeof cm === "string") {
+          const cmError = validateProviderModel(data.provider, cm);
+          if (cmError) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["customModels", i],
+              message: `Model kustom '${cm}': ${cmError}`,
+            });
+          }
+        }
+      }
+    }
+  });
+
+export const aiProviderConfigUpdateSchema = z
+  .object({
+    provider: aiProviderTypeSchema.optional(),
+    name: z.string().trim().min(1).max(60).optional(),
+    apiKey: z.string().trim().min(1).max(256).optional(),
+    baseUrl: z.string().trim().url().optional().nullable().or(z.literal("")),
+    model: z.string().trim().max(80).optional(),
+    customModels: z
+      .array(z.string().trim().min(1, "Nama model kustom tidak boleh kosong.").max(80))
+      .or(
+        z.string().transform((val) =>
+          val
+            .split(/[\n,]+/)
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0),
+        ),
+      )
+      .optional(),
+    isDefault: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.provider && data.model && data.model.trim() !== "") {
+      const errorMsg = validateProviderModel(data.provider, data.model);
+      if (errorMsg) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["model"],
+          message: errorMsg,
+        });
+      }
+    }
+
+    if (data.provider && Array.isArray(data.customModels)) {
+      for (let i = 0; i < data.customModels.length; i++) {
+        const cm = data.customModels[i];
+        if (typeof cm === "string") {
+          const cmError = validateProviderModel(data.provider, cm);
+          if (cmError) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["customModels", i],
+              message: `Model kustom '${cm}': ${cmError}`,
+            });
+          }
+        }
+      }
+    }
+  });
+
+export type AiProviderConfigInput = z.infer<typeof aiProviderConfigCreateSchema>;
+export type AiProviderConfigUpdateInput = z.infer<typeof aiProviderConfigUpdateSchema>;
+
+export const chatThreadCreateSchema = z.object({
+  title: z.string().trim().max(100, "Judul percakapan maksimal 100 karakter.").optional(),
+  modelId: z.string().trim().max(150).optional().nullable(),
+  isFavorite: z.boolean().optional(),
+});
+
+export type ChatThreadCreateInput = z.input<typeof chatThreadCreateSchema>;
+
+export const chatThreadUpdateSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, "Judul percakapan tidak boleh kosong.")
+    .max(100, "Judul percakapan maksimal 100 karakter.")
+    .optional(),
+  isFavorite: z.boolean().optional(),
+  modelId: z.string().trim().max(150).optional().nullable(),
+});
+
+export type ChatThreadUpdateInput = z.infer<typeof chatThreadUpdateSchema>;
+
+export const chatMessageCreateSchema = z.object({
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.string(),
+  parts: z.unknown().optional(),
+  toolCalls: z.unknown().optional(),
+  toolResults: z.unknown().optional(),
+});
+
+export type ChatMessageCreateInput = z.infer<typeof chatMessageCreateSchema>;
 
 export function firstIssue(error: z.ZodError): string {
   const issue = error.issues[0];

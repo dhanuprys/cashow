@@ -2,6 +2,7 @@ import { formatMoney } from "@cashow/domain";
 import { listAccounts, listCategories, listRecurring, listRecurringDrafts } from "@cashow/services";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { ContentSkeleton } from "@/components/ledger/page-skeleton";
 import {
   DeleteRecurringButton,
   RecurringDraftRow,
@@ -14,11 +15,36 @@ import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { unwrap } from "@/lib/ledger";
 
+export const metadata = {
+  title: "Transaksi berulang",
+};
+
 export default function RecurringPage() {
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-4xl bg-muted" />}>
-      <Recurring />
-    </Suspense>
+    <div className="space-y-6">
+      <section className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Transaksi berulang
+          </p>
+          <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+            Template berulang
+          </h1>
+        </div>
+        <RunRecurringButton />
+      </section>
+
+      <Suspense
+        fallback={
+          <div className="space-y-4">
+            <div className="-mt-3 h-4 w-40 animate-pulse rounded-md bg-muted" />
+            <ContentSkeleton />
+          </div>
+        }
+      >
+        <Recurring />
+      </Suspense>
+    </div>
   );
 }
 
@@ -41,22 +67,11 @@ async function Recurring() {
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Transaksi berulang
-          </p>
-          <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            Template berulang
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {templates.filter((t) => t.active).length} template aktif.
-          </p>
-        </div>
-        <RunRecurringButton />
-      </section>
+      <p className="-mt-3 text-sm text-muted-foreground">
+        {templates.filter((t) => t.active).length} template aktif.
+      </p>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           {drafts.length > 0 ? (
             <Card>

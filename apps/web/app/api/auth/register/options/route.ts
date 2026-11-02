@@ -3,14 +3,7 @@ import { generateRegistrationOptions } from "@simplewebauthn/server";
 import { z } from "zod";
 import { createChallenge, type RegistrationPayload } from "@/lib/auth/challenges";
 import { getAuthConfig } from "@/lib/auth/config";
-import {
-  assertSameOrigin,
-  badRequest,
-  clientAddress,
-  forbidden,
-  json,
-  unauthorized,
-} from "@/lib/auth/http";
+import { assertSameOrigin, badRequest, clientAddress, forbidden, json } from "@/lib/auth/http";
 import { parseTransports } from "@/lib/auth/passkeys";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
 import { getSessionUser } from "@/lib/auth/session";
@@ -20,6 +13,8 @@ import { getDb } from "@/lib/db";
 const bodySchema = z.object({
   name: z.string().trim().max(80).optional(),
   email: z.string().trim().max(200).optional(),
+  avatar: z.string().trim().max(64).optional(),
+  bio: z.string().trim().max(250).optional(),
   setupToken: z.string().max(256).optional(),
 });
 
@@ -38,7 +33,7 @@ export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return badRequest("Data pendaftaran tidak valid.");
 
-  const config = getAuthConfig();
+  const config = getAuthConfig(request);
   const setupRequired = !(await hasAnyUser());
   const sessionUser = setupRequired ? null : await getSessionUser();
   const db = await getDb();
@@ -48,7 +43,9 @@ export async function POST(request: Request) {
   let userName: string;
   let userDisplayName: string;
 
-  if (setupRequired) {
+  const isSelfRegistration = sessionUser === null;
+
+  if (isSelfRegistration) {
     if (!setupTokenMatches(parsed.data.setupToken)) {
       return forbidden("Token setup tidak valid.");
     }
@@ -62,15 +59,19 @@ export async function POST(request: Request) {
     }
 
     subjectId = uuidv7();
-    payload = { kind: "setup", name, email: email === "" ? null : email };
+    payload = {
+      kind: "setup",
+      name,
+      email: email === "" ? null : email,
+      avatar: parsed.data.avatar || null,
+      bio: parsed.data.bio || null,
+    };
     userName = email === "" ? name : email;
     userDisplayName = name;
   } else {
-    if (sessionUser === null) return unauthorized();
-
     subjectId = sessionUser.id;
     payload = { kind: "add" };
-    userName = sessionUser.email ?? sessionUser.name ?? "owner";
+    userName = sessionUser.email ?? sessionUser.name ?? "user";
     userDisplayName = sessionUser.name ?? userName;
   }
 

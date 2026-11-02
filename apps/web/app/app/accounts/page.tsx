@@ -1,6 +1,7 @@
-import { formatMoney } from "@cashow/domain";
+import { formatMoney, parseDbTimestamp, toLocalDateTimeInput } from "@cashow/domain";
 import { listAccounts, listSnapshots } from "@cashow/services";
-import { Archive, ArchiveRestore, Scale, Wallet } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeftRight, ChevronDown, Scale, Wallet } from "lucide-react";
+import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AccountForm } from "@/components/ledger/account-form";
@@ -9,6 +10,7 @@ import {
   VerifyCheckpointButton,
 } from "@/components/ledger/checkpoint-actions";
 import { ConfirmSubmitButton } from "@/components/ledger/confirm-submit-button";
+import { ContentSkeleton } from "@/components/ledger/page-skeleton";
 import { SnapshotForm } from "@/components/ledger/snapshot-form";
 import { SubmitButton } from "@/components/ledger/submit-button";
 import { Badge } from "@/components/ui/badge";
@@ -21,11 +23,33 @@ import { ACCOUNT_TYPE_LABEL, displayDateTime, GAP_KIND_LABEL, nowLocalInput } fr
 import { unwrap } from "@/lib/ledger";
 import { cn } from "@/lib/utils";
 
+export const metadata = {
+  title: "Akun",
+};
+
 export default function AccountsPage() {
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-4xl bg-muted" />}>
-      <Accounts />
-    </Suspense>
+    <div className="space-y-6">
+      <section>
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+          Dompet &amp; rekening
+        </p>
+        <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+          Akun
+        </h1>
+      </section>
+
+      <Suspense
+        fallback={
+          <div className="space-y-4">
+            <div className="-mt-3 h-4 w-52 animate-pulse rounded-md bg-muted" />
+            <ContentSkeleton />
+          </div>
+        }
+      >
+        <Accounts />
+      </Suspense>
+    </div>
   );
 }
 
@@ -50,19 +74,11 @@ async function Accounts() {
 
   return (
     <div className="space-y-6">
-      <section>
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-          Dompet & rekening
-        </p>
-        <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-          Akun
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {live.length} akun aktif · total saldo perkiraan {formatMoney(total)}
-        </p>
-      </section>
+      <p className="-mt-3 text-sm text-muted-foreground">
+        {live.length} akun aktif · total saldo perkiraan {formatMoney(total)}
+      </p>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           {accounts.length === 0 ? (
             <Card>
@@ -85,28 +101,35 @@ async function Accounts() {
                 <Card key={account.id}>
                   <CardContent className="space-y-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <span className="grid size-9 place-items-center rounded-xl bg-muted">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted">
                           <Wallet className="size-4" aria-hidden="true" />
                         </span>
-                        <div>
-                          <p className="flex items-center gap-2 font-medium">
-                            {account.name}
+                        <div className="min-w-0 flex-1">
+                          <p className="flex flex-wrap items-center gap-2 font-medium">
+                            <Link
+                              href={`/app/transactions?accountId=${account.id}`}
+                              className="hover:text-primary hover:underline break-words line-clamp-2"
+                            >
+                              {account.name}
+                            </Link>
                             {account.archivedAt === null ? null : (
-                              <Badge variant="secondary">Arsip</Badge>
+                              <Badge variant="secondary" className="shrink-0">
+                                Arsip
+                              </Badge>
                             )}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground break-words">
                             {ACCOUNT_TYPE_LABEL[account.type] ?? account.type} · {account.currency}{" "}
                             · saldo awal {formatMoney(account.openingBalance)}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="shrink-0 text-right">
                         <p
                           className={cn(
                             "text-lg font-semibold tabular-nums",
-                            account.balance < 0n ? "text-rose-600 dark:text-rose-400" : "",
+                            account.balance < 0n ? "text-rose-700 dark:text-rose-400" : "",
                           )}
                         >
                           {formatMoney(account.balance)}
@@ -125,7 +148,9 @@ async function Accounts() {
                     <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                       {account.snapshotAgeDays === null ? null : (
                         <span>
-                          Snapshot terakhir {account.snapshotAgeDays} hari lalu
+                          {account.snapshotAgeDays === 0
+                            ? "Snapshot terakhir hari ini"
+                            : `Snapshot terakhir ${account.snapshotAgeDays} hari lalu`}
                           {account.snapshotAgeDays > 30 ? " — perlu diperbarui" : ""}
                         </span>
                       )}
@@ -136,12 +161,13 @@ async function Accounts() {
                       )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <details className="w-full">
-                        <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                          Ubah akun
+                    <div className="flex flex-wrap items-start justify-between gap-2 border-t border-border/60 pt-2">
+                      <details className="group min-w-0 flex-1">
+                        <summary className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+                          <span>Ubah akun</span>
+                          <ChevronDown className="size-3 transition-transform duration-200 group-open:rotate-180" />
                         </summary>
-                        <div className="mt-3 rounded-2xl border border-border p-4">
+                        <div className="mt-3 rounded-2xl border border-border bg-background p-4">
                           <AccountForm
                             account={{
                               id: account.id,
@@ -154,38 +180,50 @@ async function Accounts() {
                         </div>
                       </details>
 
-                      <form action={archiveAccountAction}>
-                        <input type="hidden" name="accountId" value={account.id} />
-                        <input
-                          type="hidden"
-                          name="archived"
-                          value={account.archivedAt === null ? "true" : "false"}
-                        />
-                        <SubmitButton variant="outline" size="sm" pendingLabel="Menyimpan…">
-                          {account.archivedAt === null ? (
-                            <>
-                              <Archive aria-hidden="true" />
-                              Arsipkan
-                            </>
-                          ) : (
-                            <>
-                              <ArchiveRestore aria-hidden="true" />
-                              Aktifkan
-                            </>
-                          )}
-                        </SubmitButton>
-                      </form>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Link
+                          href={`/app/transactions?accountId=${account.id}`}
+                          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                          <ArrowLeftRight className="size-3" aria-hidden="true" />
+                          Mutasi
+                        </Link>
+                        <form action={archiveAccountAction} className="shrink-0">
+                          <input type="hidden" name="accountId" value={account.id} />
+                          <input
+                            type="hidden"
+                            name="archived"
+                            value={account.archivedAt === null ? "true" : "false"}
+                          />
+                          <SubmitButton variant="ghost" size="sm" pendingLabel="Menyimpan…">
+                            {account.archivedAt === null ? (
+                              <>
+                                <Archive aria-hidden="true" />
+                                Arsipkan
+                              </>
+                            ) : (
+                              <>
+                                <ArchiveRestore aria-hidden="true" />
+                                Aktifkan
+                              </>
+                            )}
+                          </SubmitButton>
+                        </form>
+                      </div>
                     </div>
 
-                    <details className="rounded-2xl border border-border p-4">
-                      <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-                        <Scale className="size-4" aria-hidden="true" />
-                        Rekonsiliasi &amp; snapshot
-                        {snapshots.length === 0 ? null : (
-                          <span className="text-xs font-normal text-muted-foreground">
-                            {snapshots.length} snapshot
-                          </span>
-                        )}
+                    <details className="group rounded-2xl border border-border bg-muted/20 p-4 transition-colors open:bg-card">
+                      <summary className="flex cursor-pointer items-center justify-between text-sm font-medium">
+                        <span className="flex items-center gap-2">
+                          <Scale className="size-4" aria-hidden="true" />
+                          <span>Rekonsiliasi &amp; snapshot</span>
+                          {snapshots.length > 0 && (
+                            <span className="text-xs font-normal text-muted-foreground">
+                              ({snapshots.length})
+                            </span>
+                          )}
+                        </span>
+                        <ChevronDown className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
                       </summary>
 
                       <div className="mt-4 space-y-5">
@@ -239,21 +277,23 @@ async function Accounts() {
                                     </p>
                                   )}
 
-                                  <div className="mt-3 flex flex-wrap items-start gap-2">
-                                    {checkpoint === null ? null : (
-                                      <Badge variant={checkpoint.active ? "default" : "outline"}>
-                                        {checkpoint.active
-                                          ? "Checkpoint aktif"
-                                          : "Checkpoint dibuka"}
-                                      </Badge>
-                                    )}
+                                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      {checkpoint === null ? null : (
+                                        <Badge variant={checkpoint.active ? "default" : "outline"}>
+                                          {checkpoint.active
+                                            ? "Checkpoint aktif"
+                                            : "Checkpoint dibuka"}
+                                        </Badge>
+                                      )}
 
-                                    {balanced && checkpoint?.active !== true ? (
-                                      <VerifyCheckpointButton snapshotId={snapshot.id} />
-                                    ) : null}
+                                      {balanced && checkpoint?.active !== true ? (
+                                        <VerifyCheckpointButton snapshotId={snapshot.id} />
+                                      ) : null}
+                                    </div>
 
                                     {checkpoint === null ? (
-                                      <form action={deleteSnapshotAction}>
+                                      <form action={deleteSnapshotAction} className="shrink-0">
                                         <input
                                           type="hidden"
                                           name="snapshotId"
@@ -268,6 +308,30 @@ async function Accounts() {
                                       </form>
                                     ) : null}
                                   </div>
+
+                                  {checkpoint?.active !== true ? (
+                                    <details className="group mt-2">
+                                      <summary className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+                                        <span>Ubah snapshot</span>
+                                        <ChevronDown className="size-3 transition-transform duration-200 group-open:rotate-180" />
+                                      </summary>
+                                      <div className="mt-3 rounded-2xl border border-border bg-background p-4">
+                                        <SnapshotForm
+                                          accountId={account.id}
+                                          defaultRecordedAtLocal={nowInput}
+                                          snapshot={{
+                                            id: snapshot.id,
+                                            amount: snapshot.amount.toString(),
+                                            recordedAtLocal: toLocalDateTimeInput(
+                                              parseDbTimestamp(snapshot.recordedAt),
+                                              user.timezone,
+                                            ),
+                                            note: snapshot.note,
+                                          }}
+                                        />
+                                      </div>
+                                    </details>
+                                  ) : null}
 
                                   {checkpoint?.active === true ? (
                                     <details className="mt-3">

@@ -81,14 +81,26 @@ enum RecurringFrequency {
   YEARLY  = "YEARLY"
 }
 
+enum AiProviderType {
+  @@type("pg/text@1")
+  GOOGLE            = "GOOGLE"
+  DEEPSEEK          = "DEEPSEEK"
+  OPENAI            = "OPENAI"
+  OPENAI_COMPATIBLE = "OPENAI_COMPATIBLE"
+}
+
 // ---------------------------------------------------------------------------
 // Core entities
 // ---------------------------------------------------------------------------
 
 model User {
   id                  String  @id @onCreate(uuid(7))
+  username            String? @unique
   email               String? @unique
   name                String?
+  avatar              String? // Avatar preset id or SVG identifier
+  bio                 String? // Optional user bio / personal note
+  password            String? // bcrypt hash; null when login is passkey-only
   // Timezone used to derive `occurredOn` and group reports. WIB is the
   // default; the plan requires WIB/WITA/WIT correctness in tests.
   timezone            String  @default("Asia/Jakarta")
@@ -120,6 +132,7 @@ model User {
   chatThreads         ChatThread[]
   chatMessages        ChatMessage[]
   aiFacts             AiFact[]
+  aiProviderConfigs   AiProviderConfig[]
 }
 
 // ---------------------------------------------------------------------------
@@ -696,29 +709,33 @@ model RuleFiring {
 // ---------------------------------------------------------------------------
 
 model ChatThread {
-  id        String  @id @onCreate(uuid(7))
-  userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String?
-  createdAt TimestamptzString @onCreate(now())
-  updatedAt TimestamptzString @onCreate(now()) @onUpdate(now())
+  id         String            @id @onCreate(uuid(7))
+  userId     String
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String?
+  isFavorite Boolean           @default(false)
+  modelId    String?
+  createdAt  TimestamptzString @onCreate(now())
+  updatedAt  TimestamptzString @onCreate(now()) @onUpdate(now())
 
   messages ChatMessage[]
 
+  @@index([userId, isFavorite, updatedAt])
   @@index([userId, updatedAt])
 }
 
 model ChatMessage {
-  id        String  @id @onCreate(uuid(7))
-  userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  threadId  String
-  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  role      String
-  content   String
-  toolCalls Json?
+  id          String            @id @onCreate(uuid(7))
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  threadId    String
+  thread      ChatThread        @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role        String
+  content     String
+  parts       Json?
+  toolCalls   Json?
   toolResults Json?
-  createdAt TimestamptzString @onCreate(now())
+  createdAt   TimestamptzString @onCreate(now())
 
   @@index([threadId, createdAt])
 }
@@ -729,6 +746,23 @@ model AiFact {
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   fact      String
   createdAt TimestamptzString @onCreate(now())
+
+  @@index([userId])
+}
+
+model AiProviderConfig {
+  id           String            @id @onCreate(uuid(7))
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     AiProviderType
+  name         String
+  apiKey       String
+  baseUrl      String?
+  model        String            @default("")
+  customModels Json?
+  isDefault    Boolean           @default(false)
+  createdAt    TimestamptzString @onCreate(now())
+  updatedAt    TimestamptzString @onCreate(now()) @onUpdate(now())
 
   @@index([userId])
 }

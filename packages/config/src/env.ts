@@ -12,11 +12,23 @@ export const envSchema = z.object({
   /** PostgreSQL connection string (user-scoped, read from Docker secrets). */
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
-  /** Origin of the web app, used for cookies, passkeys and push. */
-  WEB_ORIGIN: z.string().url().default("http://localhost:3000"),
+  /**
+   * Origin of the web app, used for cookies, passkeys and push.
+   * Can be a single URL or comma-separated URLs for multi-domain support
+   * (e.g. "http://localhost:3000,https://dev.cashow.my.id").
+   */
+  WEB_ORIGIN: z.string().min(1).default("http://localhost:3000"),
 
   /** Auth. Passkey sessions are random and hashed at rest; kept for future signed tokens. */
   AUTH_SECRET: z.string().min(1).optional(),
+
+  /**
+   * HMAC secret that signs AI tool-approval requests, so a modified client
+   * cannot fabricate an approval for a money-moving tool. Falls back to
+   * AUTH_SECRET when unset; unsigned approvals are accepted only when both
+   * are absent (local installs).
+   */
+  TOOL_APPROVAL_SECRET: z.string().min(16).optional(),
 
   /**
    * Optional one-time token for `/setup`. When set, the first-run owner must
@@ -44,8 +56,15 @@ export const envSchema = z.object({
   DEEPSEEK_MODEL: z.string().default("deepseek-flash"),
   DEEPSEEK_PRO_MODEL: z.string().default("deepseek-v4-pro"),
 
-  /** VAPID keys for Web Push. Private key stays server-side. */
-  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+  /** Google Generative AI (Gemini) configuration */
+  GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
+  GOOGLE_MODEL: z.string().default("gemini-3.5-flash"),
+
+  /**
+   * Opt-in password authentication. When "true", users can register/login with
+   * username/password in addition to passkeys. Default "true" enables Option A.
+   */
+  WEB_PASSWORD_AUTH: z.string().default("true"),
   VAPID_PRIVATE_KEY: z.string().min(1).optional(),
   VAPID_SUBJECT: z.string().optional(),
 
@@ -111,7 +130,10 @@ export function loadEnv(env: NodeJS.ProcessEnv = process.env): Env {
   return result.data;
 }
 
-/** True when AI features should be disabled (no DeepSeek key configured). */
+/** True when AI features should be enabled (Google Gemini or DeepSeek key configured). */
 export function isAiEnabled(env: Env): boolean {
-  return env.DEEPSEEK_API_KEY !== undefined && env.DEEPSEEK_API_KEY !== "";
+  const hasGoogle =
+    env.GOOGLE_GENERATIVE_AI_API_KEY !== undefined && env.GOOGLE_GENERATIVE_AI_API_KEY !== "";
+  const hasDeepseek = env.DEEPSEEK_API_KEY !== undefined && env.DEEPSEEK_API_KEY !== "";
+  return hasGoogle || hasDeepseek;
 }

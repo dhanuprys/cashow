@@ -22,7 +22,6 @@ import {
   sessionExpiry,
   setSessionCookie,
 } from "@/lib/auth/session";
-import { hasAnyUser } from "@/lib/auth/setup";
 import { getDb } from "@/lib/db";
 
 const bodySchema = z.object({
@@ -60,9 +59,7 @@ export async function POST(request: Request) {
   }
 
   if (payload.kind === "setup") {
-    if (await hasAnyUser()) {
-      return conflict("Setup pemilik sudah selesai. Silakan masuk dengan passkey.");
-    }
+    // Multi-tenant SaaS signup is allowed for new accounts
   } else {
     const sessionUser = await getSessionUser();
     if (sessionUser === null || sessionUser.id !== challenge.subjectId) {
@@ -70,14 +67,14 @@ export async function POST(request: Request) {
     }
   }
 
-  const config = getAuthConfig();
+  const config = getAuthConfig(request);
 
   let verification: Awaited<ReturnType<typeof verifyRegistrationResponse>>;
   try {
     verification = await verifyRegistrationResponse({
       response: parsed.data.response as RegistrationResponseJSON,
       expectedChallenge: challenge.challenge,
-      expectedOrigin: config.origin,
+      expectedOrigin: config.origins,
       expectedRPID: config.rpID,
     });
   } catch (error) {
@@ -110,17 +107,15 @@ export async function POST(request: Request) {
       if (consumed === null) throw new ChallengeAlreadyUsedError();
 
       if (payload.kind === "setup") {
-        const users = await tx.orm.public.User.select("id").limit(1).all();
-        if (users.length > 0) throw new SetupClosedError();
-
         await tx.orm.public.User.create({
           id: userId,
           name: payload.name,
           email: payload.email,
+          avatar: payload.avatar ?? null,
+          bio: payload.bio ?? null,
         });
 
-        // First run seeds the account and categories the ledger UI needs, in
-        // the same transaction that creates the owner.
+        // Seed the default account and categories for the new user.
         await ensureDefaultLedger(tx, userId);
       }
 

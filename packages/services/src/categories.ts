@@ -30,33 +30,62 @@ interface CategoryRow {
   transactionCount: bigint;
 }
 
-export async function listCategories(ctx: UseCaseContext): Promise<Result<CategorySummary[]>> {
+/**
+ * Categories for the owner.
+ *
+ * The transaction count is a correlated subquery per row, so it is opt-in:
+ * pickers that only need names (the dashboard, quick add) skip it entirely.
+ */
+export async function listCategories(
+  ctx: UseCaseContext,
+  options: { withTransactionCount?: boolean } = {},
+): Promise<Result<CategorySummary[]>> {
+  const withCount = options.withTransactionCount ?? false;
+  const columns = {
+    id: "pg/text@1",
+    name: "pg/text@1",
+    kind: "pg/text@1",
+    parentId: "pg/text@1",
+    icon: "pg/text@1",
+    color: "pg/text@1",
+    archivedAt: "pg/text@1",
+    transactionCount: "pg/int8@1",
+  } as const;
+
   try {
-    const plan = ctx.db.raw.sql`
-      SELECT c."id" AS id,
-             c."name" AS name,
-             c."kind" AS kind,
-             COALESCE(c."parentId", '') AS "parentId",
-             COALESCE(c."icon", '') AS icon,
-             COALESCE(c."color", '') AS color,
-             COALESCE(c."archivedAt"::text, '') AS "archivedAt",
-             (SELECT count(*) FROM "public"."Transaction" t
-               WHERE t."categoryId" = c."id" AND t."deletedAt" IS NULL)::bigint AS "transactionCount"
-      FROM "public"."Category" c
-      WHERE c."userId" = ${ctx.userId}
-      ORDER BY c."kind", (c."archivedAt" IS NOT NULL), c."name"
-    `
-      .returnsRow({
-        id: "pg/text@1",
-        name: "pg/text@1",
-        kind: "pg/text@1",
-        parentId: "pg/text@1",
-        icon: "pg/text@1",
-        color: "pg/text@1",
-        archivedAt: "pg/text@1",
-        transactionCount: "pg/int8@1",
-      })
-      .build();
+    const plan = withCount
+      ? ctx.db.raw.sql`
+          SELECT c."id" AS id,
+                 c."name" AS name,
+                 c."kind" AS kind,
+                 COALESCE(c."parentId", '') AS "parentId",
+                 COALESCE(c."icon", '') AS icon,
+                 COALESCE(c."color", '') AS color,
+                 COALESCE(c."archivedAt"::text, '') AS "archivedAt",
+                 (SELECT count(*) FROM "public"."Transaction" t
+                   WHERE t."categoryId" = c."id" AND t."deletedAt" IS NULL)::bigint
+                   AS "transactionCount"
+          FROM "public"."Category" c
+          WHERE c."userId" = ${ctx.userId}
+          ORDER BY c."kind", (c."archivedAt" IS NOT NULL), c."name"
+        `
+          .returnsRow(columns)
+          .build()
+      : ctx.db.raw.sql`
+          SELECT c."id" AS id,
+                 c."name" AS name,
+                 c."kind" AS kind,
+                 COALESCE(c."parentId", '') AS "parentId",
+                 COALESCE(c."icon", '') AS icon,
+                 COALESCE(c."color", '') AS color,
+                 COALESCE(c."archivedAt"::text, '') AS "archivedAt",
+                 0::bigint AS "transactionCount"
+          FROM "public"."Category" c
+          WHERE c."userId" = ${ctx.userId}
+          ORDER BY c."kind", (c."archivedAt" IS NOT NULL), c."name"
+        `
+          .returnsRow(columns)
+          .build();
 
     const rows = await ctx.db.query(plan);
     return ok(rows.map(mapCategory));
@@ -309,6 +338,63 @@ export async function ensureDefaultCategories(tx: DbTransaction, userId: string)
       after: created,
       actorId: null,
     });
+  }
+}
+
+/**
+ * Seed a rich set of Indonesian standard categories for an owner, skipping any
+ * that already exist. Useful if the owner starts fresh or wants standard presets.
+ */
+export async function seedStandardCategories(
+  ctx: UseCaseContext,
+): Promise<Result<{ created: number }>> {
+  const defaults: ReadonlyArray<{ name: string; kind: CategoryKind }> = [
+    { name: "Makanan & Minuman", kind: "EXPENSE" },
+    { name: "Transportasi", kind: "EXPENSE" },
+    { name: "Belanja Harian", kind: "EXPENSE" },
+    { name: "Tagihan & Utilitas", kind: "EXPENSE" },
+    { name: "Kesehatan & Medis", kind: "EXPENSE" },
+    { name: "Hiburan & Rekreasi", kind: "EXPENSE" },
+    { name: "Pendidikan", kind: "EXPENSE" },
+    { name: "Keluarga & Donasi", kind: "EXPENSE" },
+    { name: "Gaji Pokok", kind: "INCOME" },
+    { name: "Bonus & Tunjangan", kind: "INCOME" },
+    { name: "Hasil Usaha", kind: "INCOME" },
+    { name: "Investasi & Bunga", kind: "INCOME" },
+  ];
+
+  try {
+    let createdCount = 0;
+    await ctx.db.transaction(async (tx) => {
+      const existing = await tx.orm.public.Category.where({ userId: ctx.userId }).all();
+      const existingNames = new Set(
+        existing.map((c) => `${c.kind}:${c.name.toLowerCase().trim()}`),
+      );
+
+      for (const item of defaults) {
+        const key = `${item.kind}:${item.name.toLowerCase().trim()}`;
+        if (!existingNames.has(key)) {
+          const created = await tx.orm.public.Category.create({
+            userId: ctx.userId,
+            name: item.name,
+            kind: item.kind,
+          });
+          await writeAudit(tx, {
+            userId: ctx.userId,
+            entityType: "Category",
+            entityId: created.id,
+            action: "CREATE",
+            after: created,
+            actorId: null,
+          });
+          createdCount++;
+        }
+      }
+    });
+
+    return ok({ created: createdCount });
+  } catch (error) {
+    return err(toLedgerError(error));
   }
 }
 

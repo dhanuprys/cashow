@@ -3,7 +3,13 @@ import { getDb } from "@/lib/db";
 export const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 export type RegistrationPayload =
-  | { kind: "setup"; name: string; email: string | null }
+  | {
+      kind: "setup";
+      name: string;
+      email: string | null;
+      avatar?: string | null;
+      bio?: string | null;
+    }
   | { kind: "add" };
 
 export function challengeExpiry(now: Date = new Date()): string {

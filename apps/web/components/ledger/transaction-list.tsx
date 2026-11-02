@@ -1,6 +1,6 @@
 import { formatMoney } from "@cashow/domain";
 import type { TransactionSummary } from "@cashow/services";
-import { Paperclip } from "lucide-react";
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Paperclip } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { displayLocalDate } from "@/lib/format";
@@ -33,18 +33,41 @@ export function TransactionList({
           <li key={item.id}>
             <Link
               href={`/app/transactions/${item.id}`}
-              className="flex items-center gap-3 py-3 transition-colors hover:bg-muted/40"
+              className="group flex items-center gap-3.5 py-3 transition-colors hover:bg-muted/40 sm:py-3.5"
             >
-              <span
+              <div
                 aria-hidden="true"
                 className={cn(
-                  "mt-0.5 size-2 shrink-0 rounded-full",
-                  income ? "bg-emerald-500" : transfer ? "bg-sky-500" : "bg-rose-500",
+                  "flex size-9 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105",
+                  income
+                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    : transfer
+                      ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
+                      : "bg-rose-500/10 text-rose-700 dark:text-rose-400",
                 )}
-              />
+              >
+                {income ? (
+                  <ArrowDownLeft className="size-4" />
+                ) : transfer ? (
+                  <ArrowLeftRight className="size-4" />
+                ) : (
+                  <ArrowUpRight className="size-4" />
+                )}
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{title}</p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-sm font-medium leading-tight">{title}</p>
+                <p
+                  className="mt-0.5 truncate text-xs text-muted-foreground"
+                  title={`${displayLocalDate(item.occurredOn)}${
+                    transfer
+                      ? ` · ${item.accountName} → ${item.destinationAccountName ?? "—"}`
+                      : item.categoryName === null
+                        ? ""
+                        : ` · ${item.categoryName}`
+                  }${transfer ? "" : item.accountName === "" ? "" : ` · ${item.accountName}`}${
+                    item.planName === null ? "" : ` · ${item.planName}`
+                  }`}
+                >
                   {displayLocalDate(item.occurredOn)}
                   {transfer
                     ? ` · ${item.accountName} → ${item.destinationAccountName ?? "—"}`
@@ -59,13 +82,13 @@ export function TransactionList({
                 <p
                   className={cn(
                     "text-sm font-semibold tabular-nums",
-                    income ? "text-emerald-600 dark:text-emerald-400" : "text-foreground",
+                    income ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
                   )}
                 >
                   {income ? "+" : transfer ? "" : "−"}
                   {formatMoney(item.amount)}
                 </p>
-                <p className="flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+                <p className="mt-0.5 flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
                   {item.attachmentCount > 0 ? (
                     <span className="inline-flex items-center gap-0.5">
                       <Paperclip className="size-3" aria-hidden="true" />

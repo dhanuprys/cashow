@@ -1,5 +1,6 @@
 import type { VariantProps } from "class-variance-authority";
 import Link from "next/link";
+import type { ComponentProps } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -10,13 +11,22 @@ export function LinkButton({
   variant,
   size,
   className,
+  prefetch,
+  ...props
 }: {
   href: string;
   children: React.ReactNode;
   className?: string;
-} & VariantProps<typeof buttonVariants>) {
+  prefetch?: boolean;
+} & VariantProps<typeof buttonVariants> &
+  Omit<ComponentProps<typeof Link>, "href" | "className">) {
   return (
-    <Link href={href} className={cn(buttonVariants({ variant, size }), className)}>
+    <Link
+      href={href}
+      prefetch={prefetch}
+      className={cn(buttonVariants({ variant, size }), className)}
+      {...props}
+    >
       {children}
     </Link>
   );

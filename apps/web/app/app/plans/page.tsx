@@ -5,6 +5,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { LinkButton } from "@/components/ledger/link-button";
+import { ContentSkeleton } from "@/components/ledger/page-skeleton";
 import { PlanForm } from "@/components/ledger/plan-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,11 +16,39 @@ import { displayLocalDate, PLAN_STATUS_LABEL } from "@/lib/format";
 import { unwrap } from "@/lib/ledger";
 import { cn } from "@/lib/utils";
 
+export const metadata = {
+  title: "Rencana",
+};
+
 export default function PlansPage() {
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-4xl bg-muted" />}>
-      <Plans />
-    </Suspense>
+    <div className="space-y-6">
+      <section className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Pemasukan bertahap
+          </p>
+          <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+            Rencana pembayaran
+          </h1>
+        </div>
+        <LinkButton href="/app/transactions/new?type=INCOME">
+          <Plus aria-hidden="true" />
+          Catat pembayaran
+        </LinkButton>
+      </section>
+
+      <Suspense
+        fallback={
+          <div className="space-y-4">
+            <div className="-mt-3 h-4 w-48 animate-pulse rounded-md bg-muted" />
+            <ContentSkeleton />
+          </div>
+        }
+      >
+        <Plans />
+      </Suspense>
+    </div>
   );
 }
 
@@ -42,25 +71,11 @@ async function Plans() {
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Pemasukan bertahap
-          </p>
-          <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            Rencana pembayaran
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {live.length} rencana aktif · sisa {formatMoney(outstanding)}
-          </p>
-        </div>
-        <LinkButton href="/app/transactions/new?type=INCOME">
-          <Plus aria-hidden="true" />
-          Catat pembayaran
-        </LinkButton>
-      </section>
+      <p className="-mt-3 text-sm text-muted-foreground">
+        {live.length} rencana aktif · sisa {formatMoney(outstanding)}
+      </p>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           {plans.length === 0 ? (
             <Card>
@@ -127,7 +142,7 @@ async function Plans() {
                             plan.status === "COMPLETED" ? "bg-emerald-500" : "bg-foreground/70",
                           )}
                           style={{
-                            width: `${Math.max(plan.progress, plan.progress > 0 ? 3 : 0)}%`,
+                            width: `${Math.min(100, Math.max(plan.progress, plan.progress > 0 ? 3 : 0))}%`,
                           }}
                         />
                       </div>

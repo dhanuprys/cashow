@@ -15,18 +15,15 @@ import {
   Upload,
   Wallet,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-  CommandShortcut,
 } from "@/components/ui/command";
 
 const navigation = [
@@ -47,7 +44,15 @@ const navigation = [
 /** Cmd+K / Ctrl+K command palette for quick navigation. */
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
+  // The modifier is platform-specific; rendering "⌘K" on Windows/Linux is a
+  // lie. Resolved after mount so server and client markup agree.
+  const [shortcut, setShortcut] = useState("Ctrl K");
   const router = useRouter();
+
+  useEffect(() => {
+    const isApple = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+    setShortcut(isApple ? "⌘K" : "Ctrl K");
+  }, []);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -66,7 +71,7 @@ export function CommandPalette() {
   }
 
   const grouped = navigation.reduce<Record<string, (typeof navigation)[number][]>>((acc, item) => {
-    (acc[item.group] ??= []).push(item);
+    acc[item.group] = [...(acc[item.group] ?? []), item];
     return acc;
   }, {});
 
@@ -75,13 +80,13 @@ export function CommandPalette() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="hidden items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted lg:flex"
+        className="flex size-10 items-center justify-center gap-2 rounded-lg border border-border bg-muted/50 text-sm text-muted-foreground transition-colors hover:bg-muted lg:size-auto lg:justify-start lg:px-3 lg:py-1.5"
         aria-label="Buka palet perintah"
       >
         <Search className="size-4" aria-hidden="true" />
-        <span>Cari halaman…</span>
-        <kbd className="ml-2 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium">
-          ⌘K
+        <span className="hidden lg:inline">Cari halaman…</span>
+        <kbd className="ml-2 hidden rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium lg:inline">
+          {shortcut}
         </kbd>
       </button>
 

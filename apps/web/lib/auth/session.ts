@@ -1,8 +1,19 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { promisify } from "node:util";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { getDb } from "@/lib/db";
 import { getAuthConfig } from "./config";
+
+const scryptAsync = promisify(scrypt) as (
+  password: string,
+  salt: Buffer,
+  keylen: number,
+) => Promise<Buffer>;
+
+const PASSWORD_SCHEME = "scrypt";
+const PASSWORD_KEY_LENGTH = 64;
 
 export const SESSION_COOKIE = "cashow_session";
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -10,7 +21,10 @@ export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 type SessionUser = {
   id: string;
   name: string | null;
+  avatar: string | null;
+  bio: string | null;
   email: string | null;
+  username: string | null;
   timezone: string;
   currency: string;
 };
@@ -42,31 +56,15 @@ export async function setSessionCookie(token: string): Promise<void> {
   });
 }
 
+/** Clear the session cookie. */
 export async function clearSessionCookie(): Promise<void> {
   const store = await cookies();
   store.delete(SESSION_COOKIE);
 }
 
-export async function createSession(
-  userId: string,
-  request: Request,
-): Promise<{ token: string; sessionId: string }> {
-  const db = await getDb();
-  const token = newSessionToken();
-
-  const session = await db.orm.public.Session.create({
-    userId,
-    tokenHash: hashToken(token),
-    expiresAt: sessionExpiry(),
-    ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
-    userAgent: request.headers.get("user-agent"),
-  });
-
-  return { token, sessionId: session.id };
-}
-
 /** Resolve the signed-in user from the session cookie, or `null`. */
 export async function getSessionUser(): Promise<SessionUser | null> {
+  await connection();
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (token === undefined || token === "") return null;
 
@@ -77,11 +75,23 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     .first();
   if (session === null) return null;
 
+  // Load user data - supports both passkey-only and password-enabled users
   const user = await db.orm.public.User.where({ id: session.userId })
-    .select("id", "name", "email", "timezone", "currency")
+    .select("id", "name", "avatar", "bio", "email", "username", "timezone", "currency", "password")
     .first();
 
-  return user;
+  if (user === null) return null;
+
+  return {
+    id: user.id,
+    name: user.name,
+    avatar: user.avatar ?? null,
+    bio: user.bio ?? null,
+    email: user.email,
+    username: user.username,
+    timezone: user.timezone,
+    currency: user.currency,
+  };
 }
 
 /**
@@ -105,4 +115,36 @@ export async function revokeCurrentSession(): Promise<void> {
     });
   }
   await clearSessionCookie();
+}
+
+/**
+ * Hash a password with scrypt from `node:crypto`.
+ *
+ * Next.js runs route handlers on Node, so `Bun.crypto` is not available even
+ * when the dev server is launched with Bun. Stored format:
+ * `scrypt$<salt base64url>$<key base64url>`.
+ */
+export async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16);
+  const key = await scryptAsync(password, salt, PASSWORD_KEY_LENGTH);
+  return `${PASSWORD_SCHEME}$${salt.toString("base64url")}$${key.toString("base64url")}`;
+}
+
+/** Verify a password against a value produced by {@link hashPassword}. */
+export async function checkPassword(
+  candidate: string,
+  hash: string | null | undefined,
+): Promise<boolean> {
+  if (hash === null || hash === undefined || hash === "") return false;
+
+  const [scheme, saltPart, keyPart] = hash.split("$");
+  if (scheme !== PASSWORD_SCHEME || saltPart === undefined || keyPart === undefined) {
+    return false;
+  }
+
+  const expected = Buffer.from(keyPart, "base64url");
+  if (expected.length === 0) return false;
+
+  const actual = await scryptAsync(candidate, Buffer.from(saltPart, "base64url"), expected.length);
+  return timingSafeEqual(actual, expected);
 }

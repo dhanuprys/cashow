@@ -1,7 +1,13 @@
-import { budgetInputSchema, budgetUpdateSchema, firstIssue } from "@cashow/domain";
+import {
+  budgetInputSchema,
+  budgetUpdateSchema,
+  firstIssue,
+  toLocalDate,
+  zonedToUtc,
+} from "@cashow/domain";
 
 import { writeAudit } from "./audit";
-import { nowOf, type UseCaseContext, userTimezone } from "./context";
+import { nowOf, type UseCaseContext, userSettings } from "./context";
 import { LedgerError, toLedgerError } from "./errors";
 import { err, ok, type Result } from "./result";
 
@@ -19,7 +25,9 @@ export interface BudgetSummary {
 export async function listBudgets(ctx: UseCaseContext): Promise<Result<BudgetSummary[]>> {
   try {
     const rows = await ctx.db.orm.public.Budget.where({ userId: ctx.userId }).all();
-    const categories = await ctx.db.orm.public.Category.where({ userId: ctx.userId }).all();
+    const categories = await ctx.db.orm.public.Category.where({ userId: ctx.userId })
+      .select("id", "name")
+      .all();
     const byId = new Map(categories.map((category) => [category.id, category.name]));
     return ok(
       rows.map((row) => ({
@@ -170,27 +178,74 @@ export async function getBudgetStatus(
       remaining: bigint;
       usedPercent: number;
       projected: bigint;
+      daysElapsed: number;
+      totalDays: number;
+      monthElapsedPercent: number;
     }>
   >
 > {
   try {
-    const timezone = await userTimezone(ctx.db, ctx.userId);
+    const settings = await userSettings(ctx);
     const now = nowOf(ctx);
-    const { from, to } = budgetMonthRange(now, timezone, await budgetStartDay(ctx));
+    const { from, to } = budgetMonthRange(now, settings.timezone, settings.budgetMonthStartDay);
 
     const budgets = await listBudgets(ctx);
     if (!budgets.ok) return budgets;
     const liveBudgets = budgets.value.filter((budget) => budget.active);
 
     const result = [];
-    for (const budget of liveBudgets) {
-      const spent = await sumExpenses(ctx, budget.categoryId, from, to);
-      const remaining = budget.amount - spent;
-      const elapsed = Math.max(1, daysBetweenLocal(from, now, timezone));
-      const totalDays = Math.max(1, daysBetweenLocal(from, toDateLocal(to), timezone) + 1);
-      const projected = (spent * BigInt(totalDays)) / BigInt(elapsed);
-      const usedPercent = budget.amount === 0n ? 0 : Number((spent * 10000n) / budget.amount) / 100;
-      result.push({ budget, spent, remaining, usedPercent, projected });
+    if (liveBudgets.length > 0) {
+      const expensesPlan = ctx.db.raw.sql`
+        SELECT t."categoryId" AS "categoryId",
+               COALESCE(SUM(t."amount"), 0)::text AS total
+        FROM "public"."Transaction" t
+        WHERE t."userId" = ${ctx.userId}
+          AND t."deletedAt" IS NULL
+          AND t."type" = 'EXPENSE'
+          AND t."occurredOn" >= ${from}::date
+          AND t."occurredOn" <= ${to}::date
+        GROUP BY t."categoryId"
+      `
+        .returnsRow({
+          categoryId: { codecId: "pg/text@1", nullable: true },
+          total: "pg/text@1",
+        })
+        .build();
+      const expenseRows = await ctx.db.query(expensesPlan);
+
+      const categoryTotals = new Map<string, bigint>();
+      let overallExpense = 0n;
+      for (const row of expenseRows) {
+        const total = BigInt(row.total);
+        overallExpense += total;
+        if (row.categoryId !== null) {
+          categoryTotals.set(row.categoryId, total);
+        }
+      }
+
+      const elapsed = Math.max(1, daysBetweenLocal(from, now, settings.timezone));
+      const totalDays = Math.max(1, daysBetweenLocal(from, toDateLocal(to), settings.timezone) + 1);
+
+      for (const budget of liveBudgets) {
+        const spent =
+          budget.categoryId === null
+            ? overallExpense
+            : (categoryTotals.get(budget.categoryId) ?? 0n);
+        const remaining = budget.amount - spent;
+        const projected = (spent * BigInt(totalDays)) / BigInt(elapsed);
+        const usedPercent =
+          budget.amount === 0n ? 0 : Number((spent * 10000n) / budget.amount) / 100;
+        result.push({
+          budget,
+          spent,
+          remaining,
+          usedPercent,
+          projected,
+          daysElapsed: elapsed,
+          totalDays,
+          monthElapsedPercent: Math.min(100, Math.round((elapsed / totalDays) * 100)),
+        });
+      }
     }
     return ok(result);
   } catch (error) {
@@ -201,15 +256,6 @@ export async function getBudgetStatus(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-import { toLocalDate, zonedToUtc } from "@cashow/domain";
-
-async function budgetStartDay(ctx: UseCaseContext): Promise<number> {
-  const user = await ctx.db.orm.public.User.where({ id: ctx.userId })
-    .select("budgetMonthStartDay")
-    .first();
-  return user?.budgetMonthStartDay ?? 1;
-}
 
 function budgetMonthRange(
   now: Date,
@@ -250,29 +296,6 @@ function budgetMonthRange(
 
 function daysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
-}
-
-async function sumExpenses(
-  ctx: UseCaseContext,
-  categoryId: string | null,
-  from: string,
-  to: string,
-): Promise<bigint> {
-  const categoryFilter = categoryId === null ? "" : categoryId;
-  const plan = ctx.db.raw.sql`
-    SELECT COALESCE(SUM(t."amount"), 0)::text AS total
-    FROM "public"."Transaction" t
-    WHERE t."userId" = ${ctx.userId}
-      AND t."deletedAt" IS NULL
-      AND t."type" = 'EXPENSE'
-      AND t."occurredOn" >= ${from}::date
-      AND t."occurredOn" <= ${to}::date
-      AND (${categoryFilter} = '' OR t."categoryId" = ${categoryFilter})
-  `
-    .returnsRow({ total: "pg/text@1" })
-    .build();
-  const rows = await ctx.db.query(plan);
-  return BigInt(rows[0]?.total ?? "0");
 }
 
 function daysBetweenLocal(from: string, date: Date, timeZone: string): number {

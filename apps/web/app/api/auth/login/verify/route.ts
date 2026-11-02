@@ -53,14 +53,14 @@ export async function POST(request: Request) {
     return unauthorized("Passkey tidak dikenali atau sudah dicabut.");
   }
 
-  const config = getAuthConfig();
+  const config = getAuthConfig(request);
 
   let verification: Awaited<ReturnType<typeof verifyAuthenticationResponse>>;
   try {
     verification = await verifyAuthenticationResponse({
       response,
       expectedChallenge: challenge.challenge,
-      expectedOrigin: config.origin,
+      expectedOrigin: config.origins,
       expectedRPID: config.rpID,
       credential: toWebAuthnCredential(passkey),
     });

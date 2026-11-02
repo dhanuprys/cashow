@@ -1,13 +1,16 @@
 "use client";
 
 import { formatAmount, parseMoney } from "@cashow/domain";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { CurrencyInput } from "@/components/ledger/currency-input";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
 import { createTransferAction } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
+import { useClientId } from "@/lib/use-client-id";
 import { cn } from "@/lib/utils";
 import { SubmitButton } from "./submit-button";
 
@@ -43,11 +46,16 @@ export function TransferForm({
   );
   const [amount, setAmount] = useState("");
   const [feeAmount, setFeeAmount] = useState("");
-  const [requestId] = useState(() => crypto.randomUUID());
+  const [requestId] = useClientId();
   const [state, formAction] = useActionState<ActionState, FormData>(
     createTransferAction,
     initialActionState,
   );
+
+  useEffect(() => {
+    if (state.status !== "success") return;
+    toast.add({ title: "Tersimpan", description: state.message ?? "Perubahan tersimpan." });
+  }, [state]);
 
   const amountValue = parseMoney(amount) ?? 0n;
   const feeValue = parseMoney(feeAmount) ?? 0n;
@@ -66,24 +74,22 @@ export function TransferForm({
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="clientRequestId" value={requestId} />
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <Label htmlFor="transfer-amount">Jumlah dipindahkan</Label>
-          <Input
+      <FieldGroup className="grid gap-5 sm:grid-cols-2">
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor="transfer-amount">Jumlah dipindahkan</FieldLabel>
+          <CurrencyInput
             id="transfer-amount"
             name="amount"
             value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="2jt"
+            onValueChange={setAmount}
+            placeholder="2jt atau 2.000.000"
             className="mt-2 h-12 text-lg"
             required
           />
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor="transfer-source">Dari akun</Label>
+        <Field>
+          <FieldLabel htmlFor="transfer-source">Dari akun</FieldLabel>
           <NativeSelect
             id="transfer-source"
             name="accountId"
@@ -99,10 +105,10 @@ export function TransferForm({
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor="transfer-destination">Ke akun</Label>
+        <Field>
+          <FieldLabel htmlFor="transfer-destination">Ke akun</FieldLabel>
           <NativeSelect
             id="transfer-destination"
             name="destinationAccountId"
@@ -124,30 +130,27 @@ export function TransferForm({
           {sameAccount ? (
             <p className="mt-1.5 text-xs text-destructive">Akun asal dan tujuan harus berbeda.</p>
           ) : null}
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor="transfer-fee">
+        <Field>
+          <FieldLabel htmlFor="transfer-fee">
             Biaya transfer <span className="font-normal text-muted-foreground">(opsional)</span>
-          </Label>
-          <Input
+          </FieldLabel>
+          <CurrencyInput
             id="transfer-fee"
             name="feeAmount"
             value={feeAmount}
-            onChange={(event) => setFeeAmount(event.target.value)}
-            inputMode="numeric"
-            placeholder="5rb"
+            onValueChange={setFeeAmount}
+            placeholder="5rb atau 6.500"
             className="mt-2"
           />
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Dicatat sebagai pengeluaran terpisah di akun asal.
-          </p>
-        </div>
+          <FieldDescription>Dicatat sebagai pengeluaran terpisah di akun asal.</FieldDescription>
+        </Field>
 
-        <div>
-          <Label htmlFor="transfer-fee-category">
+        <Field>
+          <FieldLabel htmlFor="transfer-fee-category">
             Kategori biaya <span className="font-normal text-muted-foreground">(opsional)</span>
-          </Label>
+          </FieldLabel>
           <NativeSelect
             id="transfer-fee-category"
             name="feeCategoryId"
@@ -161,10 +164,10 @@ export function TransferForm({
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor="transfer-at">Tanggal &amp; waktu</Label>
+        <Field>
+          <FieldLabel htmlFor="transfer-at">Tanggal &amp; waktu</FieldLabel>
           <Input
             id="transfer-at"
             name="occurredAtLocal"
@@ -173,13 +176,13 @@ export function TransferForm({
             className="mt-2"
             required
           />
-          <p className="mt-1.5 text-xs text-muted-foreground">Zona waktu {timezone}</p>
-        </div>
+          <FieldDescription>Zona waktu {timezone}</FieldDescription>
+        </Field>
 
-        <div className="sm:col-span-2">
-          <Label htmlFor="transfer-note">
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor="transfer-note">
             Catatan <span className="font-normal text-muted-foreground">(opsional)</span>
-          </Label>
+          </FieldLabel>
           <Textarea
             id="transfer-note"
             name="note"
@@ -187,8 +190,8 @@ export function TransferForm({
             placeholder="Contoh: pindah dana ke rekening harian"
             className="mt-2"
           />
-        </div>
-      </div>
+        </Field>
+      </FieldGroup>
 
       <div className="rounded-2xl bg-muted/40 px-4 py-3 text-sm">
         <p className="flex items-baseline justify-between gap-3">
@@ -212,9 +215,11 @@ export function TransferForm({
         </p>
       ) : null}
 
-      <SubmitButton className="w-full" size="lg" pendingLabel="Memindahkan…">
-        Simpan transfer
-      </SubmitButton>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <SubmitButton className="w-full" size="lg" pendingLabel="Memindahkan…">
+          Simpan transfer
+        </SubmitButton>
+      </div>
     </form>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Bell, BellOff } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   markNotificationReadAction,
@@ -24,28 +24,35 @@ export function PushSubscribe({ vapidPublicKey }: { vapidPublicKey: string }) {
     subscribePushAction,
     initialActionState,
   );
+  const [localError, setLocalError] = useState<string | null>(null);
+  const errorText = localError ?? (state.status === "error" ? state.message : null);
 
   async function enable() {
+    setLocalError(null);
     if (vapidPublicKey === "") {
-      alert("VAPID public key belum dikonfigurasi.");
+      setLocalError("Kunci publik VAPID belum dikonfigurasi di server.");
       return;
     }
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      alert("Browser ini tidak mendukung push.");
+      setLocalError("Browser ini tidak mendukung notifikasi push.");
       return;
     }
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
-    });
-    const json = subscription.toJSON();
-    const formData = new FormData();
-    formData.set("endpoint", json.endpoint ?? "");
-    formData.set("p256dh", json.keys?.p256dh ?? "");
-    formData.set("auth", json.keys?.auth ?? "");
-    formData.set("label", navigator.userAgent.slice(0, 80));
-    formAction(formData);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
+      });
+      const json = subscription.toJSON();
+      const formData = new FormData();
+      formData.set("endpoint", json.endpoint ?? "");
+      formData.set("p256dh", json.keys?.p256dh ?? "");
+      formData.set("auth", json.keys?.auth ?? "");
+      formData.set("label", navigator.userAgent.slice(0, 80));
+      formAction(formData);
+    } catch {
+      setLocalError("Izin notifikasi ditolak atau langganan gagal dibuat.");
+    }
   }
 
   return (
@@ -54,16 +61,18 @@ export function PushSubscribe({ vapidPublicKey }: { vapidPublicKey: string }) {
       <p className="mt-1 text-xs text-muted-foreground">
         Aktifkan notifikasi push di perangkat ini.
       </p>
-      <div className="mt-3 flex items-center gap-3">
+      <div className="mt-3 flex flex-wrap items-center gap-3">
         <Button type="button" size="sm" onClick={enable}>
           Aktifkan push
         </Button>
-        {state.status === "success" ? (
-          <span className="text-xs text-emerald-600 dark:text-emerald-400">Aktif.</span>
-        ) : null}
-        {state.status === "error" ? (
-          <span className="text-xs text-destructive">{state.message}</span>
-        ) : null}
+        <span aria-live="polite">
+          {state.status === "success" ? (
+            <span className="text-xs text-emerald-700 dark:text-emerald-400">Aktif.</span>
+          ) : null}
+          {errorText === null ? null : (
+            <span className="text-xs text-destructive">{errorText}</span>
+          )}
+        </span>
       </div>
     </div>
   );
@@ -83,7 +92,7 @@ export function NotificationActions({ id, read }: { id: string; read: boolean })
           <input type="hidden" name="notificationId" value={id} />
           <button
             type="submit"
-            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+            className="inline-flex min-h-9 items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
           >
             <Bell className="size-3" aria-hidden="true" />
             Tandai dibaca
@@ -93,7 +102,10 @@ export function NotificationActions({ id, read }: { id: string; read: boolean })
       <form action={snoozeNotificationAction} className="flex items-center gap-1">
         <input type="hidden" name="notificationId" value={id} />
         <input type="hidden" name="minutes" value="60" />
-        <button type="submit" className="text-[11px] text-muted-foreground hover:text-foreground">
+        <button
+          type="submit"
+          className="inline-flex min-h-9 items-center text-[11px] text-muted-foreground hover:text-foreground"
+        >
           Tunda 1 jam
         </button>
       </form>

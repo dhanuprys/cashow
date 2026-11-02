@@ -1,13 +1,18 @@
 "use client";
 
 import { formatAmount, parseMoney } from "@cashow/domain";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { CurrencyInput } from "@/components/ledger/currency-input";
+import { DropzoneFileInput } from "@/components/ledger/dropzone-file-input";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
 import { createTransactionAction, updateTransactionAction } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
+import { useClientId } from "@/lib/use-client-id";
+import { useUnsavedChangesGuard } from "@/lib/use-unsaved-changes";
 import { cn } from "@/lib/utils";
 import { SubmitButton } from "./submit-button";
 
@@ -65,7 +70,12 @@ export function TransactionForm({
   initial,
   defaultPlanItemId,
   defaultType = "EXPENSE",
+  defaultAmount,
+  defaultAccountId,
+  defaultCategoryId,
+  defaultMerchant,
   defaultOccurredAtLocal,
+  defaultNote,
   timezone,
 }: {
   accounts: AccountOption[];
@@ -75,17 +85,24 @@ export function TransactionForm({
   initial?: TransactionFormInitial;
   defaultPlanItemId?: string;
   defaultType?: "INCOME" | "EXPENSE";
+  defaultAmount?: string;
+  defaultAccountId?: string;
+  defaultCategoryId?: string;
+  defaultMerchant?: string;
   defaultOccurredAtLocal: string;
+  defaultNote?: string;
   timezone: string;
 }) {
   const [type, setType] = useState<"INCOME" | "EXPENSE">(initial?.type ?? defaultType);
-  const [amount, setAmount] = useState(initial?.amount ?? "");
-  const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? "");
-  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
+  const [amount, setAmount] = useState(initial?.amount ?? defaultAmount ?? "");
+  const [accountId, setAccountId] = useState(
+    initial?.accountId ?? defaultAccountId ?? accounts[0]?.id ?? "",
+  );
+  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? defaultCategoryId ?? "");
   const [planItemId, setPlanItemId] = useState(initial?.planItemId ?? defaultPlanItemId ?? "");
-  const [merchant, setMerchant] = useState(initial?.merchant ?? "");
+  const [merchant, setMerchant] = useState(initial?.merchant ?? defaultMerchant ?? "");
   const [counterparty, setCounterparty] = useState(initial?.counterparty ?? "");
-  const [note, setNote] = useState(initial?.note ?? "");
+  const [note, setNote] = useState(initial?.note ?? defaultNote ?? "");
   const [occurredAtLocal, setOccurredAtLocal] = useState(
     initial?.occurredAtLocal ?? defaultOccurredAtLocal,
   );
@@ -94,12 +111,17 @@ export function TransactionForm({
       (initial?.allocations ?? []).map((allocation) => [allocation.incomeId, allocation.amount]),
     ),
   );
-  const [requestId] = useState(() => crypto.randomUUID());
+  const [requestId] = useClientId();
 
   const [state, formAction] = useActionState<ActionState, FormData>(
     initial === undefined ? createTransactionAction : updateTransactionAction,
     initialActionState,
   );
+
+  useEffect(() => {
+    if (state.status !== "success") return;
+    toast.add({ title: "Tersimpan", description: state.message ?? "Perubahan tersimpan." });
+  }, [state]);
 
   const visibleCategories = categories.filter((category) => category.kind === type);
   const allocationEntries = Object.entries(allocationAmounts).filter(
@@ -111,6 +133,23 @@ export function TransactionForm({
   const amountValue = parseMoney(amount);
   const remaining = (amountValue ?? 0n) - allocationTotal;
   const overAllocated = amountValue !== null && remaining < 0n;
+
+  const initialNote = initial?.note ?? defaultNote ?? "";
+  const initialAmount = initial?.amount ?? "";
+  const initialAllocations = (initial?.allocations ?? [])
+    .filter((allocation) => allocation.amount.trim() !== "")
+    .map((allocation) => `${allocation.incomeId}:${allocation.amount.trim()}`)
+    .join("|");
+  const currentAllocations = allocationEntries
+    .map(([incomeId, value]) => `${incomeId}:${value.trim()}`)
+    .join("|");
+  const dirty =
+    amount.trim() !== initialAmount.trim() ||
+    note.trim() !== initialNote.trim() ||
+    merchant.trim() !== (initial?.merchant ?? "").trim() ||
+    counterparty.trim() !== (initial?.counterparty ?? "").trim() ||
+    currentAllocations !== initialAllocations;
+  useUnsavedChangesGuard(dirty);
 
   function switchType(next: "INCOME" | "EXPENSE") {
     setType(next);
@@ -152,7 +191,8 @@ export function TransactionForm({
           <label
             key={option.value}
             className={cn(
-              "cursor-pointer rounded-full py-2 text-center text-sm font-medium transition-colors",
+              "cursor-pointer rounded-full py-2.5 text-center text-sm font-medium transition-colors",
+              "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring/70",
               type === option.value
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
@@ -171,30 +211,28 @@ export function TransactionForm({
         ))}
       </fieldset>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <Label htmlFor="amount">Jumlah</Label>
-          <Input
+      <FieldGroup className="grid gap-5 sm:grid-cols-2">
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor="amount">Jumlah</FieldLabel>
+          <CurrencyInput
             id="amount"
             name="amount"
             value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="35rb, 1,5jt, Rp 35.000"
+            onValueChange={setAmount}
+            placeholder="35rb, 1,5jt, atau 35.000"
             className="mt-2 h-12 text-lg"
             required
             aria-invalid={overAllocated}
           />
-          <p className="mt-1.5 text-xs text-muted-foreground">
+          <FieldDescription>
             Tulis angka bebas: <span className="font-medium">35rb</span>,{" "}
             <span className="font-medium">1,5jt</span>, atau{" "}
-            <span className="font-medium">Rp 35.000</span>.
-          </p>
-        </div>
+            <span className="font-medium">35.000</span>.
+          </FieldDescription>
+        </Field>
 
-        <div>
-          <Label htmlFor="accountId">Akun</Label>
+        <Field>
+          <FieldLabel htmlFor="accountId">Akun</FieldLabel>
           <NativeSelect
             id="accountId"
             name="accountId"
@@ -210,10 +248,10 @@ export function TransactionForm({
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor="categoryId">Kategori</Label>
+        <Field>
+          <FieldLabel htmlFor="categoryId">Kategori</FieldLabel>
           <NativeSelect
             id="categoryId"
             name="categoryId"
@@ -230,13 +268,13 @@ export function TransactionForm({
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
+        </Field>
 
         {type === "INCOME" ? (
-          <div>
-            <Label htmlFor="planItemId">
+          <Field>
+            <FieldLabel htmlFor="planItemId">
               Tahap pembayaran <span className="font-normal text-muted-foreground">(opsional)</span>
-            </Label>
+            </FieldLabel>
             <NativeSelect
               id="planItemId"
               name="planItemId"
@@ -251,14 +289,14 @@ export function TransactionForm({
                 </NativeSelectOption>
               ))}
             </NativeSelect>
-            <p className="mt-1.5 text-xs text-muted-foreground">
+            <FieldDescription>
               Kaitkan pemasukan ini ke tahap proyek yang sedang dibayar.
-            </p>
-          </div>
+            </FieldDescription>
+          </Field>
         ) : null}
 
-        <div>
-          <Label htmlFor="occurredAtLocal">Tanggal &amp; waktu</Label>
+        <Field>
+          <FieldLabel htmlFor="occurredAtLocal">Tanggal &amp; waktu</FieldLabel>
           <Input
             id="occurredAtLocal"
             name="occurredAtLocal"
@@ -268,14 +306,14 @@ export function TransactionForm({
             className="mt-2"
             required
           />
-          <p className="mt-1.5 text-xs text-muted-foreground">Zona waktu {timezone}</p>
-        </div>
+          <FieldDescription>Zona waktu {timezone}</FieldDescription>
+        </Field>
 
         {type === "EXPENSE" ? (
-          <div>
-            <Label htmlFor="merchant">
+          <Field>
+            <FieldLabel htmlFor="merchant">
               Toko / penerima <span className="font-normal text-muted-foreground">(opsional)</span>
-            </Label>
+            </FieldLabel>
             <Input
               id="merchant"
               value={merchant}
@@ -284,12 +322,12 @@ export function TransactionForm({
               placeholder="Contoh: Indomaret"
               className="mt-2"
             />
-          </div>
+          </Field>
         ) : (
-          <div>
-            <Label htmlFor="counterparty">
+          <Field>
+            <FieldLabel htmlFor="counterparty">
               Sumber <span className="font-normal text-muted-foreground">(opsional)</span>
-            </Label>
+            </FieldLabel>
             <Input
               id="counterparty"
               value={counterparty}
@@ -298,47 +336,45 @@ export function TransactionForm({
               placeholder="Contoh: Kantor"
               className="mt-2"
             />
-          </div>
+          </Field>
         )}
 
-        <div className="sm:col-span-2">
-          <Label htmlFor="note">
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor="note">
             Catatan <span className="font-normal text-muted-foreground">(opsional)</span>
-          </Label>
+          </FieldLabel>
           <Textarea
             id="note"
             name="note"
             value={note}
             onChange={(event) => setNote(event.target.value)}
             maxLength={1000}
-            placeholder="Keterangan singkat"
+            placeholder="Catatan transaksi atau rincian tanda terima"
             className="mt-2"
           />
-        </div>
-      </div>
+        </Field>
+      </FieldGroup>
 
-      {type === "EXPENSE" ? (
-        <section className="rounded-2xl border border-border p-4">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h2 className="text-sm font-medium">Tarik dari pemasukan</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Opsional. Isi berapa banyak pengeluaran ini memakai uang dari pemasukan tertentu.
-              </p>
-            </div>
-            <p
-              className={cn(
-                "text-xs font-medium",
-                overAllocated ? "text-destructive" : "text-muted-foreground",
-              )}
-            >
-              {amountValue === null
-                ? "Sisa belum dihitung"
-                : overAllocated
-                  ? `Kelebihan ${formatAmount(-remaining)}`
-                  : `Sisa ${formatAmount(remaining)}`}
+      {type === "EXPENSE" && incomes.length > 0 ? (
+        <section className="space-y-3 rounded-2xl border border-border bg-muted/20 p-4">
+          <div>
+            <h3 className="text-sm font-medium">Alokasi ke pemasukan</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Opsional. Isi berapa banyak pengeluaran ini memakai uang dari pemasukan tertentu.
             </p>
           </div>
+          <p
+            className={cn(
+              "text-xs font-medium",
+              overAllocated ? "text-destructive" : "text-muted-foreground",
+            )}
+          >
+            {amountValue === null
+              ? "Sisa belum dihitung"
+              : overAllocated
+                ? `Kelebihan ${formatAmount(-remaining)}`
+                : `Sisa ${formatAmount(remaining)}`}
+          </p>
 
           {incomes.length === 0 ? (
             <p className="mt-4 text-sm text-muted-foreground">
@@ -359,13 +395,12 @@ export function TransactionForm({
                         {income.occurredOn} · sisa {formatAmount(BigInt(income.free))}
                       </p>
                     </div>
-                    <Input
+                    <CurrencyInput
                       aria-label={`Alokasi dari ${income.label}`}
                       value={value}
-                      onChange={(event) => setAllocation(income.id, event.target.value)}
-                      inputMode="numeric"
+                      onValueChange={(val) => setAllocation(income.id, val)}
                       placeholder="0"
-                      className="w-32"
+                      className="w-full sm:w-36"
                     />
                   </li>
                 );
@@ -382,26 +417,26 @@ export function TransactionForm({
       ) : null}
 
       {initial === undefined ? (
-        <div>
-          <Label htmlFor="attachment">
+        <div className="space-y-2">
+          <FieldLabel htmlFor="attachment">
             Bukti <span className="font-normal text-muted-foreground">(opsional)</span>
-          </Label>
-          <Input
+          </FieldLabel>
+          <DropzoneFileInput
             id="attachment"
             name="attachment"
-            type="file"
             accept="image/*,application/pdf"
-            className="mt-2"
+            maxSizeBytes={10 * 1024 * 1024}
+            description="Tarik struk atau bukti pembayaran ke sini, atau klik untuk memilih"
           />
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Foto struk atau PDF. Maksimal 10 MB.
-          </p>
+          <FieldDescription>Foto struk atau PDF. Maksimal 10 MB.</FieldDescription>
         </div>
       ) : null}
 
-      <SubmitButton className="w-full" size="lg">
-        {initial === undefined ? "Simpan transaksi" : "Simpan perubahan"}
-      </SubmitButton>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <SubmitButton className="w-full" size="lg">
+          {initial === undefined ? "Simpan transaksi" : "Simpan perubahan"}
+        </SubmitButton>
+      </div>
     </form>
   );
 }

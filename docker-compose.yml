@@ -27,6 +27,8 @@ x-app-env: &app-env
   WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Cashow}
   # Empty by default: the compatibility probes answer 404 unless CI sets it.
   COMPAT_TOKEN: ${COMPAT_TOKEN:-}
+  GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:-}
+  GOOGLE_MODEL: ${GOOGLE_MODEL:-gemini-3.5-flash}
   DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
   DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
   DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}

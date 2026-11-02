@@ -15,6 +15,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { ConfirmSubmitButton } from "@/components/ledger/confirm-submit-button";
 import { LinkButton } from "@/components/ledger/link-button";
+import { PageSkeleton } from "@/components/ledger/page-skeleton";
 import { PlanForm } from "@/components/ledger/plan-form";
 import { PlanItemForm } from "@/components/ledger/plan-item-form";
 import { SubmitButton } from "@/components/ledger/submit-button";
@@ -29,9 +30,13 @@ import { displayLocalDate, PLAN_ITEM_STATUS_LABEL, PLAN_STATUS_LABEL } from "@/l
 import { ledgerErrorCode, unwrap } from "@/lib/ledger";
 import { cn } from "@/lib/utils";
 
+export const metadata = {
+  title: "Detail rencana",
+};
+
 export default function PlanDetailPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-4xl bg-muted" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <PlanDetail params={params} />
     </Suspense>
   );
@@ -122,20 +127,22 @@ async function PlanDetail({ params }: { params: Promise<{ id: string }> }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-3 text-sm">
-            <div>
+          <div className="grid gap-2 text-sm sm:grid-cols-3 sm:gap-3">
+            <div className="flex items-baseline justify-between gap-3 sm:block">
               <p className="text-xs text-muted-foreground">Diharapkan</p>
-              <p className="mt-1 font-semibold tabular-nums">{formatMoney(plan.expectedTotal)}</p>
+              <p className="font-semibold tabular-nums sm:mt-1">
+                {formatMoney(plan.expectedTotal)}
+              </p>
             </div>
-            <div>
+            <div className="flex items-baseline justify-between gap-3 sm:block">
               <p className="text-xs text-muted-foreground">Diterima</p>
-              <p className="mt-1 font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+              <p className="font-semibold tabular-nums text-emerald-700 sm:mt-1 dark:text-emerald-400">
                 {formatMoney(plan.receivedTotal)}
               </p>
             </div>
-            <div>
+            <div className="flex items-baseline justify-between gap-3 sm:block">
               <p className="text-xs text-muted-foreground">Sisa</p>
-              <p className="mt-1 font-semibold tabular-nums">{formatMoney(plan.outstanding)}</p>
+              <p className="font-semibold tabular-nums sm:mt-1">{formatMoney(plan.outstanding)}</p>
             </div>
           </div>
           <div>
@@ -145,7 +152,7 @@ async function PlanDetail({ params }: { params: Promise<{ id: string }> }) {
                   "h-full rounded-full",
                   plan.status === "COMPLETED" ? "bg-emerald-500" : "bg-foreground/70",
                 )}
-                style={{ width: `${plan.progress}%` }}
+                style={{ width: `${Math.min(100, Math.max(0, plan.progress))}%` }}
               />
             </div>
             <p className="mt-1.5 text-xs text-muted-foreground">{plan.progress}% diterima</p>
@@ -215,7 +222,7 @@ async function PlanDetail({ params }: { params: Promise<{ id: string }> }) {
                           ? "bg-emerald-500"
                           : "bg-foreground/70",
                       )}
-                      style={{ width: `${item.progress}%` }}
+                      style={{ width: `${Math.min(100, Math.max(0, item.progress))}%` }}
                     />
                   </div>
 

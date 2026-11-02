@@ -12,6 +12,10 @@
       "model": "AiFact",
       "namespace": "public"
     },
+    "AiProviderConfig": {
+      "model": "AiProviderConfig",
+      "namespace": "public"
+    },
     "Allocation": {
       "model": "Allocation",
       "namespace": "public"
@@ -135,6 +139,27 @@
               {
                 "name": "INVESTMENT",
                 "value": "INVESTMENT"
+              }
+            ]
+          },
+          "AiProviderType": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "GOOGLE",
+                "value": "GOOGLE"
+              },
+              {
+                "name": "DEEPSEEK",
+                "value": "DEEPSEEK"
+              },
+              {
+                "name": "OPENAI",
+                "value": "OPENAI"
+              },
+              {
+                "name": "OPENAI_COMPATIBLE",
+                "value": "OPENAI_COMPATIBLE"
               }
             ]
           },
@@ -578,6 +603,150 @@
               },
               "namespaceId": "public",
               "table": "AiFact"
+            }
+          },
+          "AiProviderConfig": {
+            "fields": {
+              "apiKey": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "baseUrl": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "customModels": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/json@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "isDefault": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "model": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "provider": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AiProviderType",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "apiKey": {
+                  "column": "apiKey"
+                },
+                "baseUrl": {
+                  "column": "baseUrl"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "customModels": {
+                  "column": "customModels"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "isDefault": {
+                  "column": "isDefault"
+                },
+                "model": {
+                  "column": "model"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "provider": {
+                  "column": "provider"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "AiProviderConfig"
             }
           },
           "Allocation": {
@@ -1753,6 +1922,13 @@
                   "kind": "scalar"
                 }
               },
+              "parts": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/json@1",
+                  "kind": "scalar"
+                }
+              },
               "role": {
                 "nullable": false,
                 "type": {
@@ -1834,6 +2010,9 @@
                 "id": {
                   "column": "id"
                 },
+                "parts": {
+                  "column": "parts"
+                },
                 "role": {
                   "column": "role"
                 },
@@ -1865,6 +2044,20 @@
               },
               "id": {
                 "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "isFavorite": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "modelId": {
+                "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
@@ -1932,6 +2125,12 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "isFavorite": {
+                  "column": "isFavorite"
+                },
+                "modelId": {
+                  "column": "modelId"
                 },
                 "title": {
                   "column": "title"
@@ -4419,6 +4618,20 @@
           },
           "User": {
             "fields": {
+              "avatar": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "bio": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "budgetMonthStartDay": {
                 "nullable": false,
                 "type": {
@@ -4461,6 +4674,13 @@
                   "kind": "scalar"
                 }
               },
+              "password": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "timezone": {
                 "nullable": false,
                 "type": {
@@ -4472,6 +4692,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "username": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -4511,6 +4738,21 @@
                 },
                 "to": {
                   "model": "AiFact",
+                  "namespace": "public"
+                }
+              },
+              "aiProviderConfigs": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "AiProviderConfig",
                   "namespace": "public"
                 }
               },
@@ -4787,6 +5029,12 @@
             },
             "storage": {
               "fields": {
+                "avatar": {
+                  "column": "avatar"
+                },
+                "bio": {
+                  "column": "bio"
+                },
                 "budgetMonthStartDay": {
                   "column": "budgetMonthStartDay"
                 },
@@ -4805,11 +5053,17 @@
                 "name": {
                   "column": "name"
                 },
+                "password": {
+                  "column": "password"
+                },
                 "timezone": {
                   "column": "timezone"
                 },
                 "updatedAt": {
                   "column": "updatedAt"
+                },
+                "username": {
+                  "column": "username"
                 },
                 "weekStartsOn": {
                   "column": "weekStartsOn"
@@ -4997,6 +5251,124 @@
                   ],
                   "name": "AiFact_userId_idx_a489d58a",
                   "prefix": "AiFact_userId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "AiProviderConfig": {
+              "checks": [
+                {
+                  "expression": "\"provider\" IN ('GOOGLE', 'DEEPSEEK', 'OPENAI', 'OPENAI_COMPATIBLE')",
+                  "name": "AiProviderConfig_provider_check_b98c7195",
+                  "prefix": "AiProviderConfig_provider_check"
+                }
+              ],
+              "columns": {
+                "apiKey": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "baseUrl": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "customModels": {
+                  "codecId": "pg/json@1",
+                  "dataType": "pg/json",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "isDefault": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
+                "model": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": ""
+                  },
+                  "nullable": false
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "provider": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AiProviderType",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "AiProviderConfig_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "AiProviderConfig"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "AiProviderConfig_userId_idx_a489d58a",
+                  "prefix": "AiProviderConfig_userId_idx",
                   "unique": false
                 }
               ],
@@ -6098,6 +6470,11 @@
                   "dataType": "pg/text",
                   "nullable": false
                 },
+                "parts": {
+                  "codecId": "pg/json@1",
+                  "dataType": "pg/json",
+                  "nullable": true
+                },
                 "role": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -6212,6 +6589,20 @@
                   "dataType": "pg/text",
                   "nullable": false
                 },
+                "isFavorite": {
+                  "codecId": "pg/bool@1",
+                  "dataType": "pg/bool",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nullable": false
+                },
+                "modelId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
                 "title": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -6257,6 +6648,16 @@
                   ],
                   "name": "ChatThread_userId_idx_a489d58a",
                   "prefix": "ChatThread_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "isFavorite",
+                    "updatedAt"
+                  ],
+                  "name": "ChatThread_userId_isFavorite_updatedAt_idx_b93a1070",
+                  "prefix": "ChatThread_userId_isFavorite_updatedAt_idx",
                   "unique": false
                 },
                 {
@@ -8528,6 +8929,16 @@
             },
             "User": {
               "columns": {
+                "avatar": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "bio": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
                 "budgetMonthStartDay": {
                   "codecId": "pg/int4@1",
                   "dataType": "pg/int4",
@@ -8566,6 +8977,11 @@
                   "dataType": "pg/text",
                   "nullable": true
                 },
+                "password": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
                 "timezone": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -8579,6 +8995,11 @@
                   "codecId": "pg/timestamptz-string@1",
                   "dataType": "pg/timestamptz",
                   "nullable": false
+                },
+                "username": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
                 },
                 "weekStartsOn": {
                   "codecId": "pg/int4@1",
@@ -8600,6 +9021,11 @@
               "uniques": [
                 {
                   "columns": [
+                    "username"
+                  ]
+                },
+                {
+                  "columns": [
                     "email"
                   ]
                 }
@@ -8614,6 +9040,15 @@
                 "EWALLET",
                 "CASH",
                 "INVESTMENT"
+              ]
+            },
+            "AiProviderType": {
+              "kind": "valueSet",
+              "values": [
+                "GOOGLE",
+                "DEEPSEEK",
+                "OPENAI",
+                "OPENAI_COMPATIBLE"
               ]
             },
             "AttachmentKind": {
@@ -8684,10 +9119,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "34c824378cb5210717c798e1dd5efc6f4bfcf2e9e0dc3dda41ca44f79cb5d326"
+    "storageHash": "7fb72184f3e8f13367c2ba4604a3e4eeb7f4c45284c9f5ac0f9225ca2762fc31"
   },
   "execution": {
-    "executionHash": "2fd37ee088cb7264e40d3cbaa5a7e893a5284d29b06f0f4b972bd3bd18d4febb",
+    "executionHash": "4e3803988a45c343f79564828b3a4ec71589883b2e58997447451e8d185f506c",
     "mutations": {
       "defaults": [
         {
@@ -8746,6 +9181,43 @@
           "ref": {
             "entry": "AiFact",
             "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "AiProviderConfig",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "AiProviderConfig",
+            "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "AiProviderConfig",
+            "field": "updatedAt",
             "namespace": "public"
           }
         },

@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { CurrencyInput } from "@/components/ledger/currency-input";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { toast } from "@/components/ui/toast";
 import { createAccountAction, updateAccountAction } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
 import { SubmitButton } from "./submit-button";
@@ -29,13 +31,18 @@ export function AccountForm({ account }: { account?: AccountFormValues }) {
     initialActionState,
   );
 
+  useEffect(() => {
+    if (state.status !== "success") return;
+    toast.add({ title: "Tersimpan", description: state.message ?? "Perubahan tersimpan." });
+  }, [state]);
+
   return (
     <form action={formAction} className="space-y-4">
       {account === undefined ? null : <input type="hidden" name="accountId" value={account.id} />}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <Label htmlFor={`account-name-${account?.id ?? "new"}`}>Nama akun</Label>
+      <FieldGroup className="grid gap-4 sm:grid-cols-2">
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor={`account-name-${account?.id ?? "new"}`}>Nama akun</FieldLabel>
           <Input
             id={`account-name-${account?.id ?? "new"}`}
             name="name"
@@ -45,10 +52,10 @@ export function AccountForm({ account }: { account?: AccountFormValues }) {
             className="mt-2"
             required
           />
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`account-type-${account?.id ?? "new"}`}>Jenis</Label>
+        <Field>
+          <FieldLabel htmlFor={`account-type-${account?.id ?? "new"}`}>Jenis</FieldLabel>
           <NativeSelect
             id={`account-type-${account?.id ?? "new"}`}
             name="type"
@@ -61,22 +68,21 @@ export function AccountForm({ account }: { account?: AccountFormValues }) {
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`account-opening-${account?.id ?? "new"}`}>Saldo awal</Label>
-          <Input
+        <Field>
+          <FieldLabel htmlFor={`account-opening-${account?.id ?? "new"}`}>Saldo awal</FieldLabel>
+          <CurrencyInput
             id={`account-opening-${account?.id ?? "new"}`}
             name="openingBalance"
             defaultValue={account?.openingBalance ?? "0"}
-            inputMode="numeric"
             placeholder="0"
             className="mt-2"
           />
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`account-currency-${account?.id ?? "new"}`}>Mata uang</Label>
+        <Field>
+          <FieldLabel htmlFor={`account-currency-${account?.id ?? "new"}`}>Mata uang</FieldLabel>
           <Input
             id={`account-currency-${account?.id ?? "new"}`}
             name="currency"
@@ -84,8 +90,8 @@ export function AccountForm({ account }: { account?: AccountFormValues }) {
             maxLength={3}
             className="mt-2 uppercase"
           />
-        </div>
-      </div>
+        </Field>
+      </FieldGroup>
 
       {state.status === "error" ? (
         <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
@@ -93,10 +99,14 @@ export function AccountForm({ account }: { account?: AccountFormValues }) {
         </p>
       ) : null}
       {state.status === "success" ? (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">Akun tersimpan.</p>
+        <p className="text-sm text-emerald-700 dark:text-emerald-400">Akun tersimpan.</p>
       ) : null}
 
-      <SubmitButton size="sm">{account === undefined ? "Tambah akun" : "Simpan akun"}</SubmitButton>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <SubmitButton size="sm" className="w-full sm:w-auto">
+          {account === undefined ? "Tambah akun" : "Simpan akun"}
+        </SubmitButton>
+      </div>
     </form>
   );
 }

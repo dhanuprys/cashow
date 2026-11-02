@@ -7,6 +7,7 @@ import {
   localDateTimeToUtc,
   parseDbTimestamp,
   snapshotCreateSchema,
+  snapshotUpdateSchema,
 } from "@cashow/domain";
 import { type AccountSummary, getAccount } from "./accounts";
 import { writeAudit } from "./audit";
@@ -189,6 +190,107 @@ export async function createSnapshot(
     const snapshots = await listSnapshots(ctx, data.accountId);
     if (!snapshots.ok) return snapshots;
     const snapshot = snapshots.value.find((row) => row.id === id);
+    if (snapshot === undefined) {
+      throw new LedgerError("INTERNAL", "Snapshot gagal dibaca kembali.");
+    }
+    return ok(snapshot);
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return err(
+        new LedgerError("CONFLICT", "Sudah ada snapshot untuk akun ini pada waktu tersebut."),
+      );
+    }
+    return err(toLedgerError(error));
+  }
+}
+
+export async function updateSnapshot(
+  ctx: UseCaseContext,
+  input: unknown,
+): Promise<Result<SnapshotSummary>> {
+  const parsed = snapshotUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    return err(new LedgerError("VALIDATION", firstIssue(parsed.error)));
+  }
+  const data = parsed.data;
+
+  try {
+    const txResult = await ctx.db.transaction(async (tx) => {
+      const before = await tx.orm.public.BalanceSnapshot.where({
+        id: data.snapshotId,
+        userId: ctx.userId,
+      }).first();
+      if (before === null) throw new LedgerError("NOT_FOUND", "Snapshot tidak ditemukan.");
+      if (before.deletedAt !== null) {
+        throw new LedgerError("CONFLICT", "Snapshot yang dihapus tidak bisa diubah.");
+      }
+
+      // A verified checkpoint freezes the period; unlock it first.
+      const checkpoint = await tx.orm.public.ReconciliationCheckpoint.where({
+        snapshotId: data.snapshotId,
+        userId: ctx.userId,
+      })
+        .where({ unlockedAt: null })
+        .first();
+      if (checkpoint !== null) {
+        throw new LedgerError(
+          "CONFLICT",
+          "Snapshot ini sudah diverifikasi. Buka kunci checkpoint dulu sebelum mengubah.",
+        );
+      }
+
+      const account = await tx.orm.public.Account.where({
+        id: before.accountId,
+        userId: ctx.userId,
+      }).first();
+      if (account === null) throw new LedgerError("NOT_FOUND", "Akun tidak ditemukan.");
+
+      const timezone = await userTimezone(tx, ctx.userId);
+      const recordedAt = localDateTimeToUtc(data.recordedAtLocal, timezone);
+
+      // Unique (accountId, recordedAt) constraint — check for collision with another snapshot.
+      const collision = await tx.orm.public.BalanceSnapshot.where({
+        accountId: before.accountId,
+        userId: ctx.userId,
+      })
+        .where({ recordedAt: recordedAt.toISOString() })
+        .first();
+      if (collision !== null && collision.id !== data.snapshotId) {
+        throw new LedgerError("CONFLICT", "Sudah ada snapshot untuk akun ini pada waktu tersebut.");
+      }
+
+      const after = await tx.orm.public.BalanceSnapshot.where({
+        id: data.snapshotId,
+        userId: ctx.userId,
+      }).update({
+        amount: data.amount,
+        recordedAt: recordedAt.toISOString(),
+        note: data.note,
+      });
+      if (after === null) throw new LedgerError("NOT_FOUND", "Snapshot tidak ditemukan.");
+
+      await writeAudit(tx, {
+        userId: ctx.userId,
+        entityType: "BalanceSnapshot",
+        entityId: data.snapshotId,
+        action: "UPDATE",
+        before,
+        after,
+      });
+      await writeOutbox(tx, {
+        userId: ctx.userId,
+        aggregateType: "BalanceSnapshot",
+        aggregateId: data.snapshotId,
+        eventType: "balance_snapshot.updated",
+        payload: after,
+      });
+
+      return { id: data.snapshotId, accountId: before.accountId };
+    });
+
+    const snapshots = await listSnapshots(ctx, txResult.accountId);
+    if (!snapshots.ok) return snapshots;
+    const snapshot = snapshots.value.find((row) => row.id === txResult.id);
     if (snapshot === undefined) {
       throw new LedgerError("INTERNAL", "Snapshot gagal dibaca kembali.");
     }

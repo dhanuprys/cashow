@@ -1,12 +1,26 @@
 "use client";
 
 import { formatMoney } from "@cashow/domain";
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { CurrencyInput } from "@/components/ledger/currency-input";
+import { DatePicker } from "@/components/ledger/date-picker";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
 import {
   confirmRecurringDraftAction,
   createRecurringAction,
@@ -57,15 +71,20 @@ export function RecurringForm({
     initialActionState,
   );
 
+  useEffect(() => {
+    if (state.status !== "success") return;
+    toast.add({ title: "Tersimpan", description: state.message ?? "Perubahan tersimpan." });
+  }, [state]);
+
   return (
     <form action={formAction} className="space-y-4">
       {template === undefined ? null : (
         <input type="hidden" name="recurringId" value={template.id} />
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor={`rec-type-${template?.id ?? "new"}`}>Jenis</Label>
+      <FieldGroup className="grid gap-4 sm:grid-cols-2">
+        <Field>
+          <FieldLabel htmlFor={`rec-type-${template?.id ?? "new"}`}>Jenis</FieldLabel>
           <NativeSelect
             id={`rec-type-${template?.id ?? "new"}`}
             name="type"
@@ -77,23 +96,22 @@ export function RecurringForm({
             <NativeSelectOption value="INCOME">Pemasukan</NativeSelectOption>
             <NativeSelectOption value="TRANSFER">Transfer</NativeSelectOption>
           </NativeSelect>
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`rec-amount-${template?.id ?? "new"}`}>Jumlah</Label>
-          <Input
+        <Field>
+          <FieldLabel htmlFor={`rec-amount-${template?.id ?? "new"}`}>Jumlah</FieldLabel>
+          <CurrencyInput
             id={`rec-amount-${template?.id ?? "new"}`}
             name="amount"
             defaultValue={template?.amount ?? ""}
-            inputMode="numeric"
-            placeholder="500rb"
+            placeholder="500rb atau 500.000"
             className="mt-2"
             required
           />
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`rec-account-${template?.id ?? "new"}`}>Akun asal</Label>
+        <Field>
+          <FieldLabel htmlFor={`rec-account-${template?.id ?? "new"}`}>Akun asal</FieldLabel>
           <NativeSelect
             id={`rec-account-${template?.id ?? "new"}`}
             name="accountId"
@@ -107,10 +125,12 @@ export function RecurringForm({
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`rec-destination-${template?.id ?? "new"}`}>Akun tujuan (transfer)</Label>
+        <Field>
+          <FieldLabel htmlFor={`rec-destination-${template?.id ?? "new"}`}>
+            Akun tujuan <span className="font-normal text-muted-foreground">(transfer)</span>
+          </FieldLabel>
           <NativeSelect
             id={`rec-destination-${template?.id ?? "new"}`}
             name="destinationAccountId"
@@ -124,10 +144,10 @@ export function RecurringForm({
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`rec-category-${template?.id ?? "new"}`}>Kategori</Label>
+        <Field>
+          <FieldLabel htmlFor={`rec-category-${template?.id ?? "new"}`}>Kategori</FieldLabel>
           <NativeSelect
             id={`rec-category-${template?.id ?? "new"}`}
             name="categoryId"
@@ -141,10 +161,10 @@ export function RecurringForm({
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`rec-frequency-${template?.id ?? "new"}`}>Frekuensi</Label>
+        <Field>
+          <FieldLabel htmlFor={`rec-frequency-${template?.id ?? "new"}`}>Frekuensi</FieldLabel>
           <NativeSelect
             id={`rec-frequency-${template?.id ?? "new"}`}
             name="frequency"
@@ -157,10 +177,10 @@ export function RecurringForm({
             <NativeSelectOption value="MONTHLY">Bulanan</NativeSelectOption>
             <NativeSelectOption value="YEARLY">Tahunan</NativeSelectOption>
           </NativeSelect>
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`rec-dayofmonth-${template?.id ?? "new"}`}>Hari (bulan)</Label>
+        <Field>
+          <FieldLabel htmlFor={`rec-dayofmonth-${template?.id ?? "new"}`}>Hari (bulan)</FieldLabel>
           <Input
             id={`rec-dayofmonth-${template?.id ?? "new"}`}
             name="dayOfMonth"
@@ -169,39 +189,42 @@ export function RecurringForm({
             placeholder="1-31"
             className="mt-2"
           />
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`rec-start-${template?.id ?? "new"}`}>Mulai (YYYY-MM-DD)</Label>
-          <Input
+        <Field>
+          <FieldLabel htmlFor={`rec-start-${template?.id ?? "new"}`}>Mulai (YYYY-MM-DD)</FieldLabel>
+          <DatePicker
             id={`rec-start-${template?.id ?? "new"}`}
             name="startDate"
-            type="date"
+            ariaLabel="Tanggal mulai"
             className="mt-2"
           />
-        </div>
-      </div>
+        </Field>
 
-      <div>
-        <Label htmlFor={`rec-merchant-${template?.id ?? "new"}`}>Toko / penerima</Label>
-        <Input
-          id={`rec-merchant-${template?.id ?? "new"}`}
-          name="merchant"
-          defaultValue={template?.merchant ?? ""}
-          className="mt-2"
-        />
-      </div>
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor={`rec-merchant-${template?.id ?? "new"}`}>Toko / penerima</FieldLabel>
+          <Input
+            id={`rec-merchant-${template?.id ?? "new"}`}
+            name="merchant"
+            defaultValue={template?.merchant ?? ""}
+            className="mt-2"
+          />
+        </Field>
 
-      <div>
-        <Label htmlFor={`rec-note-${template?.id ?? "new"}`}>Catatan</Label>
-        <Textarea
-          id={`rec-note-${template?.id ?? "new"}`}
-          name="note"
-          defaultValue={template?.note ?? ""}
-          maxLength={1000}
-          className="mt-2"
-        />
-      </div>
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor={`rec-note-${template?.id ?? "new"}`}>
+            Catatan <span className="font-normal text-muted-foreground">(opsional)</span>
+          </FieldLabel>
+          <Textarea
+            id={`rec-note-${template?.id ?? "new"}`}
+            name="note"
+            defaultValue={template?.note ?? ""}
+            maxLength={1000}
+            className="mt-2"
+            placeholder="Catatan singkat"
+          />
+        </Field>
+      </FieldGroup>
 
       {state.status === "error" ? (
         <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
@@ -209,12 +232,14 @@ export function RecurringForm({
         </p>
       ) : null}
       {state.status === "success" ? (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">Template tersimpan.</p>
+        <p className="text-sm text-emerald-700 dark:text-emerald-400">Template tersimpan.</p>
       ) : null}
 
-      <SubmitButton size="sm">
-        {template === undefined ? "Buat template" : "Simpan template"}
-      </SubmitButton>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <SubmitButton size="sm" className="w-full sm:w-auto">
+          {template === undefined ? "Buat template" : "Simpan template"}
+        </SubmitButton>
+      </div>
     </form>
   );
 }
@@ -230,19 +255,49 @@ export function RunRecurringButton() {
 }
 
 export function DeleteRecurringButton({ id }: { id: string }) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [pending, setPending] = useState(false);
+
   return (
-    <form action={deleteRecurringAction}>
-      <input type="hidden" name="recurringId" value={id} />
-      <button
-        type="submit"
-        className="text-xs text-muted-foreground hover:text-destructive"
-        onClick={(event) => {
-          if (!window.confirm("Hapus template ini?")) event.preventDefault();
-        }}
-      >
-        Hapus
-      </button>
-    </form>
+    <>
+      <form ref={formRef} action={deleteRecurringAction}>
+        <input type="hidden" name="recurringId" value={id} />
+      </form>
+      <AlertDialog>
+        <AlertDialogTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="sm"
+              className="min-h-9 text-xs text-muted-foreground hover:text-destructive"
+            />
+          }
+        >
+          Hapus
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus template ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Template yang dihapus tidak lagi membuat draf baru. Riwayat transaksi yang sudah
+              tercatat tetap ada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={pending}
+              onClick={() => {
+                setPending(true);
+                formRef.current?.requestSubmit();
+              }}
+            >
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

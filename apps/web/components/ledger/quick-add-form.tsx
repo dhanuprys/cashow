@@ -1,11 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { formatMoney, parseMoney } from "@cashow/domain";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { CurrencyInput } from "@/components/ledger/currency-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { toast } from "@/components/ui/toast";
 import { quickAddAction } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
+import { useClientId } from "@/lib/use-client-id";
 import { cn } from "@/lib/utils";
 
 export interface QuickAddAccount {
@@ -34,18 +38,24 @@ export function QuickAddForm({
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const [requestId, regenerateRequestId] = useClientId();
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     quickAddAction,
     initialActionState,
   );
 
+  const parsedAmount = useMemo(() => {
+    if (!amount.trim()) return null;
+    return parseMoney(amount);
+  }, [amount]);
+
   useEffect(() => {
     if (state.status !== "success") return;
     setAmount("");
     setNote("");
-    setRequestId(crypto.randomUUID());
-  }, [state]);
+    regenerateRequestId();
+    toast.add({ title: "Tercatat", description: state.message ?? "Transaksi tersimpan." });
+  }, [state, regenerateRequestId]);
 
   const visibleCategories = categories.filter((category) => category.kind === type);
 
@@ -63,7 +73,8 @@ export function QuickAddForm({
             <label
               key={option.value}
               className={cn(
-                "cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                "cursor-pointer rounded-full px-4 py-2 text-sm font-medium transition-colors sm:px-3 sm:py-1 sm:text-xs",
+                "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring/70",
                 type === option.value
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground",
@@ -85,23 +96,36 @@ export function QuickAddForm({
           ))}
         </div>
         {state.status === "success" ? (
-          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          <span
+            role="status"
+            aria-live="polite"
+            className="text-xs font-medium text-emerald-700 dark:text-emerald-400"
+          >
             Tercatat ✓
           </span>
         ) : null}
       </div>
 
-      <Input
-        name="amount"
-        value={amount}
-        onChange={(event) => setAmount(event.target.value)}
-        inputMode="numeric"
-        autoComplete="off"
-        placeholder="Jumlah — 35rb, 1,5jt"
-        className="h-11 text-base"
-        aria-label="Jumlah"
-        required
-      />
+      <div>
+        <CurrencyInput
+          name="amount"
+          value={amount}
+          onValueChange={setAmount}
+          placeholder="Jumlah — 35rb, 1,5jt, atau 50000"
+          className="h-11 text-base"
+          aria-label="Jumlah"
+          required
+        />
+        {parsedAmount !== null && parsedAmount > 0n ? (
+          <p className="mt-1 px-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            = {formatMoney(parsedAmount)}
+          </p>
+        ) : amount.trim() !== "" && parsedAmount === null ? (
+          <p className="mt-1 px-1 text-xs text-muted-foreground">
+            Contoh format: 50k, 35rb, 1,5jt, atau 50000
+          </p>
+        ) : null}
+      </div>
 
       <Input
         name="note"
@@ -112,12 +136,13 @@ export function QuickAddForm({
         aria-label="Catatan"
       />
 
-      <div className="flex gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <NativeSelect
           name="categoryId"
+          aria-label="Kategori"
           value={categoryId}
           onChange={(event) => setCategoryId(event.target.value)}
-          className="min-w-0 flex-1"
+          className="w-full"
         >
           <NativeSelectOption value="">Tanpa kategori</NativeSelectOption>
           {visibleCategories.map((category) => (
@@ -126,7 +151,7 @@ export function QuickAddForm({
             </NativeSelectOption>
           ))}
         </NativeSelect>
-        <NativeSelect name="accountId" defaultValue="" className="min-w-0 flex-1">
+        <NativeSelect name="accountId" aria-label="Akun" defaultValue="" className="w-full">
           <NativeSelectOption value="">Akun utama</NativeSelectOption>
           {accounts.map((account) => (
             <NativeSelectOption key={account.id} value={account.id}>
@@ -142,7 +167,7 @@ export function QuickAddForm({
         </p>
       ) : null}
 
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button type="submit" className="h-11 w-full" disabled={pending}>
         {pending ? "Menyimpan…" : "Catat cepat"}
       </Button>
     </form>

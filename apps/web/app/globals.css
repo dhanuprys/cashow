@@ -49,6 +49,7 @@
 }
 
 :root {
+  color-scheme: light;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -60,18 +61,22 @@
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  /* 5.0:1 on --muted and 5.3:1 on white; the previous 0.556 was 4.24:1 on
+     --muted, below the 4.5:1 AA threshold for body text. */
+  --muted-foreground: oklch(0.51 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.845 0.143 164.978);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.596 0.145 163.225);
-  --chart-4: oklch(0.508 0.118 165.612);
-  --chart-5: oklch(0.432 0.095 166.913);
+  /* Categorical chart palette: five clearly separated hues (green, blue,
+     violet, amber, rose) instead of five shades of the same green. */
+  --chart-1: oklch(0.646 0.15 163);
+  --chart-2: oklch(0.62 0.16 250);
+  --chart-3: oklch(0.62 0.18 300);
+  --chart-4: oklch(0.74 0.15 75);
+  --chart-5: oklch(0.63 0.2 15);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -84,6 +89,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -102,11 +108,11 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.845 0.143 164.978);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.596 0.145 163.225);
-  --chart-4: oklch(0.508 0.118 165.612);
-  --chart-5: oklch(0.432 0.095 166.913);
+  --chart-1: oklch(0.72 0.15 163);
+  --chart-2: oklch(0.7 0.15 250);
+  --chart-3: oklch(0.72 0.16 300);
+  --chart-4: oklch(0.8 0.14 75);
+  --chart-5: oklch(0.7 0.18 15);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.723 0.219 149.579);
@@ -126,5 +132,52 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /* Respect the OS-level motion preference (WCAG 2.3.3). The override has to
+     beat utility classes, which out-specify element selectors. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      /* biome-ignore lint/complexity/noImportantStyles: must override utilities */
+      animation-duration: 0.01ms !important;
+      /* biome-ignore lint/complexity/noImportantStyles: must override utilities */
+      animation-iteration-count: 1 !important;
+      /* biome-ignore lint/complexity/noImportantStyles: must override utilities */
+      transition-duration: 0.01ms !important;
+      /* biome-ignore lint/complexity/noImportantStyles: must override utilities */
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Print: a clean report of the dashboard. */
+@media print {
+  header,
+  nav,
+  .no-print {
+    /* biome-ignore lint/complexity/noImportantStyles: print override must win */
+    display: none !important;
+  }
+  body {
+    /* biome-ignore lint/complexity/noImportantStyles: print override must win */
+    background: white !important;
+    /* biome-ignore lint/complexity/noImportantStyles: print override must win */
+    color: black !important;
+  }
+  main {
+    /* biome-ignore lint/complexity/noImportantStyles: print override must win */
+    max-width: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: print override must win */
+    padding: 0 !important;
+  }
+  .card,
+  [data-slot="card"] {
+    break-inside: avoid;
+    /* biome-ignore lint/complexity/noImportantStyles: print override must win */
+    box-shadow: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: print override must win */
+    border: 1px solid #e5e5e5 !important;
   }
 }

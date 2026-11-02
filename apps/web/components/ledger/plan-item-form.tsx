@@ -1,9 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { CurrencyInput } from "@/components/ledger/currency-input";
+import { DatePicker } from "@/components/ledger/date-picker";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
 import { createPlanItemAction, updatePlanItemAction } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
 import { SubmitButton } from "./submit-button";
@@ -23,14 +26,19 @@ export function PlanItemForm({ planId, item }: { planId: string; item?: PlanItem
     initialActionState,
   );
 
+  useEffect(() => {
+    if (state.status !== "success") return;
+    toast.add({ title: "Tersimpan", description: state.message ?? "Perubahan tersimpan." });
+  }, [state]);
+
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="planId" value={planId} />
       {item === undefined ? null : <input type="hidden" name="itemId" value={item.id} />}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <Label htmlFor={`item-label-${item?.id ?? "new"}`}>Nama tahap</Label>
+      <FieldGroup className="grid gap-4 sm:grid-cols-2">
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor={`item-label-${item?.id ?? "new"}`}>Nama tahap</FieldLabel>
           <Input
             id={`item-label-${item?.id ?? "new"}`}
             name="label"
@@ -40,38 +48,39 @@ export function PlanItemForm({ planId, item }: { planId: string; item?: PlanItem
             className="mt-2"
             required
           />
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`item-amount-${item?.id ?? "new"}`}>Nilai yang diharapkan</Label>
-          <Input
+        <Field>
+          <FieldLabel htmlFor={`item-amount-${item?.id ?? "new"}`}>
+            Nilai yang diharapkan
+          </FieldLabel>
+          <CurrencyInput
             id={`item-amount-${item?.id ?? "new"}`}
             name="expectedAmount"
             defaultValue={item?.expectedAmount ?? ""}
-            inputMode="numeric"
-            placeholder="5jt"
+            placeholder="5jt atau 5.000.000"
             className="mt-2"
             required
           />
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`item-due-${item?.id ?? "new"}`}>
+        <Field>
+          <FieldLabel htmlFor={`item-due-${item?.id ?? "new"}`}>
             Jatuh tempo <span className="font-normal text-muted-foreground">(opsional)</span>
-          </Label>
-          <Input
+          </FieldLabel>
+          <DatePicker
             id={`item-due-${item?.id ?? "new"}`}
             name="dueOn"
-            type="date"
             defaultValue={item?.dueOn ?? ""}
+            ariaLabel="Jatuh tempo"
             className="mt-2"
           />
-        </div>
+        </Field>
 
-        <div className="sm:col-span-2">
-          <Label htmlFor={`item-note-${item?.id ?? "new"}`}>
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor={`item-note-${item?.id ?? "new"}`}>
             Catatan <span className="font-normal text-muted-foreground">(opsional)</span>
-          </Label>
+          </FieldLabel>
           <Textarea
             id={`item-note-${item?.id ?? "new"}`}
             name="note"
@@ -80,8 +89,8 @@ export function PlanItemForm({ planId, item }: { planId: string; item?: PlanItem
             className="mt-2"
             placeholder="Detail singkat tahap ini"
           />
-        </div>
-      </div>
+        </Field>
+      </FieldGroup>
 
       {state.status === "error" ? (
         <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
@@ -89,10 +98,14 @@ export function PlanItemForm({ planId, item }: { planId: string; item?: PlanItem
         </p>
       ) : null}
       {state.status === "success" ? (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">Tahap tersimpan.</p>
+        <p className="text-sm text-emerald-700 dark:text-emerald-400">Tahap tersimpan.</p>
       ) : null}
 
-      <SubmitButton size="sm">{item === undefined ? "Tambah tahap" : "Simpan tahap"}</SubmitButton>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <SubmitButton size="sm" className="w-full sm:w-auto">
+          {item === undefined ? "Tambah tahap" : "Simpan tahap"}
+        </SubmitButton>
+      </div>
     </form>
   );
 }

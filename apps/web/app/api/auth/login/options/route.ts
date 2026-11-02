@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const config = getAuthConfig();
+  const config = getAuthConfig(request);
 
   // No `allowCredentials`: passkeys are discoverable, so the browser can offer
   // every account's credential without the server naming a user first.

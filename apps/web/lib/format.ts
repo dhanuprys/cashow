@@ -1,10 +1,34 @@
 import { parseDbTimestamp, toLocalDate, toLocalDateTimeInput } from "@cashow/domain";
 
+/**
+ * `Intl.DateTimeFormat` construction is expensive relative to formatting, and
+ * the app formats the same timestamp repeatedly with the same owner timezone
+ * (the transaction detail page alone calls `displayDateTime` a dozen times).
+ * One formatter per timezone is kept for the lifetime of the process.
+ */
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+const dateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
+const localDateFormatters = new Map<string, Intl.DateTimeFormat>();
+const monthFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function cached(
+  cache: Map<string, Intl.DateTimeFormat>,
+  timeZone: string,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  let formatter = cache.get(timeZone);
+  if (formatter === undefined) {
+    formatter = new Intl.DateTimeFormat("id-ID", { timeZone, ...options });
+    cache.set(timeZone, formatter);
+  }
+  return formatter;
+}
+
 const dateFormatter = (timeZone: string) =>
-  new Intl.DateTimeFormat("id-ID", { timeZone, dateStyle: "medium" });
+  cached(dateFormatters, timeZone, { dateStyle: "medium" });
 
 const dateTimeFormatter = (timeZone: string) =>
-  new Intl.DateTimeFormat("id-ID", { timeZone, dateStyle: "medium", timeStyle: "short" });
+  cached(dateTimeFormatters, timeZone, { dateStyle: "medium", timeStyle: "short" });
 
 /** Local date (`27 Okt 2026`) for a database timestamp or ISO instant. */
 export function displayDate(instant: string | Date, timeZone: string): string {
@@ -19,10 +43,7 @@ export function displayDate(instant: string | Date, timeZone: string): string {
 export function displayLocalDate(value: string): string {
   const date = new Date(`${value}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(date);
+  return cached(localDateFormatters, "UTC", { dateStyle: "medium" }).format(date);
 }
 
 /** Local date and time (`27 Okt 2026, 08.30`) in the owner's timezone. */
@@ -47,7 +68,7 @@ export function previousMonthKey(month: string): string {
 /** `Oktober 2026` for a `YYYY-MM` key. */
 export function monthLabel(month: string): string {
   const [yearText, monthText] = month.split("-");
-  return new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(
+  return cached(monthFormatters, "UTC", { month: "long", year: "numeric" }).format(
     new Date(Date.UTC(Number(yearText), Number(monthText) - 1, 1)),
   );
 }

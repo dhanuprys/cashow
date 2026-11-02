@@ -1,5 +1,6 @@
 import { type LocalDate, toLocalDate } from "@cashow/domain";
-import { nowOf, type UseCaseContext, userTimezone } from "./context";
+import { getBudgetStatus } from "./budgets";
+import { nowOf, type UseCaseContext, userSettings } from "./context";
 import { toLedgerError } from "./errors";
 import { err, ok, type Result } from "./result";
 
@@ -71,9 +72,10 @@ export interface SafeToSpend {
 
 export async function getSafeToSpend(ctx: UseCaseContext): Promise<Result<SafeToSpend>> {
   try {
-    const timezone = await userTimezone(ctx.db, ctx.userId);
+    const settings = await userSettings(ctx);
     const now = nowOf(ctx);
-    const budgetStartDay = await loadBudgetStartDay(ctx);
+    const timezone = settings.timezone;
+    const budgetStartDay = settings.budgetMonthStartDay;
     const range = budgetMonthRange(now, timezone, budgetStartDay);
 
     const today = toLocalDate(now, timezone);
@@ -96,7 +98,6 @@ export async function getSafeToSpend(ctx: UseCaseContext): Promise<Result<SafeTo
     const free = summary === null ? 0n : summary.income - summary.expense;
 
     // Prefer budget remaining when budgets exist.
-    const { getBudgetStatus } = await import("./budgets");
     const budgetStatus = await getBudgetStatus(ctx);
     let available = free;
     if (budgetStatus.ok && budgetStatus.value.length > 0) {
@@ -116,10 +117,11 @@ export async function getSummary(
   options: SummaryOptions = {},
 ): Promise<Result<Summary>> {
   try {
-    const timezone = await userTimezone(ctx.db, ctx.userId);
+    const settings = await userSettings(ctx);
+    const timezone = settings.timezone;
     const now = nowOf(ctx);
-    const budgetStartDay = await loadBudgetStartDay(ctx);
-    const weekStartsOn = await loadWeekStartsOn(ctx);
+    const budgetStartDay = settings.budgetMonthStartDay;
+    const weekStartsOn = settings.weekStartsOn;
 
     const period = options.period ?? "month";
     const range = periodRange(
@@ -369,20 +371,6 @@ async function loadDaily(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-async function loadBudgetStartDay(ctx: UseCaseContext): Promise<number> {
-  const user = await ctx.db.orm.public.User.where({ id: ctx.userId })
-    .select("budgetMonthStartDay", "weekStartsOn")
-    .first();
-  return user?.budgetMonthStartDay ?? 1;
-}
-
-async function loadWeekStartsOn(ctx: UseCaseContext): Promise<number> {
-  const user = await ctx.db.orm.public.User.where({ id: ctx.userId })
-    .select("weekStartsOn")
-    .first();
-  return user?.weekStartsOn ?? 1;
-}
 
 function budgetMonthRange(now: Date, timeZone: string, startDay: number): SummaryRange {
   const today = toLocalDate(now, timeZone);

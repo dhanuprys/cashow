@@ -31,10 +31,17 @@ function rateLimited(key: string, limit: number, windowMs: number): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Rate limit auth endpoints: 10 attempts per 15 minutes per IP.
-  if (pathname === "/login" || pathname === "/setup" || pathname.startsWith("/api/auth/")) {
+  // Rate limit auth endpoints in production (POST submissions & auth APIs).
+  // In development, or for safe GET/HEAD navigations (browser visits, link prefetching),
+  // we do not block access to login/setup pages.
+  const isAuthMutation =
+    (pathname === "/login" || pathname === "/setup" || pathname.startsWith("/api/auth/")) &&
+    request.method !== "GET" &&
+    request.method !== "HEAD";
+
+  if (process.env.NODE_ENV === "production" && isAuthMutation) {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-    if (rateLimited(`${ip}:${pathname}`, 10, 15 * 60 * 1000)) {
+    if (rateLimited(`${ip}:${pathname}`, 15, 15 * 60 * 1000)) {
       return withSecurityHeaders(
         new NextResponse("Too many requests", {
           status: 429,

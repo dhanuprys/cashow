@@ -8,6 +8,8 @@ import { err, ok, type Result } from "./result";
 export interface Profile {
   id: string;
   name: string | null;
+  avatar: string | null;
+  bio: string | null;
   email: string | null;
   timezone: string;
   weekStartsOn: number;
@@ -23,6 +25,8 @@ export async function getProfile(ctx: UseCaseContext): Promise<Result<Profile>> 
     return ok({
       id: row.id,
       name: row.name,
+      avatar: row.avatar ?? null,
+      bio: row.bio ?? null,
       email: row.email,
       timezone: row.timezone,
       weekStartsOn: row.weekStartsOn,
@@ -53,6 +57,8 @@ export async function updateProfile(ctx: UseCaseContext, input: unknown): Promis
 
       const patch: Record<string, unknown> = {};
       if (data.name !== undefined) patch.name = data.name;
+      if (data.avatar !== undefined) patch.avatar = data.avatar;
+      if (data.bio !== undefined) patch.bio = data.bio;
       if (data.timezone !== undefined) patch.timezone = data.timezone;
       if (data.weekStartsOn !== undefined) patch.weekStartsOn = data.weekStartsOn;
       if (data.budgetMonthStartDay !== undefined) {
@@ -87,6 +93,8 @@ export async function updateProfile(ctx: UseCaseContext, input: unknown): Promis
     return ok({
       id: after.id,
       name: after.name,
+      avatar: after.avatar ?? null,
+      bio: after.bio ?? null,
       email: after.email,
       timezone: after.timezone,
       weekStartsOn: after.weekStartsOn,

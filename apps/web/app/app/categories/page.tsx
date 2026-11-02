@@ -1,21 +1,49 @@
 import { listCategories } from "@cashow/services";
-import { Archive, ArchiveRestore, Tags } from "lucide-react";
+import { Archive, ArchiveRestore, Sparkles, Tags } from "lucide-react";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { CategoryForm } from "@/components/ledger/category-form";
+import { ContentSkeleton } from "@/components/ledger/page-skeleton";
 import { SubmitButton } from "@/components/ledger/submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { archiveCategoryAction } from "@/lib/actions/ledger";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { archiveCategoryAction, seedCategoriesAction } from "@/lib/actions/ledger";
 import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { unwrap } from "@/lib/ledger";
 
+export const metadata = {
+  title: "Kategori",
+};
+
 export default function CategoriesPage() {
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-4xl bg-muted" />}>
-      <Categories />
-    </Suspense>
+    <div className="space-y-6">
+      <section className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Struktur
+          </p>
+          <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+            Kategori
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Kategori bisa punya subkategori. Jenisnya tidak berubah setelah dibuat.
+          </p>
+        </div>
+        <form action={seedCategoriesAction}>
+          <SubmitButton variant="outline" size="sm" pendingLabel="Menyiapkan…">
+            <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
+            Pasang Kategori Standar
+          </SubmitButton>
+        </form>
+      </section>
+
+      <Suspense fallback={<ContentSkeleton />}>
+        <Categories />
+      </Suspense>
+    </div>
   );
 }
 
@@ -25,7 +53,7 @@ async function Categories() {
   const user = await requireUser();
   const db = await getDb();
   const ctx = { db, userId: user.id };
-  const categories = unwrap(await listCategories(ctx));
+  const categories = unwrap(await listCategories(ctx, { withTransactionCount: true }));
   const byId = new Map(categories.map((category) => [category.id, category]));
 
   const parentOptions = (kind: "INCOME" | "EXPENSE") =>
@@ -40,19 +68,7 @@ async function Categories() {
 
   return (
     <div className="space-y-6">
-      <section>
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-          Struktur
-        </p>
-        <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-          Kategori
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Kategori bisa punya subkategori. Jenisnya tidak berubah setelah dibuat.
-        </p>
-      </section>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           {(["EXPENSE", "INCOME"] as const).map((kind) => {
             const rows = categories.filter((category) => category.kind === kind);
@@ -64,24 +80,33 @@ async function Categories() {
                 </CardHeader>
                 <CardContent>
                   {rows.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Belum ada kategori.</p>
+                    <Empty className="border">
+                      <EmptyHeader>
+                        <EmptyTitle>Belum ada kategori</EmptyTitle>
+                        <EmptyDescription>
+                          Buat kategori pengeluaran atau pemasukan.
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
                   ) : (
                     <ul className="space-y-2">
                       {rows.map((category) => (
                         <li key={category.id} className="rounded-2xl border border-border p-3">
                           <div className="flex items-start justify-between gap-3">
-                            <div className="flex min-w-0 items-start gap-2.5">
+                            <div className="flex min-w-0 flex-1 items-start gap-2.5">
                               <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted">
                                 <Tags className="size-3.5" aria-hidden="true" />
                               </span>
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                                  <span className="truncate">{category.name}</span>
+                                  <span className="break-words line-clamp-2">{category.name}</span>
                                   {category.archivedAt === null ? null : (
-                                    <Badge variant="secondary">Arsip</Badge>
+                                    <Badge variant="secondary" className="shrink-0">
+                                      Arsip
+                                    </Badge>
                                   )}
                                   {category.parentId === null ? null : (
-                                    <span className="text-xs font-normal text-muted-foreground">
+                                    <span className="shrink-0 text-xs font-normal text-muted-foreground">
                                       di bawah {byId.get(category.parentId)?.name ?? "induk"}
                                     </span>
                                   )}
@@ -92,7 +117,7 @@ async function Categories() {
                               </div>
                             </div>
 
-                            <form action={archiveCategoryAction}>
+                            <form action={archiveCategoryAction} className="shrink-0">
                               <input type="hidden" name="categoryId" value={category.id} />
                               <input
                                 type="hidden"

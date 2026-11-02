@@ -4,15 +4,26 @@ import { Suspense } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { SetupForm } from "@/components/auth/setup-form";
 import { getAuthConfig } from "@/lib/auth/config";
-import { hasAnyUser } from "@/lib/auth/setup";
+import { getSessionUser } from "@/lib/auth/session";
+
+export const metadata = {
+  title: "Daftar Akun",
+  description:
+    "Daftarkan akun buku kas Cashow menggunakan passkey biometrik atau username dan kata sandi.",
+};
 
 export default function SetupPage() {
   return (
     <AuthShell
-      title="Siapkan pemilik"
-      subtitle="Buat passkey pertama. Setelah ini pendaftaran publik ditutup dan akun hanya bisa dibuka dengan passkey."
+      title="Daftar Akun Baru"
+      subtitle="Pilih passkey biometrik atau kata sandi untuk mengamankan pembukuan keuangan pribadimu."
+      footerLink={{
+        href: "/login",
+        label: "Sudah punya akun?",
+        actionText: "Masuk ke buku kas",
+      }}
     >
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Memeriksa status setup…</p>}>
+      <Suspense fallback={<p className="text-sm text-muted-foreground">Memeriksa status…</p>}>
         <SetupGate />
       </Suspense>
     </AuthShell>
@@ -22,7 +33,8 @@ export default function SetupPage() {
 async function SetupGate() {
   await connection();
 
-  if (await hasAnyUser()) redirect("/login");
+  const user = await getSessionUser();
+  if (user !== null) redirect("/app");
 
   return <SetupForm setupTokenRequired={getAuthConfig().setupTokenRequired} />;
 }

@@ -1,6 +1,6 @@
 import { formatMoney } from "@cashow/domain";
 import { getTransaction } from "@cashow/services";
-import { ArrowLeft, FileText, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, FileText, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -8,6 +8,7 @@ import { Suspense } from "react";
 import { AttachmentUploader } from "@/components/ledger/attachment-uploader";
 import { ConfirmSubmitButton } from "@/components/ledger/confirm-submit-button";
 import { LinkButton } from "@/components/ledger/link-button";
+import { PageSkeleton } from "@/components/ledger/page-skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,9 +29,13 @@ import {
 import { ledgerErrorCode } from "@/lib/ledger";
 import { cn } from "@/lib/utils";
 
+export const metadata = {
+  title: "Detail transaksi",
+};
+
 export default function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<div className="h-96 animate-pulse rounded-4xl bg-muted" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <TransactionDetail params={params} />
     </Suspense>
   );
@@ -63,6 +68,15 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
       transaction.note ??
       transaction.categoryName ??
       (income ? "Pemasukan" : "Pengeluaran"));
+
+  const cloneQuery = new URLSearchParams();
+  cloneQuery.set("type", transaction.type);
+  cloneQuery.set("amount", transaction.amount.toString());
+  cloneQuery.set("accountId", transaction.accountId);
+  if (transaction.categoryId) cloneQuery.set("categoryId", transaction.categoryId);
+  if (transaction.merchant) cloneQuery.set("merchant", transaction.merchant);
+  if (transaction.note) cloneQuery.set("note", transaction.note);
+  const cloneHref = `/app/transactions/new?${cloneQuery.toString()}`;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -102,11 +116,13 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                   <Badge variant="outline">Catat cepat</Badge>
                 ) : null}
               </div>
-              <CardTitle className="mt-3 text-xl">{title}</CardTitle>
+              <CardTitle className="mt-3 text-xl break-words [overflow-wrap:anywhere]">
+                {title}
+              </CardTitle>
               <p
                 className={cn(
-                  "mt-2 text-3xl font-semibold tabular-nums tracking-tight",
-                  income ? "text-emerald-600 dark:text-emerald-400" : "",
+                  "mt-2 text-2xl font-semibold tabular-nums tracking-tight break-words sm:text-3xl",
+                  income ? "text-emerald-700 dark:text-emerald-400" : "",
                 )}
               >
                 {income ? "+" : transfer ? "" : "−"}
@@ -142,6 +158,12 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                       Ubah
                     </LinkButton>
                   ) : null}
+                  {!transfer && !feeForTransfer && (
+                    <LinkButton href={cloneHref} variant="outline" size="sm">
+                      <Copy aria-hidden="true" />
+                      Duplikasi
+                    </LinkButton>
+                  )}
                   {feeForTransfer ? null : (
                     <form action={deleteTransactionAction}>
                       <input type="hidden" name="transactionId" value={transaction.id} />
@@ -358,7 +380,9 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                     )}
                     <div className="flex items-center justify-between gap-2 p-2.5">
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-medium">{attachment.fileName}</p>
+                        <p className="truncate text-xs font-medium" title={attachment.fileName}>
+                          {attachment.fileName}
+                        </p>
                         <p className="text-[11px] text-muted-foreground">
                           {ATTACHMENT_KIND_LABEL[attachment.kind] ?? attachment.kind} ·{" "}
                           {formatBytes(attachment.byteSize)}

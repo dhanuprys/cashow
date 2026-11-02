@@ -1,9 +1,10 @@
 "use server";
 
-import { quickAddSchema } from "@cashow/domain";
+import { quickAddSchema, uuidv7 } from "@cashow/domain";
 import {
   confirmRecurringDraft,
   createAccount,
+  createAiProviderConfig,
   createBudget,
   createCategory,
   createPlan,
@@ -13,18 +14,23 @@ import {
   createSnapshot,
   createTransaction,
   createTransfer,
+  deleteAiProviderConfig,
   deleteBudget,
   deletePlanItem,
   deleteRecurring,
   deleteRule,
+  getAiProviderConfig,
   listAccounts,
+  listCategories,
   markNotificationRead,
   restoreTransaction,
   runDueRecurring,
   runRules,
   savePushSubscription,
+  seedStandardCategories,
   setAccountArchived,
   setCategoryArchived,
+  setDefaultAiProviderConfig,
   setPlanArchived,
   skipRecurringDraft,
   snoozeNotification,
@@ -33,6 +39,7 @@ import {
   softDeleteTransaction,
   unlockCheckpoint,
   updateAccount,
+  updateAiProviderConfig,
   updateBudget,
   updateCategory,
   updatePlan,
@@ -40,12 +47,15 @@ import {
   updateProfile,
   updateRecurring,
   updateRule,
+  updateSnapshot,
   updateTransaction,
   uploadAttachment,
   verifyCheckpoint,
 } from "@cashow/services";
+import { generateText } from "ai";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { buildLanguageModel } from "@/lib/ai-model";
 import { nowLocalInput } from "@/lib/format";
 import { requireLedgerSession } from "@/lib/ledger";
 import { attachmentStorage } from "@/lib/storage";
@@ -101,6 +111,11 @@ function revalidateLedger(): void {
   revalidatePath("/app/accounts");
   revalidatePath("/app/categories");
   revalidatePath("/app/plans");
+  // Budget spend, rule matches and inbox items are all derived from
+  // transactions, so recording one invalidates these pages too.
+  revalidatePath("/app/budgets");
+  revalidatePath("/app/rules");
+  revalidatePath("/app/inbox");
 }
 
 export async function createTransactionAction(
@@ -248,7 +263,7 @@ export async function quickAddAction(
     categoryId: text(formData, "categoryId"),
     note: text(formData, "note"),
     occurredAtLocal,
-    clientRequestId: parsed.data.clientRequestId ?? crypto.randomUUID(),
+    clientRequestId: parsed.data.clientRequestId ?? uuidv7(),
     source: "QUICK_ADD",
     allocations: [],
   });
@@ -356,6 +371,13 @@ export async function archiveCategoryAction(formData: FormData): Promise<void> {
   revalidateLedger();
 }
 
+export async function seedCategoriesAction(): Promise<void> {
+  const session = await requireLedgerSession();
+  const result = await seedStandardCategories(session.ctx);
+  if (!result.ok) throw result.error;
+  revalidateLedger();
+}
+
 export async function deleteAttachmentAction(formData: FormData): Promise<void> {
   const session = await requireLedgerSession();
   const id = text(formData, "attachmentId");
@@ -376,6 +398,8 @@ export async function updateSettingsAction(
   const session = await requireLedgerSession();
   const result = await updateProfile(session.ctx, {
     name: text(formData, "name"),
+    avatar: text(formData, "avatar") || null,
+    bio: text(formData, "bio") || null,
     timezone: text(formData, "timezone") || undefined,
     weekStartsOn: numberField(formData, "weekStartsOn"),
     budgetMonthStartDay: numberField(formData, "budgetMonthStartDay"),
@@ -508,6 +532,24 @@ export async function createSnapshotAction(
 
   const result = await createSnapshot(session.ctx, {
     accountId,
+    amount: text(formData, "amount"),
+    recordedAtLocal: text(formData, "recordedAtLocal"),
+    note: text(formData, "note"),
+  });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  return { status: "success" };
+}
+
+export async function updateSnapshotAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+
+  const result = await updateSnapshot(session.ctx, {
+    snapshotId: text(formData, "snapshotId"),
     amount: text(formData, "amount"),
     recordedAtLocal: text(formData, "recordedAtLocal"),
     note: text(formData, "note"),
@@ -775,13 +817,21 @@ export async function createRuleAction(
   } catch {
     return failure("JSON tidak valid.");
   }
+  const severity = text(formData, "severity") || "INFO";
+  const cooldownMinutes = Number(text(formData, "cooldownMinutes")) || 0;
+  const edgeTriggered = formData.get("edgeTriggered") !== "false";
+
   const result = await createRule(session.ctx, {
     name: text(formData, "name"),
     description: text(formData, "description"),
     trigger,
     condition,
     actions: [],
-    settings: { severity: "INFO", cooldownMinutes: 0, edgeTriggered: true },
+    settings: {
+      severity: severity === "ALERT" || severity === "WARNING" ? severity : "INFO",
+      cooldownMinutes,
+      edgeTriggered,
+    },
     active: true,
   });
   if (!result.ok) return failure(result.error.message);
@@ -824,12 +874,11 @@ export async function importCsvAction(
   const csv = text(formData, "csv");
   if (csv.trim() === "") return failure("CSV wajib diisi.");
 
-  const _db = session.ctx.db;
-  const accounts = await (await import("@cashow/services")).listAccounts(session.ctx);
+  const accounts = await listAccounts(session.ctx);
   const account = accounts.ok ? accounts.value.find((a) => a.archivedAt === null) : null;
   if (account === undefined || account === null) return failure("Tidak ada akun aktif.");
 
-  const categories = await (await import("@cashow/services")).listCategories(session.ctx);
+  const categories = await listCategories(session.ctx);
   const expenseCategory = categories.ok
     ? categories.value.find((c) => c.kind === "EXPENSE" && c.archivedAt === null)
     : null;
@@ -837,30 +886,83 @@ export async function importCsvAction(
     ? categories.value.find((c) => c.kind === "INCOME" && c.archivedAt === null)
     : null;
 
-  const lines = csv.trim().split(/\r?\n/).slice(1);
+  const rows = csv
+    .trim()
+    .split(/\r?\n/)
+    .map((line, index) => ({ line, number: index + 1 }))
+    .slice(1);
+
   let created = 0;
-  for (const line of lines) {
-    const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
-    if (parts.length < 3) continue;
+  const problems: string[] = [];
+
+  for (const row of rows) {
+    if (row.line.trim() === "") continue;
+
+    const parts = row.line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
+    if (parts.length < 3) {
+      problems.push(`Baris ${row.number}: butuh minimal 3 kolom (tanggal, jumlah, jenis).`);
+      continue;
+    }
+
     const [date, amount, typeRaw] = parts;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      problems.push(`Baris ${row.number}: tanggal "${date ?? ""}" bukan format YYYY-MM-DD.`);
+      continue;
+    }
+
     const type = typeRaw?.toUpperCase() === "INCOME" ? "INCOME" : "EXPENSE";
     const category = type === "INCOME" ? incomeCategory : expenseCategory;
-    const result = await (await import("@cashow/services")).createTransaction(session.ctx, {
+    const note = parts.length >= 4 ? parts.slice(3).join(", ").trim() : null;
+
+    // Duplicate detection: check if same transaction already exists on that date
+    const parsedAmount = BigInt(amount || "0");
+    const duplicate = await session.ctx.db.orm.public.Transaction.where({
+      userId: session.ctx.userId,
+      accountId: account.id,
+      type,
+      amount: parsedAmount,
+      occurredOn: date,
+    }).first();
+
+    if (duplicate !== null) {
+      problems.push(
+        `Baris ${row.number}: dilewati (duplikat transaksi ${date} senilai ${amount}).`,
+      );
+      continue;
+    }
+
+    const result = await createTransaction(session.ctx, {
       type,
       amount,
       accountId: account.id,
       categoryId: category?.id ?? null,
+      note: note === "" ? null : note,
       occurredAtLocal: `${date}T12:00`,
       source: "STATEMENT_IMPORT",
       allocations: [],
       clientRequestId: null,
     });
-    if (result.ok) created += 1;
+
+    if (result.ok) {
+      created += 1;
+    } else {
+      problems.push(`Baris ${row.number}: ${result.error.message}`);
+    }
   }
 
   revalidateLedger();
   revalidatePath("/app/transactions");
-  return { status: "success", message: `${created} transaksi diimpor.` };
+
+  if (created === 0) {
+    return failure(
+      problems.length === 0
+        ? "Tidak ada baris data setelah header."
+        : `Tidak ada transaksi yang diimpor. ${problems[0]}`,
+    );
+  }
+
+  const skipped = problems.length === 0 ? "" : ` ${problems.length} baris dilewati: ${problems[0]}`;
+  return { status: "success", message: `${created} transaksi diimpor.${skipped}` };
 }
 
 /** Trigger families a full manual sweep evaluates, including scheduled rules. */
@@ -918,4 +1020,147 @@ export async function snoozeNotificationAction(formData: FormData): Promise<void
   const result = await snoozeNotification(session.ctx, id, Number.isFinite(minutes) ? minutes : 60);
   if (!result.ok) throw result.error;
   revalidatePath("/app/inbox");
+}
+
+// ---------------------------------------------------------------------------
+// AI Provider configurations
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates a new provider configuration, or updates an existing one when the
+ * form carries an `id`. One action keeps the create/edit dialog honest: both
+ * paths revalidate the same routes and return the same `ActionState` shape.
+ */
+export async function saveAiProviderConfigAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "id");
+  const provider = text(formData, "provider");
+  const name = text(formData, "name");
+  const apiKey = text(formData, "apiKey");
+  const copyApiKeyFromId = text(formData, "copyApiKeyFromId") || null;
+  const baseUrl = text(formData, "baseUrl") || null;
+  const model = text(formData, "model");
+  const customModelsRaw = text(formData, "customModels");
+  const isDefault = formData.get("isDefault") === "true";
+
+  const customModels = customModelsRaw
+    ? customModelsRaw
+        .split(/[\n,]+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+    : [];
+
+  const result =
+    id === ""
+      ? await createAiProviderConfig(session.ctx, {
+          provider,
+          name,
+          apiKey,
+          copyApiKeyFromId,
+          baseUrl,
+          model,
+          customModels,
+          isDefault,
+        })
+      : await updateAiProviderConfig(session.ctx, id, {
+          provider: provider === "" ? undefined : provider,
+          name,
+          baseUrl,
+          model,
+          customModels,
+          isDefault,
+          // An empty field means "keep the stored key", never "erase it".
+          ...(apiKey === "" ? {} : { apiKey }),
+        });
+
+  if (!result.ok) return failure(result.error.message);
+
+  revalidatePath("/app/settings");
+  revalidatePath("/app/chat");
+  return {
+    status: "success",
+    message:
+      id === ""
+        ? "Konfigurasi model AI berhasil ditambahkan."
+        : "Konfigurasi model AI berhasil diperbarui.",
+  };
+}
+
+/**
+ * Sends one tiny prompt through a stored configuration so the user can prove
+ * the key, model id and base URL work before relying on them in a chat.
+ */
+export async function testAiProviderConfigAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "id");
+  if (id === "") return failure("Konfigurasi AI tidak ditemukan.");
+
+  const configResult = await getAiProviderConfig(session.ctx, id);
+  if (!configResult.ok) return failure(configResult.error.message);
+
+  const config = configResult.value;
+  if (config === null) return failure("Konfigurasi AI tidak ditemukan.");
+
+  const specificModel = text(formData, "model");
+  if (specificModel) {
+    config.model = specificModel;
+  } else if (!config.model || config.model.trim() === "") {
+    if (config.customModels && config.customModels.length > 0) {
+      config.model = config.customModels[0];
+    }
+  }
+
+  const startedAt = Date.now();
+  try {
+    const result = await generateText({
+      model: buildLanguageModel(config),
+      prompt: "Balas dengan satu kata: OK",
+      // Reasoning models spend part of the budget on hidden thinking tokens,
+      // so leave enough room for an actual visible reply.
+      maxOutputTokens: 256,
+      temperature: 0,
+      maxRetries: 1,
+      abortSignal: AbortSignal.timeout(20_000),
+    });
+    const elapsed = Date.now() - startedAt;
+    const reply = result.text.trim().replace(/\s+/g, " ").slice(0, 60);
+    return {
+      status: "success",
+      message: `Koneksi ke ${config.name} (${config.model}) berhasil (${elapsed} ms).${
+        reply === "" ? "" : ` Balasan: ${reply}`
+      }`,
+    };
+  } catch (error) {
+    return failure(`Koneksi ke ${config.name} gagal: ${errorMessage(error).slice(0, 240)}`);
+  }
+}
+
+export async function setDefaultAiProviderConfigAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "id");
+  if (id === "") return;
+
+  const result = await setDefaultAiProviderConfig(session.ctx, id);
+  if (!result.ok) throw result.error;
+
+  revalidatePath("/app/settings");
+  revalidatePath("/app/chat");
+}
+
+export async function deleteAiProviderConfigAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "id");
+  if (id === "") return;
+
+  const result = await deleteAiProviderConfig(session.ctx, id);
+  if (!result.ok) throw result.error;
+
+  revalidatePath("/app/settings");
+  revalidatePath("/app/chat");
 }

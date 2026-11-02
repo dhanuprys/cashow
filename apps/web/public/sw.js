@@ -1,24 +1,18 @@
-const CACHE = "cashow-shell-v1";
+// Cashow Service Worker
+// Manages web push notifications and PWA lifecycle.
+// Intentionally does NOT intercept fetch requests: Next.js App Router and React Server Components (RSC)
+// rely on direct HTTP streaming and segment cache, which can freeze or stall behind service worker fetch handlers.
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(["/app", "/manifest.webmanifest", "/icon.svg"])),
-  );
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener("fetch", (event) => {
-  const request = event.request;
-  if (request.method !== "GET") return;
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).catch(() => caches.match("/app"));
-    }),
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
   );
 });
 

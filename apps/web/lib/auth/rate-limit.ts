@@ -17,6 +17,11 @@ const MAX_BUCKETS = 10_000;
 export type RateLimitResult = { allowed: true } | { allowed: false; retryAfterSeconds: number };
 
 export function checkRateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
+  // Rate limiting is disabled in local development to avoid accidental lockouts.
+  if (process.env.NODE_ENV === "development") {
+    return { allowed: true };
+  }
+
   const now = Date.now();
 
   if (buckets.size > MAX_BUCKETS) {

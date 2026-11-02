@@ -2,26 +2,18 @@ import {
   evaluateRule,
   firstIssue,
   parseBackupStamp,
+  ruleInputSchema,
+  ruleUpdateSchema,
   toLocalDate,
   triggerFamilyOf,
   triggerMatches,
 } from "@cashow/domain";
-import { z } from "zod";
+import { listAccounts } from "./accounts";
 import { writeAudit } from "./audit";
 import { nowOf, type UseCaseContext, userTimezone } from "./context";
 import { LedgerError, toLedgerError } from "./errors";
 import { createNotification } from "./notifications";
 import { err, ok, type Result } from "./result";
-
-const ruleInputSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  description: z.string().trim().max(500).optional().nullable(),
-  trigger: z.unknown(),
-  condition: z.unknown(),
-  actions: z.unknown().optional(),
-  settings: z.unknown().optional(),
-  active: z.boolean().optional(),
-});
 
 export interface RuleSummary {
   id: string;
@@ -33,14 +25,41 @@ export interface RuleSummary {
   settings: unknown;
   active: boolean;
   version: number;
+  lastFiredAt: string | null;
+  lastEvaluatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export async function listRules(ctx: UseCaseContext): Promise<Result<RuleSummary[]>> {
   try {
-    const rows = await ctx.db.orm.public.Rule.where({ userId: ctx.userId }).all();
-    return ok(rows.map(toSummary));
+    const [rows, states] = await Promise.all([
+      ctx.db.orm.public.Rule.where({ userId: ctx.userId }).all(),
+      ctx.db.orm.public.RuleState.where({ userId: ctx.userId }).all(),
+    ]);
+
+    const stateByRule = new Map(states.map((s) => [s.ruleId, s]));
+
+    return ok(
+      rows.map((row) => {
+        const state = stateByRule.get(row.id);
+        return {
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          trigger: row.trigger,
+          condition: row.condition,
+          actions: row.actions,
+          settings: row.settings,
+          active: row.active,
+          version: row.version,
+          lastFiredAt: state?.lastFiredAt ? String(state.lastFiredAt) : null,
+          lastEvaluatedAt: state?.lastEvaluatedAt ? String(state.lastEvaluatedAt) : null,
+          createdAt: String(row.createdAt),
+          updatedAt: String(row.updatedAt),
+        };
+      }),
+    );
   } catch (error) {
     return err(toLedgerError(error));
   }
@@ -83,8 +102,8 @@ export async function updateRule(
   id: string,
   input: unknown,
 ): Promise<Result<RuleSummary>> {
-  const parsed = ruleInputSchema.partial().safeParse(input);
-  if (!parsed.success) return err(new LedgerError("VALIDATION", firstIssue(parsed.error as never)));
+  const parsed = ruleUpdateSchema.safeParse(input);
+  if (!parsed.success) return err(new LedgerError("VALIDATION", firstIssue(parsed.error)));
   const data = parsed.data;
   try {
     const before = await ctx.db.orm.public.Rule.where({ id, userId: ctx.userId }).first();
@@ -280,8 +299,12 @@ export async function dryRunRule(
 }
 
 async function computeMetrics(ctx: UseCaseContext): Promise<Record<string, number>> {
-  const accounts = await ctx.db.orm.public.Account.where({ userId: ctx.userId }).all();
-  const totalBalance = accounts.reduce((sum, a) => sum + Number(a.openingBalance ?? 0), 0);
+  // Live derived balance across all accounts
+  const accountsResult = await listAccounts(ctx);
+  const accounts = accountsResult.ok ? accountsResult.value : [];
+  const totalBalance = accounts
+    .filter((a) => a.archivedAt === null)
+    .reduce((sum, a) => sum + Number(a.balance), 0);
 
   const now = nowOf(ctx);
   const timezone = await userTimezone(ctx.db, ctx.userId);
@@ -364,19 +387,22 @@ async function ageHoursSince(
   return Math.max(0, (now.getTime() - parsed.getTime()) / 3_600_000);
 }
 
-function toSummary(row: {
-  id: string;
-  name: string;
-  description: string | null;
-  trigger: unknown;
-  condition: unknown;
-  actions: unknown;
-  settings: unknown;
-  active: boolean;
-  version: number;
-  createdAt: unknown;
-  updatedAt: unknown;
-}): RuleSummary {
+function toSummary(
+  row: {
+    id: string;
+    name: string;
+    description: string | null;
+    trigger: unknown;
+    condition: unknown;
+    actions: unknown;
+    settings: unknown;
+    active: boolean;
+    version: number;
+    createdAt: unknown;
+    updatedAt: unknown;
+  },
+  state?: { lastFiredAt: unknown; lastEvaluatedAt: unknown } | null,
+): RuleSummary {
   return {
     id: row.id,
     name: row.name,
@@ -387,6 +413,8 @@ function toSummary(row: {
     settings: row.settings,
     active: row.active,
     version: row.version,
+    lastFiredAt: state?.lastFiredAt ? String(state.lastFiredAt) : null,
+    lastEvaluatedAt: state?.lastEvaluatedAt ? String(state.lastEvaluatedAt) : null,
     createdAt: String(row.createdAt),
     updatedAt: String(row.updatedAt),
   };

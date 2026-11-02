@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { toast } from "@/components/ui/toast";
 import { createCategoryAction, updateCategoryAction } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
 import { SubmitButton } from "./submit-button";
@@ -37,6 +38,11 @@ export function CategoryForm({
     initialActionState,
   );
 
+  useEffect(() => {
+    if (state.status !== "success") return;
+    toast.add({ title: "Tersimpan", description: state.message ?? "Perubahan tersimpan." });
+  }, [state]);
+
   const prefix = category?.id ?? "new";
   const visibleParents = parents.filter(
     (parent) => parent.id !== category?.id && parent.kind === kind,
@@ -48,9 +54,9 @@ export function CategoryForm({
         <input type="hidden" name="categoryId" value={category.id} />
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor={`category-name-${prefix}`}>Nama kategori</Label>
+      <FieldGroup className="grid gap-4 sm:grid-cols-2">
+        <Field>
+          <FieldLabel htmlFor={`category-name-${prefix}`}>Nama kategori</FieldLabel>
           <Input
             id={`category-name-${prefix}`}
             name="name"
@@ -60,10 +66,10 @@ export function CategoryForm({
             className="mt-2"
             required
           />
-        </div>
+        </Field>
 
-        <div>
-          <Label htmlFor={`category-kind-${prefix}`}>Jenis</Label>
+        <Field>
+          <FieldLabel htmlFor={`category-kind-${prefix}`}>Jenis</FieldLabel>
           {category === undefined ? (
             <NativeSelect
               id={`category-kind-${prefix}`}
@@ -80,12 +86,12 @@ export function CategoryForm({
               {category.kind === "INCOME" ? "Pemasukan" : "Pengeluaran"} · jenis tidak bisa diubah
             </p>
           )}
-        </div>
+        </Field>
 
-        <div className="sm:col-span-2">
-          <Label htmlFor={`category-parent-${prefix}`}>
+        <Field className="sm:col-span-2">
+          <FieldLabel htmlFor={`category-parent-${prefix}`}>
             Induk <span className="font-normal text-muted-foreground">(opsional)</span>
-          </Label>
+          </FieldLabel>
           <NativeSelect
             id={`category-parent-${prefix}`}
             name="parentId"
@@ -99,8 +105,8 @@ export function CategoryForm({
               </NativeSelectOption>
             ))}
           </NativeSelect>
-        </div>
-      </div>
+        </Field>
+      </FieldGroup>
 
       {state.status === "error" ? (
         <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
@@ -108,12 +114,14 @@ export function CategoryForm({
         </p>
       ) : null}
       {state.status === "success" ? (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">Kategori tersimpan.</p>
+        <p className="text-sm text-emerald-700 dark:text-emerald-400">Kategori tersimpan.</p>
       ) : null}
 
-      <SubmitButton size="sm">
-        {category === undefined ? "Tambah kategori" : "Simpan kategori"}
-      </SubmitButton>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <SubmitButton size="sm" className="w-full sm:w-auto">
+          {category === undefined ? "Tambah kategori" : "Simpan kategori"}
+        </SubmitButton>
+      </div>
     </form>
   );
 }
