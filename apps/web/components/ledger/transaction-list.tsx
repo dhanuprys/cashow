@@ -92,7 +92,7 @@ export function TransactionList({
               <div className="shrink-0 text-right pl-2">
                 <p
                   className={cn(
-                    "text-sm font-semibold tabular-nums font-mono",
+                    "text-sm font-semibold tabular-nums",
                     income ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
                   )}
                 >

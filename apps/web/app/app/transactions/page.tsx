@@ -157,7 +157,7 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
             <p className="text-xs font-medium text-muted-foreground">Total Pemasukan</p>
             <p className="text-[11px] text-muted-foreground hidden sm:block">Aliran kas masuk</p>
           </div>
-          <p className="font-mono text-base sm:text-lg font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+          <p className="text-base sm:text-lg font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
             +{formatMoney(list.totalIncome)}
           </p>
         </div>
@@ -166,7 +166,7 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
             <p className="text-xs font-medium text-muted-foreground">Total Pengeluaran</p>
             <p className="text-[11px] text-muted-foreground hidden sm:block">Aliran kas keluar</p>
           </div>
-          <p className="font-mono text-base sm:text-lg font-semibold tabular-nums text-rose-700 dark:text-rose-400">
+          <p className="text-base sm:text-lg font-semibold tabular-nums text-rose-700 dark:text-rose-400">
             −{formatMoney(list.totalExpense)}
           </p>
         </div>
@@ -179,7 +179,7 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
           </div>
           <p
             className={cn(
-              "font-mono text-base sm:text-lg font-semibold tabular-nums",
+              "text-base sm:text-lg font-semibold tabular-nums",
               net >= 0n
                 ? "text-emerald-700 dark:text-emerald-400"
                 : "text-rose-700 dark:text-rose-400",

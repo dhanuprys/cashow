@@ -128,7 +128,7 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
               <div className="pt-1">
                 <p
                   className={cn(
-                    "text-3xl sm:text-4xl font-mono font-bold tabular-nums tracking-tight break-words",
+                    "text-3xl sm:text-4xl font-bold tabular-nums tracking-tight break-words",
                     income
                       ? "text-emerald-700 dark:text-emerald-400"
                       : transfer
@@ -142,7 +142,7 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                 {transfer && transaction.transferFeeAmount !== null ? (
                   <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
                     <span>Termasuk biaya</span>
-                    <span className="font-mono font-medium">
+                    <span className="font-medium tabular-nums">
                       {formatMoney(transaction.transferFeeAmount)}
                     </span>
                     <span>di akun asal</span>
@@ -281,7 +281,7 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
             {transfer && transaction.transferFeeId !== null ? (
               <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
                 <dt className="text-xs font-medium text-muted-foreground">Biaya Transfer</dt>
-                <dd className="mt-0.5 font-mono font-medium">
+                <dd className="mt-0.5 font-medium tabular-nums">
                   <Link
                     href={`/app/transactions/${transaction.transferFeeId}`}
                     className="text-primary hover:underline"
