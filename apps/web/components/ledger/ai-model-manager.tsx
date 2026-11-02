@@ -371,50 +371,59 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
       {/* Aggregate KPI Strip */}
       {configs.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-xl border border-border bg-card/60 p-3 shadow-xs">
+          <div className="rounded-xl border border-border/80 bg-card/60 p-3.5 shadow-2xs">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Coins className="size-3.5 text-primary" aria-hidden="true" />
-              <span>Total Token</span>
+              <span className="font-medium">Total Token</span>
             </div>
-            <p className="mt-1 text-lg font-bold tracking-tight">
+            <p className="mt-1.5 font-mono text-xl font-bold tracking-tight text-foreground">
               {aggregateTokens.total.toLocaleString("id-ID")}
             </p>
-            <p className="text-[10px] text-muted-foreground">Semua koneksi aktif</p>
+            <p className="text-[11px] text-muted-foreground">Semua koneksi aktif</p>
           </div>
 
-          <div className="rounded-xl border border-border bg-card/60 p-3 shadow-xs">
+          <div className="rounded-xl border border-border/80 bg-card/60 p-3.5 shadow-2xs">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ArrowDownRight className="size-3.5 text-blue-500" aria-hidden="true" />
-              <span>Input Tokens</span>
+              <ArrowDownRight
+                className="size-3.5 text-blue-600 dark:text-blue-400"
+                aria-hidden="true"
+              />
+              <span className="font-medium">Input Tokens</span>
             </div>
-            <p className="mt-1 text-lg font-bold tracking-tight text-blue-600 dark:text-blue-400">
+            <p className="mt-1.5 font-mono text-xl font-bold tracking-tight text-foreground">
               {aggregateTokens.input.toLocaleString("id-ID")}
             </p>
-            <p className="text-[10px] text-muted-foreground">Prompt / konteks</p>
+            <p className="text-[11px] text-muted-foreground">Prompt & konteks data</p>
           </div>
 
-          <div className="rounded-xl border border-border bg-card/60 p-3 shadow-xs">
+          <div className="rounded-xl border border-border/80 bg-card/60 p-3.5 shadow-2xs">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ArrowUpRight className="size-3.5 text-emerald-500" aria-hidden="true" />
-              <span>Output Tokens</span>
+              <ArrowUpRight
+                className="size-3.5 text-emerald-600 dark:text-emerald-400"
+                aria-hidden="true"
+              />
+              <span className="font-medium">Output Tokens</span>
             </div>
-            <p className="mt-1 text-lg font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+            <p className="mt-1.5 font-mono text-xl font-bold tracking-tight text-foreground">
               {aggregateTokens.output.toLocaleString("id-ID")}
             </p>
-            <p className="text-[10px] text-muted-foreground">Generasi jawaban AI</p>
+            <p className="text-[11px] text-muted-foreground">Generasi jawaban AI</p>
           </div>
 
-          <div className="flex flex-col justify-between rounded-xl border border-border bg-card/60 p-3 shadow-xs">
+          <div className="flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-3.5 shadow-2xs">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <History className="size-3.5 text-purple-500" aria-hidden="true" />
-              <span>Riwayat Pemanggilan</span>
+              <History
+                className="size-3.5 text-purple-600 dark:text-purple-400"
+                aria-hidden="true"
+              />
+              <span className="font-medium">Riwayat Token</span>
             </div>
             <Button
               type="button"
               variant="outline"
               size="xs"
               onClick={() => void openUsageHistory()}
-              className="mt-2 w-full gap-1.5 text-xs font-medium"
+              className="mt-2 w-full gap-1.5 text-xs font-medium cursor-pointer"
             >
               <Clock className="size-3" aria-hidden="true" />
               Lihat Detail Riwayat
@@ -909,12 +918,18 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
                       <button
                         type="button"
                         onClick={() => void openUsageHistory(config)}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted/70"
+                        className="group inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted/70 hover:border-border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label={`Lihat detail riwayat token akun ${config.name}`}
                         title="Klik untuk melihat detail riwayat token akun ini"
                       >
-                        <Coins className="size-3 text-primary" aria-hidden="true" />
-                        <span>{(config.totalTokens || 0).toLocaleString("id-ID")} token</span>
-                        <span className="text-[10px] text-muted-foreground font-normal">
+                        <Coins
+                          className="size-3 text-primary group-hover:scale-105 transition-transform"
+                          aria-hidden="true"
+                        />
+                        <span className="font-mono">
+                          {(config.totalTokens || 0).toLocaleString("id-ID")} token
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-normal font-mono">
                           (in: {(config.totalInputTokens || 0).toLocaleString("id-ID")} · out:{" "}
                           {(config.totalOutputTokens || 0).toLocaleString("id-ID")})
                         </span>
@@ -1063,26 +1078,28 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
           </DialogHeader>
 
           {/* Quick Stats Header */}
-          <div className="grid grid-cols-3 gap-2 p-4 bg-muted/20 border-b border-border/40 text-center">
-            <div className="rounded-lg bg-background/80 p-2 border border-border/50">
-              <p className="text-[10px] text-muted-foreground uppercase font-medium">Total Token</p>
-              <p className="text-base font-bold">
+          <div className="grid grid-cols-3 gap-2.5 p-4 bg-muted/20 border-b border-border/40 text-center">
+            <div className="rounded-lg bg-background p-2.5 border border-border/70 shadow-2xs">
+              <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">
+                Total Token
+              </p>
+              <p className="mt-0.5 font-mono text-base font-bold text-foreground">
                 {usageStats?.totalTokens.toLocaleString("id-ID") ?? "0"}
               </p>
             </div>
-            <div className="rounded-lg bg-background/80 p-2 border border-border/50">
-              <p className="text-[10px] text-muted-foreground uppercase font-medium text-blue-500">
+            <div className="rounded-lg bg-background p-2.5 border border-border/70 shadow-2xs">
+              <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold tracking-wider">
                 Input Tokens
               </p>
-              <p className="text-base font-bold text-blue-600 dark:text-blue-400">
+              <p className="mt-0.5 font-mono text-base font-bold text-foreground">
                 {usageStats?.totalInputTokens.toLocaleString("id-ID") ?? "0"}
               </p>
             </div>
-            <div className="rounded-lg bg-background/80 p-2 border border-border/50">
-              <p className="text-[10px] text-muted-foreground uppercase font-medium text-emerald-500">
+            <div className="rounded-lg bg-background p-2.5 border border-border/70 shadow-2xs">
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-semibold tracking-wider">
                 Output Tokens
               </p>
-              <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+              <p className="mt-0.5 font-mono text-base font-bold text-foreground">
                 {usageStats?.totalOutputTokens.toLocaleString("id-ID") ?? "0"}
               </p>
             </div>
@@ -1090,7 +1107,11 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
 
           <div className="flex-1 overflow-y-auto p-4">
             {historyLoading ? (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+              <div
+                className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2"
+                role="status"
+                aria-label="Memuat riwayat penggunaan token"
+              >
                 <Loader2 className="size-6 animate-spin text-primary" aria-hidden="true" />
                 <span className="text-xs">Memuat riwayat penggunaan token…</span>
               </div>
@@ -1100,7 +1121,9 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
                   className="size-8 stroke-[1.5] text-muted-foreground/50"
                   aria-hidden="true"
                 />
-                <p className="text-sm font-medium">Belum ada riwayat pemanggilan AI</p>
+                <p className="text-sm font-medium text-foreground">
+                  Belum ada riwayat pemanggilan AI
+                </p>
                 <p className="text-xs text-muted-foreground max-w-xs">
                   Setelah Anda mulai bercakap di ruang chat, setiap konsumsi token akan tercatat
                   otomatis di sini.
@@ -1111,20 +1134,20 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
                 {usageStats.logs.map((log) => (
                   <div
                     key={log.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border border-border/60 bg-card/40 hover:bg-card/70 transition-colors gap-2"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border border-border/70 bg-card/50 hover:bg-card/90 transition-colors gap-2.5 shadow-2xs"
                   >
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs font-semibold text-foreground truncate max-w-[200px]">
+                        <span className="font-mono text-xs font-semibold text-foreground truncate max-w-[220px]">
                           {log.modelId}
                         </span>
                         {log.providerName && (
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5">
+                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium">
                             {log.providerName}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 font-mono">
                         <Clock className="size-3" aria-hidden="true" />
                         <span>
                           {new Date(log.createdAt).toLocaleString("id-ID", {
@@ -1135,25 +1158,25 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2.5 sm:self-center self-end">
+                    <div className="flex items-center gap-2 sm:self-center self-end">
                       <div className="flex items-center gap-1.5 text-xs font-mono">
                         <Badge
                           variant="secondary"
-                          className="font-mono text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border-none"
-                          title="Input tokens"
+                          className="font-mono text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-300 border-none px-1.5 py-0.5"
+                          title="Input tokens (prompt & context)"
                         >
                           +{log.inputTokens.toLocaleString("id-ID")} in
                         </Badge>
                         <Badge
                           variant="secondary"
-                          className="font-mono text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-none"
-                          title="Output tokens"
+                          className="font-mono text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-none px-1.5 py-0.5"
+                          title="Output tokens (respons)"
                         >
                           +{log.outputTokens.toLocaleString("id-ID")} out
                         </Badge>
                         <Badge
-                          variant="default"
-                          className="font-mono text-[10px]"
+                          variant="outline"
+                          className="font-mono text-[10px] border-border/80 font-semibold px-1.5 py-0.5"
                           title="Total tokens"
                         >
                           {log.totalTokens.toLocaleString("id-ID")} total
