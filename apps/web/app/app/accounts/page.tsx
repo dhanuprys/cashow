@@ -4,7 +4,7 @@ import { Archive, ArchiveRestore, ArrowLeftRight, ChevronDown, Scale, Wallet } f
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { AccountForm } from "@/components/ledger/account-form";
+import { AccountForm, EditAccountDialog } from "@/components/ledger/account-form";
 import {
   UnlockCheckpointForm,
   VerifyCheckpointButton,
@@ -161,24 +161,18 @@ async function Accounts() {
                       )}
                     </div>
 
-                    <div className="flex flex-wrap items-start justify-between gap-2 border-t border-border/60 pt-2">
-                      <details className="group min-w-0 flex-1">
-                        <summary className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
-                          <span>Ubah akun</span>
-                          <ChevronDown className="size-3 transition-transform duration-200 group-open:rotate-180" />
-                        </summary>
-                        <div className="mt-3 rounded-2xl border border-border bg-background p-4">
-                          <AccountForm
-                            account={{
-                              id: account.id,
-                              name: account.name,
-                              type: account.type,
-                              openingBalance: account.openingBalance.toString(),
-                              currency: account.currency,
-                            }}
-                          />
-                        </div>
-                      </details>
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2">
+                      <div className="flex items-center gap-1">
+                        <EditAccountDialog
+                          account={{
+                            id: account.id,
+                            name: account.name,
+                            type: account.type,
+                            openingBalance: account.openingBalance.toString(),
+                            currency: account.currency,
+                          }}
+                        />
+                      </div>
 
                       <div className="flex items-center gap-1 shrink-0">
                         <Link
@@ -186,7 +180,7 @@ async function Accounts() {
                           className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
                           <ArrowLeftRight className="size-3" aria-hidden="true" />
-                          Mutasi
+                          <span>Mutasi</span>
                         </Link>
                         <form action={archiveAccountAction} className="shrink-0">
                           <input type="hidden" name="accountId" value={account.id} />
@@ -199,12 +193,12 @@ async function Accounts() {
                             {account.archivedAt === null ? (
                               <>
                                 <Archive aria-hidden="true" />
-                                Arsipkan
+                                <span>Arsipkan</span>
                               </>
                             ) : (
                               <>
                                 <ArchiveRestore aria-hidden="true" />
-                                Aktifkan
+                                <span>Aktifkan</span>
                               </>
                             )}
                           </SubmitButton>

@@ -1,8 +1,17 @@
 "use client";
 
 import { SUPPORTED_CURRENCIES } from "@cashow/domain";
-import { useActionState, useEffect } from "react";
+import { Pencil } from "lucide-react";
+import { useActionState, useEffect, useState } from "react";
 import { CurrencyInput } from "@/components/ledger/currency-input";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -10,6 +19,41 @@ import { toast } from "@/components/ui/toast";
 import { createAccountAction, updateAccountAction } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
 import { SubmitButton } from "./submit-button";
+
+export function EditAccountDialog({ account }: { account: AccountFormValues }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen(true)}
+        className="h-8 gap-1 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+      >
+        <Pencil className="size-3" aria-hidden="true" />
+        <span>Ubah</span>
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="w-full max-w-lg sm:rounded-xl">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base sm:text-lg flex items-center gap-2">
+              <Pencil className="size-4 text-primary" aria-hidden="true" />
+              <span>Ubah Akun</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Sesuaikan nama, jenis akun, saldo awal, atau mata uang.
+            </DialogDescription>
+          </DialogHeader>
+
+          <AccountForm key={account.id} account={account} onSuccess={() => setOpen(false)} />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 export interface AccountFormValues {
   id: string;
@@ -26,7 +70,13 @@ const TYPES = [
   { value: "INVESTMENT", label: "Investasi" },
 ] as const;
 
-export function AccountForm({ account }: { account?: AccountFormValues }) {
+export function AccountForm({
+  account,
+  onSuccess,
+}: {
+  account?: AccountFormValues;
+  onSuccess?: () => void;
+}) {
   const [state, formAction] = useActionState<ActionState, FormData>(
     account === undefined ? createAccountAction : updateAccountAction,
     initialActionState,
@@ -35,7 +85,8 @@ export function AccountForm({ account }: { account?: AccountFormValues }) {
   useEffect(() => {
     if (state.status !== "success") return;
     toast.add({ title: "Tersimpan", description: state.message ?? "Perubahan tersimpan." });
-  }, [state]);
+    onSuccess?.();
+  }, [state, onSuccess]);
 
   return (
     <form action={formAction} className="space-y-4">
