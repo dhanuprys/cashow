@@ -33,7 +33,7 @@ export function TransactionList({
           <li key={item.id}>
             <Link
               href={`/app/transactions/${item.id}`}
-              className="group flex items-center gap-3.5 py-3 transition-colors hover:bg-muted/40 sm:py-3.5"
+              className="group flex items-center gap-3 py-3 px-2 rounded-lg transition-colors hover:bg-muted/50 sm:py-3.5 sm:gap-3.5"
             >
               <div
                 aria-hidden="true"
@@ -56,47 +56,62 @@ export function TransactionList({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium leading-tight">{title}</p>
-                <p
-                  className="mt-0.5 truncate text-xs text-muted-foreground"
-                  title={`${displayLocalDate(item.occurredOn)}${
-                    transfer
-                      ? ` · ${item.accountName} → ${item.destinationAccountName ?? "—"}`
-                      : item.categoryName === null
-                        ? ""
-                        : ` · ${item.categoryName}`
-                  }${transfer ? "" : item.accountName === "" ? "" : ` · ${item.accountName}`}${
-                    item.planName === null ? "" : ` · ${item.planName}`
-                  }`}
-                >
-                  {displayLocalDate(item.occurredOn)}
-                  {transfer
-                    ? ` · ${item.accountName} → ${item.destinationAccountName ?? "—"}`
-                    : item.categoryName === null
-                      ? ""
-                      : ` · ${item.categoryName}`}
-                  {transfer ? "" : item.accountName === "" ? "" : ` · ${item.accountName}`}
-                  {item.planName === null ? "" : ` · ${item.planName}`}
-                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
+                  <span className="shrink-0">{displayLocalDate(item.occurredOn)}</span>
+                  {transfer ? (
+                    <>
+                      <span>•</span>
+                      <span className="truncate">
+                        {item.accountName} → {item.destinationAccountName ?? "—"}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      {item.categoryName && (
+                        <>
+                          <span>•</span>
+                          <span className="truncate">{item.categoryName}</span>
+                        </>
+                      )}
+                      {item.accountName && (
+                        <>
+                          <span>•</span>
+                          <span className="truncate">{item.accountName}</span>
+                        </>
+                      )}
+                    </>
+                  )}
+                  {item.planName && (
+                    <>
+                      <span>•</span>
+                      <span className="truncate text-primary/80">{item.planName}</span>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="shrink-0 text-right">
+              <div className="shrink-0 text-right pl-2">
                 <p
                   className={cn(
-                    "text-sm font-semibold tabular-nums",
+                    "text-sm font-semibold tabular-nums font-mono",
                     income ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
                   )}
                 >
                   {income ? "+" : transfer ? "" : "−"}
                   {formatMoney(item.amount)}
                 </p>
-                <p className="mt-0.5 flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+                <div className="mt-1 flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
                   {item.attachmentCount > 0 ? (
-                    <span className="inline-flex items-center gap-0.5">
+                    <span className="inline-flex items-center gap-0.5 text-[11px] bg-muted/60 px-1.5 py-0.5 rounded">
                       <Paperclip className="size-3" aria-hidden="true" />
                       {item.attachmentCount}
                     </span>
                   ) : null}
-                  {item.deletedAt === null ? null : <Badge variant="secondary">Dihapus</Badge>}
-                </p>
+                  {item.deletedAt === null ? null : (
+                    <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
+                      Dihapus
+                    </Badge>
+                  )}
+                </div>
               </div>
             </Link>
           </li>

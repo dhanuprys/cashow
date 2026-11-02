@@ -12,7 +12,6 @@ import { PageSkeleton } from "@/components/ledger/page-skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   deleteAttachmentAction,
   deleteTransactionAction,
@@ -98,12 +97,15 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Badge variant={income ? "default" : transfer ? "outline" : "secondary"}>
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-muted/15 border-b border-border/40 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant={income ? "default" : transfer ? "outline" : "secondary"}
+                  className="font-medium"
+                >
                   {feeForTransfer
                     ? "Biaya transfer"
                     : transfer
@@ -113,29 +115,44 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                         : "Pengeluaran"}
                 </Badge>
                 {transaction.source === "QUICK_ADD" ? (
-                  <Badge variant="outline">Catat cepat</Badge>
+                  <Badge variant="outline" className="border-dashed text-xs">
+                    Catat cepat
+                  </Badge>
                 ) : null}
               </div>
-              <CardTitle className="mt-3 text-xl break-words [overflow-wrap:anywhere]">
+
+              <CardTitle className="text-xl sm:text-2xl font-bold break-words [overflow-wrap:anywhere] text-foreground">
                 {title}
               </CardTitle>
-              <p
-                className={cn(
-                  "mt-2 text-2xl font-semibold tabular-nums tracking-tight break-words sm:text-3xl",
-                  income ? "text-emerald-700 dark:text-emerald-400" : "",
-                )}
-              >
-                {income ? "+" : transfer ? "" : "−"}
-                {formatMoney(transaction.amount)}
-              </p>
-              {transfer && transaction.transferFeeAmount !== null ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Plus biaya {formatMoney(transaction.transferFeeAmount)} di akun asal.
+
+              <div className="pt-1">
+                <p
+                  className={cn(
+                    "text-3xl sm:text-4xl font-mono font-bold tabular-nums tracking-tight break-words",
+                    income
+                      ? "text-emerald-700 dark:text-emerald-400"
+                      : transfer
+                        ? "text-sky-600 dark:text-sky-400"
+                        : "text-foreground",
+                  )}
+                >
+                  {income ? "+" : transfer ? "" : "−"}
+                  {formatMoney(transaction.amount)}
                 </p>
-              ) : null}
+                {transfer && transaction.transferFeeAmount !== null ? (
+                  <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
+                    <span>Termasuk biaya</span>
+                    <span className="font-mono font-medium">
+                      {formatMoney(transaction.transferFeeAmount)}
+                    </span>
+                    <span>di akun asal</span>
+                  </p>
+                ) : null}
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            {/* Quick Actions Bar */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
               {feeForTransfer && transaction.transferId !== null ? (
                 <LinkButton
                   href={`/app/transactions/${transaction.transferId}`}
@@ -153,14 +170,15 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                       href={`/app/transactions/${transaction.id}/edit`}
                       variant="outline"
                       size="sm"
+                      className="gap-1.5"
                     >
-                      <Pencil aria-hidden="true" />
+                      <Pencil className="size-3.5" aria-hidden="true" />
                       Ubah
                     </LinkButton>
                   ) : null}
                   {!transfer && !feeForTransfer && (
-                    <LinkButton href={cloneHref} variant="outline" size="sm">
-                      <Copy aria-hidden="true" />
+                    <LinkButton href={cloneHref} variant="outline" size="sm" className="gap-1.5">
+                      <Copy className="size-3.5" aria-hidden="true" />
                       Duplikasi
                     </LinkButton>
                   )}
@@ -169,13 +187,15 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                       <input type="hidden" name="transactionId" value={transaction.id} />
                       <ConfirmSubmitButton
                         size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/10"
                         message={
                           transfer
                             ? "Hapus transfer ini? Biaya transfernya ikut terhapus."
                             : "Hapus transaksi ini? Catatan tetap tersimpan dan bisa dipulihkan."
                         }
                       >
-                        <Trash2 aria-hidden="true" />
+                        <Trash2 className="size-3.5" aria-hidden="true" />
                         Hapus
                       </ConfirmSubmitButton>
                     </form>
@@ -189,7 +209,7 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                     variant="default"
                     message="Pulihkan transaksi ini? Saldo dan laporan akan menghitungnya lagi."
                   >
-                    <RotateCcw aria-hidden="true" />
+                    <RotateCcw className="size-3.5" aria-hidden="true" />
                     Pulihkan
                   </ConfirmSubmitButton>
                 </form>
@@ -197,39 +217,74 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <dl className="grid gap-3 text-sm sm:grid-cols-2">
-            <Row label="Tanggal" value={displayDateTime(transaction.occurredAt, user.timezone)} />
-            <Row label="Tanggal buku" value={displayLocalDate(transaction.occurredOn)} />
+
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+              <dt className="text-xs font-medium text-muted-foreground">Waktu Transaksi</dt>
+              <dd className="font-medium text-foreground">
+                {displayDateTime(transaction.occurredAt, user.timezone)}
+              </dd>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+              <dt className="text-xs font-medium text-muted-foreground">Tanggal Pembukuan</dt>
+              <dd className="font-medium text-foreground">
+                {displayLocalDate(transaction.occurredOn)}
+              </dd>
+            </div>
+
             {transfer ? (
               <>
-                <Row label="Dari akun" value={transaction.accountName} />
-                <Row label="Ke akun" value={transaction.destinationAccountName ?? "—"} />
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                  <dt className="text-xs font-medium text-muted-foreground">Dari Akun</dt>
+                  <dd className="font-medium text-foreground">{transaction.accountName}</dd>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                  <dt className="text-xs font-medium text-muted-foreground">Ke Akun</dt>
+                  <dd className="font-medium text-foreground">
+                    {transaction.destinationAccountName ?? "—"}
+                  </dd>
+                </div>
               </>
             ) : (
-              <Row label="Akun" value={transaction.accountName} />
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                <dt className="text-xs font-medium text-muted-foreground">Akun</dt>
+                <dd className="font-medium text-foreground">{transaction.accountName}</dd>
+              </div>
             )}
+
             {transaction.type === "INCOME" || transaction.type === "EXPENSE" ? (
-              <Row label="Kategori" value={transaction.categoryName ?? "Tanpa kategori"} />
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                <dt className="text-xs font-medium text-muted-foreground">Kategori</dt>
+                <dd className="font-medium text-foreground">
+                  {transaction.categoryName ?? "Tanpa kategori"}
+                </dd>
+              </div>
             ) : null}
-            {transaction.planId === null || transaction.planName === null ? null : (
-              <div>
-                <dt className="text-xs text-muted-foreground">Rencana pembayaran</dt>
-                <dd className="mt-0.5">
-                  <Link href={`/app/plans/${transaction.planId}`} className="hover:underline">
+
+            {transaction.planId !== null && transaction.planName !== null && (
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                <dt className="text-xs font-medium text-muted-foreground">Rencana Pembayaran</dt>
+                <dd className="mt-0.5 font-medium">
+                  <Link
+                    href={`/app/plans/${transaction.planId}`}
+                    className="text-primary hover:underline"
+                  >
                     {transaction.planName}
                     {transaction.planItemLabel === null ? "" : ` · ${transaction.planItemLabel}`}
                   </Link>
                 </dd>
               </div>
             )}
+
             {transfer && transaction.transferFeeId !== null ? (
-              <div>
-                <dt className="text-xs text-muted-foreground">Biaya transfer</dt>
-                <dd className="mt-0.5">
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                <dt className="text-xs font-medium text-muted-foreground">Biaya Transfer</dt>
+                <dd className="mt-0.5 font-mono font-medium">
                   <Link
                     href={`/app/transactions/${transaction.transferFeeId}`}
-                    className="hover:underline"
+                    className="text-primary hover:underline"
                   >
                     {transaction.transferFeeAmount === null
                       ? "Lihat biaya"
@@ -238,34 +293,57 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                 </dd>
               </div>
             ) : null}
+
             {feeForTransfer && transaction.transferId !== null ? (
-              <div>
-                <dt className="text-xs text-muted-foreground">Untuk transfer</dt>
-                <dd className="mt-0.5">
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                <dt className="text-xs font-medium text-muted-foreground">Untuk Transfer</dt>
+                <dd className="mt-0.5 font-medium">
                   <Link
                     href={`/app/transactions/${transaction.transferId}`}
-                    className="hover:underline"
+                    className="text-primary hover:underline"
                   >
                     Buka transfer
                   </Link>
                 </dd>
               </div>
             ) : null}
-            {transaction.merchant === null ? null : (
-              <Row label="Toko / penerima" value={transaction.merchant} />
+
+            {transaction.merchant !== null && (
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                <dt className="text-xs font-medium text-muted-foreground">Toko / Penerima</dt>
+                <dd className="font-medium text-foreground">{transaction.merchant}</dd>
+              </div>
             )}
-            {transaction.counterparty === null ? null : (
-              <Row label="Sumber" value={transaction.counterparty} />
+
+            {transaction.counterparty !== null && (
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                <dt className="text-xs font-medium text-muted-foreground">Sumber Pihak</dt>
+                <dd className="font-medium text-foreground">{transaction.counterparty}</dd>
+              </div>
             )}
-            <Row label="Dicatat" value={displayDateTime(transaction.createdAt, user.timezone)} />
-            <Row label="ID" value={transaction.id} mono />
+
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+              <dt className="text-xs font-medium text-muted-foreground">Dicatat pada</dt>
+              <dd className="text-xs text-muted-foreground">
+                {displayDateTime(transaction.createdAt, user.timezone)}
+              </dd>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1 sm:col-span-2">
+              <dt className="text-xs font-medium text-muted-foreground">ID Referensi</dt>
+              <dd className="font-mono text-xs text-muted-foreground break-all select-all">
+                {transaction.id}
+              </dd>
+            </div>
           </dl>
 
-          {transaction.note === null ? null : (
-            <>
-              <Separator className="my-4" />
-              <p className="whitespace-pre-wrap text-sm">{transaction.note}</p>
-            </>
+          {transaction.note !== null && (
+            <div className="rounded-xl border border-border/70 bg-background p-3.5 space-y-1.5 mt-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Catatan
+              </span>
+              <p className="whitespace-pre-wrap text-sm text-foreground">{transaction.note}</p>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -412,15 +490,6 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
           ) : null}
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={cn("mt-0.5 break-words", mono ? "font-mono text-xs" : "")}>{value}</dd>
     </div>
   );
 }

@@ -8,17 +8,20 @@ export function ConfirmSubmitButton({
   message,
   variant = "destructive",
   size = "sm",
+  className,
 }: {
   children: React.ReactNode;
   message: string;
   variant?: React.ComponentProps<typeof Button>["variant"];
   size?: React.ComponentProps<typeof Button>["size"];
+  className?: string;
 }) {
   return (
     <Button
       type="submit"
       variant={variant}
       size={size}
+      className={className}
       onClick={(event) => {
         if (!window.confirm(message)) event.preventDefault();
       }}

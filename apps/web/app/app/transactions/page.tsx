@@ -151,24 +151,35 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
       </div>
 
       {/* Aggregate Stats for the Filtered Query */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-border bg-card p-3.5 shadow-2xs">
-          <p className="text-xs font-medium text-muted-foreground">Total Pemasukan</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
+        <div className="flex flex-row items-center justify-between sm:flex-col sm:items-start rounded-2xl border border-border/80 bg-card/80 p-3.5 shadow-2xs">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Total Pemasukan</p>
+            <p className="text-[11px] text-muted-foreground hidden sm:block">Aliran kas masuk</p>
+          </div>
+          <p className="font-mono text-base sm:text-lg font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
             +{formatMoney(list.totalIncome)}
           </p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-3.5 shadow-2xs">
-          <p className="text-xs font-medium text-muted-foreground">Total Pengeluaran</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-rose-700 dark:text-rose-400">
+        <div className="flex flex-row items-center justify-between sm:flex-col sm:items-start rounded-2xl border border-border/80 bg-card/80 p-3.5 shadow-2xs">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Total Pengeluaran</p>
+            <p className="text-[11px] text-muted-foreground hidden sm:block">Aliran kas keluar</p>
+          </div>
+          <p className="font-mono text-base sm:text-lg font-semibold tabular-nums text-rose-700 dark:text-rose-400">
             −{formatMoney(list.totalExpense)}
           </p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-3.5 shadow-2xs">
-          <p className="text-xs font-medium text-muted-foreground">Arus Bersih (Net)</p>
+        <div className="flex flex-row items-center justify-between sm:flex-col sm:items-start rounded-2xl border border-border/80 bg-card/80 p-3.5 shadow-2xs">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Arus Bersih (Net)</p>
+            <p className="text-[11px] text-muted-foreground hidden sm:block">
+              Selisih masuk & keluar
+            </p>
+          </div>
           <p
             className={cn(
-              "mt-1 text-lg font-semibold tabular-nums",
+              "font-mono text-base sm:text-lg font-semibold tabular-nums",
               net >= 0n
                 ? "text-emerald-700 dark:text-emerald-400"
                 : "text-rose-700 dark:text-rose-400",
@@ -181,9 +192,9 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
       </div>
 
       <Card>
-        <CardContent>
-          <form className="flex flex-wrap items-end gap-3" method="get">
-            <div className="relative min-w-[200px] flex-1 basis-full sm:basis-auto">
+        <CardContent className="p-3.5 sm:p-5">
+          <form className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end" method="get">
+            <div className="relative w-full sm:min-w-[200px] sm:flex-1">
               <Search
                 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden="true"
@@ -192,11 +203,11 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
                 name="search"
                 defaultValue={params.search ?? ""}
                 placeholder="Cari catatan, toko, kategori…"
-                className="pl-9"
+                className="pl-9 w-full"
                 aria-label="Cari transaksi"
               />
             </div>
-            <div className="min-w-[120px] flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full sm:w-auto sm:flex-1">
               <NativeSelect
                 name="type"
                 defaultValue={type ?? ""}
@@ -208,8 +219,7 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
                 <NativeSelectOption value="INCOME">Pemasukan</NativeSelectOption>
                 <NativeSelectOption value="TRANSFER">Transfer</NativeSelectOption>
               </NativeSelect>
-            </div>
-            <div className="min-w-[120px] flex-1">
+
               <NativeSelect
                 name="accountId"
                 defaultValue={params.accountId ?? ""}
@@ -223,8 +233,7 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
-            </div>
-            <div className="min-w-[140px] flex-1">
+
               <NativeSelect
                 name="categoryId"
                 defaultValue={params.categoryId ?? ""}
@@ -239,14 +248,12 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
                 ))}
               </NativeSelect>
             </div>
-            <div className="min-w-[150px] flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full sm:w-auto sm:flex-1">
               <DatePicker name="from" defaultValue={params.from ?? ""} ariaLabel="Dari tanggal" />
-            </div>
-            <div className="min-w-[150px] flex-1">
               <DatePicker name="to" defaultValue={params.to ?? ""} ariaLabel="Sampai tanggal" />
             </div>
-            <div className="flex w-full items-center justify-between border-t border-border/40 pt-2 sm:pt-3">
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex flex-col sm:flex-row w-full items-stretch sm:items-center justify-between border-t border-border/40 pt-3 gap-3">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
                 <input
                   type="checkbox"
                   name="deleted"
@@ -256,7 +263,7 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
                 />
                 Tampilkan yang dihapus
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-end">
                 {hasFilters ? (
                   <LinkButton href="/app/transactions" variant="ghost" size="sm">
                     Reset
@@ -264,7 +271,7 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
                 ) : null}
                 <button
                   type="submit"
-                  className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+                  className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 w-full sm:w-auto"
                 >
                   Terapkan Filter
                 </button>
@@ -275,7 +282,7 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
       </Card>
 
       <Card>
-        <CardContent>
+        <CardContent className="p-2 sm:p-6">
           <TransactionList
             items={list.items}
             empty={
