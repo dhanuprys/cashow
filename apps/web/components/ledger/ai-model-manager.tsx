@@ -94,7 +94,7 @@ const PROVIDER_INFO: Record<
   GOOGLE: {
     label: "Google AI Studio",
     badgeVariant: "outline",
-    defaultModel: "gemini-flash-latest",
+    defaultModel: "gemini-3.5-flash-lite",
     defaultBaseUrl: "",
     docsUrl: "https://aistudio.google.com/app/apikey",
     keyPlaceholder: "AIzaSy...",

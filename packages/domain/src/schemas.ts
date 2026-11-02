@@ -515,16 +515,10 @@ export type AiProviderType = z.infer<typeof aiProviderTypeSchema>;
 export const DEEPSEEK_MODELS = [
   { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash" },
   { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro" },
-  { id: "deepseek-chat", label: "DeepSeek Chat (Alias)" },
-  { id: "deepseek-reasoner", label: "DeepSeek Reasoner (Alias)" },
 ] as const;
 
 export const GOOGLE_MODELS = [
-  { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash (Stabil & Cepat)" },
   { id: "gemini-3.5-flash-lite", label: "Gemini 3.5 Flash Lite" },
-  { id: "gemini-3.8-flash", label: "Gemini 3.8 Flash" },
-  { id: "gemini-flash-latest", label: "Gemini Flash Latest" },
-  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
 ] as const;
 
 export const OPENAI_MODELS = [
