@@ -27,10 +27,14 @@ export function CategoryForm({
   category,
   parents,
   defaultKind = "EXPENSE",
+  defaultParentId = null,
+  onSuccess,
 }: {
   category?: CategoryFormValues;
   parents: ParentOption[];
   defaultKind?: "INCOME" | "EXPENSE";
+  defaultParentId?: string | null;
+  onSuccess?: () => void;
 }) {
   const [kind, setKind] = useState<"INCOME" | "EXPENSE">(category?.kind ?? defaultKind);
   const [state, formAction] = useActionState<ActionState, FormData>(
@@ -41,7 +45,8 @@ export function CategoryForm({
   useEffect(() => {
     if (state.status !== "success") return;
     toast.add({ title: "Tersimpan", description: state.message ?? "Perubahan tersimpan." });
-  }, [state]);
+    onSuccess?.();
+  }, [state, onSuccess]);
 
   const prefix = category?.id ?? "new";
   const visibleParents = parents.filter(
@@ -95,10 +100,10 @@ export function CategoryForm({
           <NativeSelect
             id={`category-parent-${prefix}`}
             name="parentId"
-            defaultValue={category?.parentId ?? ""}
+            defaultValue={category?.parentId ?? defaultParentId ?? ""}
             className="mt-2 w-full"
           >
-            <NativeSelectOption value="">Tanpa induk</NativeSelectOption>
+            <NativeSelectOption value="">Tanpa induk (Kategori Utama)</NativeSelectOption>
             {visibleParents.map((parent) => (
               <NativeSelectOption key={parent.id} value={parent.id}>
                 {parent.parentName === null ? parent.name : `${parent.parentName} · ${parent.name}`}
