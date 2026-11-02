@@ -23,9 +23,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'7fb72184f3e8f13367c2ba4604a3e4eeb7f4c45284c9f5ac0f9225ca2762fc31'>;
+  StorageHashBase<'affc841717f5b357f53875d5b0e20c0b4f75f7cb26f0d867d2ac32174b007872'>;
 export type ExecutionHash =
-  ExecutionHashBase<'4e3803988a45c343f79564828b3a4ec71589883b2e58997447451e8d185f506c'>;
+  ExecutionHashBase<'6eeb5c12327323a21c1431dd5580578a81e088d406b2d4f77775b411f2d4b8e1'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -476,10 +476,28 @@ export namespace Models {
     model: FieldOutputTypes['public']['AiProviderConfig']['model'];
     name: FieldOutputTypes['public']['AiProviderConfig']['name'];
     provider: FieldOutputTypes['public']['AiProviderConfig']['provider'];
+    totalInputTokens: FieldOutputTypes['public']['AiProviderConfig']['totalInputTokens'];
+    totalOutputTokens: FieldOutputTypes['public']['AiProviderConfig']['totalOutputTokens'];
+    totalTokens: FieldOutputTypes['public']['AiProviderConfig']['totalTokens'];
     updatedAt: FieldOutputTypes['public']['AiProviderConfig']['updatedAt'];
     userId: FieldOutputTypes['public']['AiProviderConfig']['userId'];
+    usageLogs: public_AiUsageLog[];
     user: public_User;
-    readonly [RelationKeys]?: 'user';
+    readonly [RelationKeys]?: 'usageLogs' | 'user';
+  };
+  export type public_AiUsageLog = {
+    createdAt: FieldOutputTypes['public']['AiUsageLog']['createdAt'];
+    id: FieldOutputTypes['public']['AiUsageLog']['id'];
+    inputTokens: FieldOutputTypes['public']['AiUsageLog']['inputTokens'];
+    modelId: FieldOutputTypes['public']['AiUsageLog']['modelId'];
+    outputTokens: FieldOutputTypes['public']['AiUsageLog']['outputTokens'];
+    providerConfigId: FieldOutputTypes['public']['AiUsageLog']['providerConfigId'];
+    threadId: FieldOutputTypes['public']['AiUsageLog']['threadId'];
+    totalTokens: FieldOutputTypes['public']['AiUsageLog']['totalTokens'];
+    userId: FieldOutputTypes['public']['AiUsageLog']['userId'];
+    providerConfig: public_AiProviderConfig;
+    user: public_User;
+    readonly [RelationKeys]?: 'providerConfig' | 'user';
   };
   export type public_Allocation = {
     amount: FieldOutputTypes['public']['Allocation']['amount'];
@@ -944,6 +962,7 @@ export declare const models: {
     Account: Models.public_Account;
     AiFact: Models.public_AiFact;
     AiProviderConfig: Models.public_AiProviderConfig;
+    AiUsageLog: Models.public_AiUsageLog;
     Allocation: Models.public_Allocation;
     Attachment: Models.public_Attachment;
     AuditLog: Models.public_AuditLog;
@@ -1202,6 +1221,36 @@ type ContractBase = Omit<
                   readonly nullable: false;
                   readonly many: false;
                 };
+                readonly totalInputTokens: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                  readonly many: false;
+                };
+                readonly totalOutputTokens: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                  readonly many: false;
+                };
+                readonly totalTokens: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                  readonly many: false;
+                };
                 readonly updatedAt: {
                   readonly dataType: 'pg/timestamptz';
                   readonly codecId: 'pg/timestamptz-string@1';
@@ -1235,6 +1284,130 @@ type ContractBase = Omit<
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
+            readonly AiUsageLog: {
+              columns: {
+                readonly createdAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly inputTokens: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                  readonly many: false;
+                };
+                readonly modelId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly outputTokens: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                  readonly many: false;
+                };
+                readonly providerConfigId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly threadId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly totalTokens: {
+                  readonly dataType: 'pg/int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
+                  };
+                  readonly many: false;
+                };
+                readonly userId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'AiUsageLog_providerConfigId_createdAt_idx_3815409c';
+                  readonly prefix: 'AiUsageLog_providerConfigId_createdAt_idx';
+                  readonly columns: readonly ['providerConfigId', 'createdAt'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'AiUsageLog_providerConfigId_idx_562d7615';
+                  readonly prefix: 'AiUsageLog_providerConfigId_idx';
+                  readonly columns: readonly ['providerConfigId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'AiUsageLog_userId_createdAt_idx_f726f04a';
+                  readonly prefix: 'AiUsageLog_userId_createdAt_idx';
+                  readonly columns: readonly ['userId', 'createdAt'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'AiUsageLog_userId_idx_a489d58a';
+                  readonly prefix: 'AiUsageLog_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'AiUsageLog';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'AiUsageLog';
+                    readonly columns: readonly ['providerConfigId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'AiProviderConfig';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -4261,6 +4434,10 @@ type ContractBase = Omit<
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'AiProviderConfig';
     };
+    readonly AiUsageLog: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'AiUsageLog';
+    };
     readonly Allocation: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'Allocation';
@@ -4579,6 +4756,18 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly totalInputTokens: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly totalOutputTokens: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly totalTokens: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
               readonly updatedAt: {
                 readonly nullable: false;
                 readonly type: {
@@ -4592,6 +4781,17 @@ type ContractBase = Omit<
               };
             };
             readonly relations: {
+              readonly usageLogs: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'AiUsageLog';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['providerConfigId'];
+                };
+              };
               readonly user: {
                 readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
                 readonly cardinality: 'N:1';
@@ -4615,7 +4815,91 @@ type ContractBase = Omit<
                 readonly model: { readonly column: 'model' };
                 readonly name: { readonly column: 'name' };
                 readonly provider: { readonly column: 'provider' };
+                readonly totalInputTokens: { readonly column: 'totalInputTokens' };
+                readonly totalOutputTokens: { readonly column: 'totalOutputTokens' };
+                readonly totalTokens: { readonly column: 'totalTokens' };
                 readonly updatedAt: { readonly column: 'updatedAt' };
+                readonly userId: { readonly column: 'userId' };
+              };
+            };
+          };
+          readonly AiUsageLog: {
+            readonly fields: {
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly inputTokens: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly modelId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly outputTokens: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly providerConfigId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly threadId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly totalTokens: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: {
+              readonly providerConfig: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'AiProviderConfig';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['providerConfigId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'AiUsageLog';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly id: { readonly column: 'id' };
+                readonly inputTokens: { readonly column: 'inputTokens' };
+                readonly modelId: { readonly column: 'modelId' };
+                readonly outputTokens: { readonly column: 'outputTokens' };
+                readonly providerConfigId: { readonly column: 'providerConfigId' };
+                readonly threadId: { readonly column: 'threadId' };
+                readonly totalTokens: { readonly column: 'totalTokens' };
                 readonly userId: { readonly column: 'userId' };
               };
             };
@@ -7600,6 +7884,22 @@ type ContractBase = Omit<
           readonly ref: {
             readonly entry: 'AiProviderConfig';
             readonly field: 'updatedAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'AiUsageLog';
+            readonly field: 'createdAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'AiUsageLog';
+            readonly field: 'id';
             readonly namespace: 'public';
           };
         },

@@ -20,6 +20,7 @@ import {
   deleteRecurring,
   deleteRule,
   getAiProviderConfig,
+  getAiTokenUsageStats,
   listAccounts,
   listCategories,
   markNotificationRead,
@@ -1163,4 +1164,16 @@ export async function deleteAiProviderConfigAction(formData: FormData): Promise<
 
   revalidatePath("/app/settings");
   revalidatePath("/app/chat");
+}
+
+export async function getAiTokenUsageStatsAction(options?: {
+  providerConfigId?: string;
+  limit?: number;
+}) {
+  const session = await requireLedgerSession();
+  const res = await getAiTokenUsageStats(session.ctx, options);
+  if (!res.ok) {
+    throw new Error(res.error.message);
+  }
+  return res.value;
 }

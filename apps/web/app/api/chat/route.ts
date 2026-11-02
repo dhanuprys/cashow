@@ -17,6 +17,7 @@ import {
   listRecurringDrafts,
   listTransactions,
   nowOf,
+  recordAiUsageLog,
   type SummaryPeriod,
   saveChatMessage,
   updateChatThread,
@@ -756,6 +757,22 @@ export async function POST(request: Request) {
     maxOutputTokens: 1536,
     temperature: 0.2,
     maxRetries: 1,
+    onFinish: async (event) => {
+      if (selectedConfig && event.usage) {
+        try {
+          await recordAiUsageLog(ctx, {
+            providerConfigId: selectedConfig.id,
+            modelId: selectedConfig.model,
+            threadId: capturedThreadId ?? null,
+            inputTokens: event.usage.inputTokens ?? 0,
+            outputTokens: event.usage.outputTokens ?? 0,
+            totalTokens: event.usage.totalTokens ?? 0,
+          });
+        } catch (err) {
+          console.error("[api/chat] Failed to record AI token usage:", err);
+        }
+      }
+    },
   });
 
   const capturedThreadId = threadId;

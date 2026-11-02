@@ -751,20 +751,42 @@ model AiFact {
 }
 
 model AiProviderConfig {
-  id           String            @id @onCreate(uuid(7))
-  userId       String
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider     AiProviderType
-  name         String
-  apiKey       String
-  baseUrl      String?
-  model        String            @default("")
-  customModels Json?
-  isDefault    Boolean           @default(false)
-  createdAt    TimestamptzString @onCreate(now())
-  updatedAt    TimestamptzString @onCreate(now()) @onUpdate(now())
+  id                String            @id @onCreate(uuid(7))
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          AiProviderType
+  name              String
+  apiKey            String
+  baseUrl           String?
+  model             String            @default("")
+  customModels      Json?
+  isDefault         Boolean           @default(false)
+  totalInputTokens  Int               @default(0)
+  totalOutputTokens Int               @default(0)
+  totalTokens       Int               @default(0)
+  createdAt         TimestamptzString @onCreate(now())
+  updatedAt         TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  usageLogs         AiUsageLog[]
 
   @@index([userId])
+}
+
+model AiUsageLog {
+  id               String            @id @onCreate(uuid(7))
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  providerConfigId String
+  providerConfig   AiProviderConfig  @relation(fields: [providerConfigId], references: [id], onDelete: Cascade)
+  threadId         String?
+  modelId          String
+  inputTokens      Int               @default(0)
+  outputTokens     Int               @default(0)
+  totalTokens      Int               @default(0)
+  createdAt        TimestamptzString @onCreate(now())
+
+  @@index([userId, createdAt])
+  @@index([providerConfigId, createdAt])
 }
 
 // ---------------------------------------------------------------------------

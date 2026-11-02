@@ -3,15 +3,20 @@
 import { PROVIDER_MODELS } from "@cashow/domain";
 import type { AiProviderSummary, AiProviderType } from "@cashow/services";
 import {
+  ArrowDownRight,
+  ArrowUpRight,
   Bot,
   Check,
   CheckCircle2,
+  Clock,
+  Coins,
   CopyPlus,
   Cpu,
   ExternalLink,
   Eye,
   EyeOff,
   Globe,
+  History,
   Key,
   Loader2,
   Pencil,
@@ -58,6 +63,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { toast } from "@/components/ui/toast";
 import {
   deleteAiProviderConfigAction,
+  getAiTokenUsageStatsAction,
   saveAiProviderConfigAction,
   setDefaultAiProviderConfigAction,
 } from "@/lib/actions/ledger";
@@ -139,6 +145,61 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
   // Per-config testing state for immediate client-side feedback
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+
+  // Token usage history modal state
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedHistoryConfig, setSelectedHistoryConfig] = useState<AiProviderSummary | null>(
+    null,
+  );
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [usageStats, setUsageStats] = useState<{
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    totalTokens: number;
+    totalCalls: number;
+    logs: Array<{
+      id: string;
+      providerConfigId: string;
+      providerName?: string;
+      providerType?: AiProviderType;
+      threadId: string | null;
+      modelId: string;
+      inputTokens: number;
+      outputTokens: number;
+      totalTokens: number;
+      createdAt: string;
+    }>;
+  } | null>(null);
+
+  // Overall aggregate token metrics
+  const aggregateTokens = configs.reduce(
+    (acc, curr) => ({
+      input: acc.input + (curr.totalInputTokens || 0),
+      output: acc.output + (curr.totalOutputTokens || 0),
+      total: acc.total + (curr.totalTokens || 0),
+    }),
+    { input: 0, output: 0, total: 0 },
+  );
+
+  async function openUsageHistory(config?: AiProviderSummary) {
+    setSelectedHistoryConfig(config ?? null);
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    try {
+      const stats = await getAiTokenUsageStatsAction({
+        providerConfigId: config?.id,
+        limit: 100,
+      });
+      setUsageStats(stats);
+    } catch (err) {
+      toast.add({
+        title: "Gagal memuat riwayat",
+        description: err instanceof Error ? err.message : "Tidak dapat mengambil riwayat token.",
+      });
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
 
   const [saveState, saveAction] = useActionState<ActionState, FormData>(
     saveAiProviderConfigAction,
@@ -307,6 +368,61 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
 
   return (
     <div className="space-y-4">
+      {/* Aggregate KPI Strip */}
+      {configs.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-xl border border-border bg-card/60 p-3 shadow-xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Coins className="size-3.5 text-primary" aria-hidden="true" />
+              <span>Total Token</span>
+            </div>
+            <p className="mt-1 text-lg font-bold tracking-tight">
+              {aggregateTokens.total.toLocaleString("id-ID")}
+            </p>
+            <p className="text-[10px] text-muted-foreground">Semua koneksi aktif</p>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card/60 p-3 shadow-xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <ArrowDownRight className="size-3.5 text-blue-500" aria-hidden="true" />
+              <span>Input Tokens</span>
+            </div>
+            <p className="mt-1 text-lg font-bold tracking-tight text-blue-600 dark:text-blue-400">
+              {aggregateTokens.input.toLocaleString("id-ID")}
+            </p>
+            <p className="text-[10px] text-muted-foreground">Prompt / konteks</p>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card/60 p-3 shadow-xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <ArrowUpRight className="size-3.5 text-emerald-500" aria-hidden="true" />
+              <span>Output Tokens</span>
+            </div>
+            <p className="mt-1 text-lg font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+              {aggregateTokens.output.toLocaleString("id-ID")}
+            </p>
+            <p className="text-[10px] text-muted-foreground">Generasi jawaban AI</p>
+          </div>
+
+          <div className="flex flex-col justify-between rounded-xl border border-border bg-card/60 p-3 shadow-xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <History className="size-3.5 text-purple-500" aria-hidden="true" />
+              <span>Riwayat Pemanggilan</span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={() => void openUsageHistory()}
+              className="mt-2 w-full gap-1.5 text-xs font-medium"
+            >
+              <Clock className="size-3" aria-hidden="true" />
+              Lihat Detail Riwayat
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles className="size-4 text-primary" aria-hidden="true" />
@@ -787,6 +903,23 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
                           </Badge>
                         )}
                     </div>
+
+                    {/* Per-Provider Token Usage Metrics */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => void openUsageHistory(config)}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted/70"
+                        title="Klik untuk melihat detail riwayat token akun ini"
+                      >
+                        <Coins className="size-3 text-primary" aria-hidden="true" />
+                        <span>{(config.totalTokens || 0).toLocaleString("id-ID")} token</span>
+                        <span className="text-[10px] text-muted-foreground font-normal">
+                          (in: {(config.totalInputTokens || 0).toLocaleString("id-ID")} · out:{" "}
+                          {(config.totalOutputTokens || 0).toLocaleString("id-ID")})
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -911,6 +1044,135 @@ export function AiModelManager({ configs }: { configs: AiProviderSummary[] }) {
           })}
         </div>
       )}
+
+      {/* Token Usage History Dialog */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-2xl max-h-[min(90dvh,700px)] flex flex-col gap-0 p-0 overflow-hidden">
+          <DialogHeader className="shrink-0 p-6 pb-4 border-b border-border/40 pr-12">
+            <DialogTitle className="flex items-center gap-2">
+              <History className="size-5 text-primary" aria-hidden="true" />
+              <span>
+                {selectedHistoryConfig
+                  ? `Riwayat Penggunaan Token: ${selectedHistoryConfig.name}`
+                  : "Riwayat Penggunaan Token Keseluruhan"}
+              </span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Rincian token input (prompt) dan output (respons) dari setiap pemanggilan AI.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Quick Stats Header */}
+          <div className="grid grid-cols-3 gap-2 p-4 bg-muted/20 border-b border-border/40 text-center">
+            <div className="rounded-lg bg-background/80 p-2 border border-border/50">
+              <p className="text-[10px] text-muted-foreground uppercase font-medium">Total Token</p>
+              <p className="text-base font-bold">
+                {usageStats?.totalTokens.toLocaleString("id-ID") ?? "0"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-background/80 p-2 border border-border/50">
+              <p className="text-[10px] text-muted-foreground uppercase font-medium text-blue-500">
+                Input Tokens
+              </p>
+              <p className="text-base font-bold text-blue-600 dark:text-blue-400">
+                {usageStats?.totalInputTokens.toLocaleString("id-ID") ?? "0"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-background/80 p-2 border border-border/50">
+              <p className="text-[10px] text-muted-foreground uppercase font-medium text-emerald-500">
+                Output Tokens
+              </p>
+              <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                {usageStats?.totalOutputTokens.toLocaleString("id-ID") ?? "0"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            {historyLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+                <Loader2 className="size-6 animate-spin text-primary" aria-hidden="true" />
+                <span className="text-xs">Memuat riwayat penggunaan token…</span>
+              </div>
+            ) : !usageStats || usageStats.logs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground gap-2">
+                <Coins
+                  className="size-8 stroke-[1.5] text-muted-foreground/50"
+                  aria-hidden="true"
+                />
+                <p className="text-sm font-medium">Belum ada riwayat pemanggilan AI</p>
+                <p className="text-xs text-muted-foreground max-w-xs">
+                  Setelah Anda mulai bercakap di ruang chat, setiap konsumsi token akan tercatat
+                  otomatis di sini.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {usageStats.logs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border border-border/60 bg-card/40 hover:bg-card/70 transition-colors gap-2"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs font-semibold text-foreground truncate max-w-[200px]">
+                          {log.modelId}
+                        </span>
+                        {log.providerName && (
+                          <Badge variant="outline" className="text-[10px] py-0 px-1.5">
+                            {log.providerName}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <Clock className="size-3" aria-hidden="true" />
+                        <span>
+                          {new Date(log.createdAt).toLocaleString("id-ID", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 sm:self-center self-end">
+                      <div className="flex items-center gap-1.5 text-xs font-mono">
+                        <Badge
+                          variant="secondary"
+                          className="font-mono text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border-none"
+                          title="Input tokens"
+                        >
+                          +{log.inputTokens.toLocaleString("id-ID")} in
+                        </Badge>
+                        <Badge
+                          variant="secondary"
+                          className="font-mono text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-none"
+                          title="Output tokens"
+                        >
+                          +{log.outputTokens.toLocaleString("id-ID")} out
+                        </Badge>
+                        <Badge
+                          variant="default"
+                          className="font-mono text-[10px]"
+                          title="Total tokens"
+                        >
+                          {log.totalTokens.toLocaleString("id-ID")} total
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="p-4 border-t border-border/40 bg-muted/10 shrink-0">
+            <Button type="button" variant="outline" size="sm" onClick={() => setHistoryOpen(false)}>
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

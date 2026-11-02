@@ -22,6 +22,9 @@ export interface AiProviderSummary {
   model: string;
   customModels: string[];
   isDefault: boolean;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalTokens: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,8 +38,32 @@ export interface AiProviderDetail {
   model: string;
   customModels: string[];
   isDefault: boolean;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalTokens: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AiUsageLogItem {
+  id: string;
+  providerConfigId: string;
+  providerName?: string;
+  providerType?: AiProviderType;
+  threadId: string | null;
+  modelId: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  createdAt: string;
+}
+
+export interface AiTokenUsageStats {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalTokens: number;
+  totalCalls: number;
+  logs: AiUsageLogItem[];
 }
 
 function maskKey(key: string): string {
@@ -70,6 +97,9 @@ export async function listAiProviderConfigs(
       model: r.model,
       customModels: parseCustomModels(r.customModels),
       isDefault: r.isDefault,
+      totalInputTokens: r.totalInputTokens ?? 0,
+      totalOutputTokens: r.totalOutputTokens ?? 0,
+      totalTokens: r.totalTokens ?? 0,
       createdAt: String(r.createdAt),
       updatedAt: String(r.updatedAt),
     }));
@@ -101,6 +131,9 @@ export async function getAiProviderConfig(
       model: row.model,
       customModels: parseCustomModels(row.customModels),
       isDefault: row.isDefault,
+      totalInputTokens: row.totalInputTokens ?? 0,
+      totalOutputTokens: row.totalOutputTokens ?? 0,
+      totalTokens: row.totalTokens ?? 0,
       createdAt: String(row.createdAt),
       updatedAt: String(row.updatedAt),
     });
@@ -133,6 +166,9 @@ export async function getDefaultAiProviderConfig(
       model: row.model,
       customModels: parseCustomModels(row.customModels),
       isDefault: row.isDefault,
+      totalInputTokens: row.totalInputTokens ?? 0,
+      totalOutputTokens: row.totalOutputTokens ?? 0,
+      totalTokens: row.totalTokens ?? 0,
       createdAt: String(row.createdAt),
       updatedAt: String(row.updatedAt),
     });
@@ -231,6 +267,9 @@ export async function createAiProviderConfig(
         model: created.model,
         customModels,
         isDefault: created.isDefault,
+        totalInputTokens: created.totalInputTokens ?? 0,
+        totalOutputTokens: created.totalOutputTokens ?? 0,
+        totalTokens: created.totalTokens ?? 0,
         createdAt: String(created.createdAt),
         updatedAt: String(created.updatedAt),
       };
@@ -417,6 +456,133 @@ export async function deleteAiProviderConfig(
     });
 
     return ok(undefined);
+  } catch (error) {
+    return err(toLedgerError(error));
+  }
+}
+
+export async function recordAiUsageLog(
+  ctx: UseCaseContext,
+  input: {
+    providerConfigId: string;
+    modelId: string;
+    threadId?: string | null;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  },
+): Promise<Result<void>> {
+  try {
+    const inputTokens = Math.max(0, Math.round(input.inputTokens || 0));
+    const outputTokens = Math.max(0, Math.round(input.outputTokens || 0));
+    const totalTokens = Math.max(0, Math.round(input.totalTokens || inputTokens + outputTokens));
+
+    await ctx.db.transaction(async (tx) => {
+      // 1. Insert detailed per-call log
+      await tx.orm.public.AiUsageLog.create({
+        userId: ctx.userId,
+        providerConfigId: input.providerConfigId,
+        threadId: input.threadId ?? null,
+        modelId: input.modelId,
+        inputTokens,
+        outputTokens,
+        totalTokens,
+      });
+
+      // 2. Increment cumulative counters on AiProviderConfig
+      const cfg = await tx.orm.public.AiProviderConfig.where({
+        id: input.providerConfigId,
+        userId: ctx.userId,
+      }).first();
+
+      if (cfg) {
+        await tx.orm.public.AiProviderConfig.where({
+          id: input.providerConfigId,
+          userId: ctx.userId,
+        }).update({
+          totalInputTokens: (cfg.totalInputTokens ?? 0) + inputTokens,
+          totalOutputTokens: (cfg.totalOutputTokens ?? 0) + outputTokens,
+          totalTokens: (cfg.totalTokens ?? 0) + totalTokens,
+        });
+      }
+    });
+
+    return ok(undefined);
+  } catch (error) {
+    return err(toLedgerError(error));
+  }
+}
+
+export async function getAiTokenUsageStats(
+  ctx: UseCaseContext,
+  options?: {
+    providerConfigId?: string;
+    limit?: number;
+  },
+): Promise<Result<AiTokenUsageStats>> {
+  try {
+    const limit = Math.min(options?.limit ?? 50, 200);
+
+    // Fetch providers to enrich logs with names
+    const configs = await ctx.db.orm.public.AiProviderConfig.where({ userId: ctx.userId }).all();
+    const configMap = new Map(configs.map((c) => [c.id, c]));
+
+    let query = ctx.db.orm.public.AiUsageLog.where({ userId: ctx.userId });
+    if (options?.providerConfigId) {
+      query = ctx.db.orm.public.AiUsageLog.where({
+        userId: ctx.userId,
+        providerConfigId: options.providerConfigId,
+      });
+    }
+
+    const rows = await query
+      .orderBy((l) => l.createdAt.desc())
+      .limit(limit)
+      .all();
+
+    // Calculate user-wide running totals across all configs or specific config
+    let sumInput = 0;
+    let sumOutput = 0;
+    let sumTotal = 0;
+
+    if (options?.providerConfigId) {
+      const target = configMap.get(options.providerConfigId);
+      if (target) {
+        sumInput = target.totalInputTokens ?? 0;
+        sumOutput = target.totalOutputTokens ?? 0;
+        sumTotal = target.totalTokens ?? 0;
+      }
+    } else {
+      for (const c of configs) {
+        sumInput += c.totalInputTokens ?? 0;
+        sumOutput += c.totalOutputTokens ?? 0;
+        sumTotal += c.totalTokens ?? 0;
+      }
+    }
+
+    const logs: AiUsageLogItem[] = rows.map((r) => {
+      const cfg = configMap.get(r.providerConfigId);
+      return {
+        id: r.id,
+        providerConfigId: r.providerConfigId,
+        providerName: cfg?.name,
+        providerType: cfg?.provider as AiProviderType | undefined,
+        threadId: r.threadId,
+        modelId: r.modelId,
+        inputTokens: r.inputTokens,
+        outputTokens: r.outputTokens,
+        totalTokens: r.totalTokens,
+        createdAt: String(r.createdAt),
+      };
+    });
+
+    return ok({
+      totalInputTokens: sumInput,
+      totalOutputTokens: sumOutput,
+      totalTokens: sumTotal,
+      totalCalls: rows.length,
+      logs,
+    });
   } catch (error) {
     return err(toLedgerError(error));
   }

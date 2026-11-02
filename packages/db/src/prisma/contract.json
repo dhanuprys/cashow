@@ -16,6 +16,10 @@
       "model": "AiProviderConfig",
       "namespace": "public"
     },
+    "AiUsageLog": {
+      "model": "AiUsageLog",
+      "namespace": "public"
+    },
     "Allocation": {
       "model": "Allocation",
       "namespace": "public"
@@ -676,6 +680,27 @@
                   "plane": "domain"
                 }
               },
+              "totalInputTokens": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "totalOutputTokens": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "totalTokens": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "updatedAt": {
                 "nullable": false,
                 "type": {
@@ -692,6 +717,21 @@
               }
             },
             "relations": {
+              "usageLogs": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "providerConfigId"
+                  ]
+                },
+                "to": {
+                  "model": "AiUsageLog",
+                  "namespace": "public"
+                }
+              },
               "user": {
                 "cardinality": "N:1",
                 "nullable": false,
@@ -738,6 +778,15 @@
                 "provider": {
                   "column": "provider"
                 },
+                "totalInputTokens": {
+                  "column": "totalInputTokens"
+                },
+                "totalOutputTokens": {
+                  "column": "totalOutputTokens"
+                },
+                "totalTokens": {
+                  "column": "totalTokens"
+                },
                 "updatedAt": {
                   "column": "updatedAt"
                 },
@@ -747,6 +796,140 @@
               },
               "namespaceId": "public",
               "table": "AiProviderConfig"
+            }
+          },
+          "AiUsageLog": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "inputTokens": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "modelId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "outputTokens": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "providerConfigId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "threadId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "totalTokens": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "providerConfig": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "providerConfigId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "AiProviderConfig",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "inputTokens": {
+                  "column": "inputTokens"
+                },
+                "modelId": {
+                  "column": "modelId"
+                },
+                "outputTokens": {
+                  "column": "outputTokens"
+                },
+                "providerConfigId": {
+                  "column": "providerConfigId"
+                },
+                "threadId": {
+                  "column": "threadId"
+                },
+                "totalTokens": {
+                  "column": "totalTokens"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "AiUsageLog"
             }
           },
           "Allocation": {
@@ -5329,6 +5512,33 @@
                     "plane": "storage"
                   }
                 },
+                "totalInputTokens": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "totalOutputTokens": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "totalTokens": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
                 "updatedAt": {
                   "codecId": "pg/timestamptz-string@1",
                   "dataType": "pg/timestamptz",
@@ -5369,6 +5579,151 @@
                   ],
                   "name": "AiProviderConfig_userId_idx_a489d58a",
                   "prefix": "AiProviderConfig_userId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "AiUsageLog": {
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "dataType": "pg/timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "inputTokens": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "modelId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "outputTokens": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "providerConfigId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                },
+                "threadId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": true
+                },
+                "totalTokens": {
+                  "codecId": "pg/int4@1",
+                  "dataType": "pg/int4",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "index": {
+                    "name": "AiUsageLog_userId_idx_a489d58a"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "AiUsageLog"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "User"
+                  }
+                },
+                {
+                  "index": {
+                    "name": "AiUsageLog_providerConfigId_idx_562d7615"
+                  },
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "providerConfigId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "AiUsageLog"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "AiProviderConfig"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "providerConfigId",
+                    "createdAt"
+                  ],
+                  "name": "AiUsageLog_providerConfigId_createdAt_idx_3815409c",
+                  "prefix": "AiUsageLog_providerConfigId_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "providerConfigId"
+                  ],
+                  "name": "AiUsageLog_providerConfigId_idx_562d7615",
+                  "prefix": "AiUsageLog_providerConfigId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "createdAt"
+                  ],
+                  "name": "AiUsageLog_userId_createdAt_idx_f726f04a",
+                  "prefix": "AiUsageLog_userId_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "AiUsageLog_userId_idx_a489d58a",
+                  "prefix": "AiUsageLog_userId_idx",
                   "unique": false
                 }
               ],
@@ -9119,10 +9474,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "7fb72184f3e8f13367c2ba4604a3e4eeb7f4c45284c9f5ac0f9225ca2762fc31"
+    "storageHash": "affc841717f5b357f53875d5b0e20c0b4f75f7cb26f0d867d2ac32174b007872"
   },
   "execution": {
-    "executionHash": "4e3803988a45c343f79564828b3a4ec71589883b2e58997447451e8d185f506c",
+    "executionHash": "6eeb5c12327323a21c1431dd5580578a81e088d406b2d4f77775b411f2d4b8e1",
     "mutations": {
       "defaults": [
         {
@@ -9218,6 +9573,28 @@
           "ref": {
             "entry": "AiProviderConfig",
             "field": "updatedAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestamptzStringNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "AiUsageLog",
+            "field": "createdAt",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv7",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "AiUsageLog",
+            "field": "id",
             "namespace": "public"
           }
         },
