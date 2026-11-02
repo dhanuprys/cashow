@@ -42,26 +42,31 @@ export function RuleCardItem({ rule, timezone = "Asia/Jakarta", onEdit }: RuleCa
 
   return (
     <Card className={!rule.active ? "opacity-75 bg-muted/20" : undefined}>
-      <CardContent className="p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+      <CardContent className="p-3.5 sm:p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 sm:gap-3">
           <div className="space-y-1 min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-sm sm:text-base text-foreground break-words">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="font-semibold text-sm sm:text-base text-foreground break-words leading-tight">
                 {rule.name}
               </span>
-              <Badge variant={rule.active ? "default" : "outline"} className="text-[10px]">
+              <Badge
+                variant={rule.active ? "default" : "outline"}
+                className="text-[10px] py-0 px-1.5"
+              >
                 {rule.active ? "Aktif" : "Nonaktif"}
               </Badge>
               {settings.severity && (
                 <span
-                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${severityInfo.color}`}
+                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${severityInfo.color}`}
                 >
                   {severityInfo.label}
                 </span>
               )}
             </div>
             {rule.description && (
-              <p className="text-xs text-muted-foreground break-words">{rule.description}</p>
+              <p className="text-xs text-muted-foreground break-words line-clamp-2 sm:line-clamp-none">
+                {rule.description}
+              </p>
             )}
           </div>
 
@@ -70,9 +75,9 @@ export function RuleCardItem({ rule, timezone = "Asia/Jakarta", onEdit }: RuleCa
               <Button
                 type="button"
                 variant="ghost"
-                size="xs"
+                size="sm"
                 onClick={() => onEdit(rule)}
-                className="gap-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                className="h-8 gap-1 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer flex-1 sm:flex-initial justify-center"
               >
                 <Pencil className="size-3" aria-hidden="true" />
                 Ubah
@@ -80,14 +85,14 @@ export function RuleCardItem({ rule, timezone = "Asia/Jakarta", onEdit }: RuleCa
             )}
 
             {/* Toggle Active Form */}
-            <form action={toggleRuleActiveAction}>
+            <form action={toggleRuleActiveAction} className="flex-1 sm:flex-initial">
               <input type="hidden" name="ruleId" value={rule.id} />
               <input type="hidden" name="active" value={rule.active ? "false" : "true"} />
               <Button
                 type="submit"
                 variant="outline"
-                size="xs"
-                className="gap-1 text-xs"
+                size="sm"
+                className="h-8 gap-1 px-2.5 text-xs w-full sm:w-auto justify-center"
                 title={rule.active ? "Jeda aturan" : "Aktifkan aturan"}
               >
                 <Power
@@ -103,8 +108,8 @@ export function RuleCardItem({ rule, timezone = "Asia/Jakarta", onEdit }: RuleCa
               <ConfirmSubmitButton
                 message={`Hapus aturan "${rule.name}"?`}
                 variant="ghost"
-                size="icon-xs"
-                className="text-muted-foreground hover:text-destructive"
+                size="sm"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="size-3.5" aria-hidden="true" />
                 <span className="sr-only">Hapus {rule.name}</span>
@@ -115,20 +120,24 @@ export function RuleCardItem({ rule, timezone = "Asia/Jakarta", onEdit }: RuleCa
 
         {/* Visual condition badge container */}
         <div className="rounded-lg border bg-muted/40 p-2.5 text-xs space-y-1.5">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Clock className="size-3.5 text-primary" />
-            <span>Pemicu:</span>
-            <span className="font-medium text-foreground">{triggerText}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 text-muted-foreground">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Clock className="size-3.5 text-primary" />
+              <span>Pemicu:</span>
+            </div>
+            <span className="font-medium text-foreground pl-5 sm:pl-0">{triggerText}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <AlertCircle className="size-3.5 text-amber-600" />
-            <span>Kondisi:</span>
-            <span className="font-medium text-foreground">{conditionText}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 text-muted-foreground">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <AlertCircle className="size-3.5 text-amber-600" />
+              <span>Kondisi:</span>
+            </div>
+            <span className="font-medium text-foreground pl-5 sm:pl-0">{conditionText}</span>
           </div>
         </div>
 
         {/* Firing & evaluation history audit footer */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-[11px] text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 border-t pt-2 text-[11px] text-muted-foreground">
           <span>
             {rule.lastEvaluatedAt
               ? `Dievaluasi ${displayDateTime(rule.lastEvaluatedAt, timezone)}`

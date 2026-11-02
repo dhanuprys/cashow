@@ -76,10 +76,10 @@ export function RuleManager({ rules, timezone }: RuleManagerProps) {
 
       {/* Filter and Search Bar */}
       <Card>
-        <CardContent className="p-3.5 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
             {/* Search Input */}
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative flex-1 min-w-0">
               <Search
                 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden="true"
@@ -88,18 +88,18 @@ export function RuleManager({ rules, timezone }: RuleManagerProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari aturan keuangan…"
-                className="pl-9 w-full"
+                className="pl-9 w-full text-sm"
                 aria-label="Cari aturan"
               />
             </div>
 
             {/* Filter Tabs */}
-            <div className="inline-flex rounded-lg border border-border/80 bg-muted/40 p-0.5 self-start sm:self-auto">
+            <div className="grid grid-cols-3 sm:flex rounded-lg border border-border/80 bg-muted/40 p-0.5 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab("ALL")}
                 className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                  "rounded-md py-1.5 sm:py-1 px-2 sm:px-2.5 text-center text-xs font-medium transition-colors cursor-pointer",
                   activeTab === "ALL"
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground",
@@ -111,7 +111,7 @@ export function RuleManager({ rules, timezone }: RuleManagerProps) {
                 type="button"
                 onClick={() => setActiveTab("ACTIVE")}
                 className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                  "rounded-md py-1.5 sm:py-1 px-2 sm:px-2.5 text-center text-xs font-medium transition-colors cursor-pointer",
                   activeTab === "ACTIVE"
                     ? "bg-background text-emerald-700 dark:text-emerald-400 shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground",
@@ -123,7 +123,7 @@ export function RuleManager({ rules, timezone }: RuleManagerProps) {
                 type="button"
                 onClick={() => setActiveTab("PAUSED")}
                 className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                  "rounded-md py-1.5 sm:py-1 px-2 sm:px-2.5 text-center text-xs font-medium transition-colors cursor-pointer",
                   activeTab === "PAUSED"
                     ? "bg-background text-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground",
@@ -172,11 +172,11 @@ export function RuleManager({ rules, timezone }: RuleManagerProps) {
 
       {/* Builder Modal Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="w-full max-w-xl max-h-[min(92dvh,720px)] sm:rounded-xl p-0 overflow-hidden flex flex-col">
+        <DialogContent className="w-full max-w-xl max-h-[92dvh] sm:rounded-xl p-0 overflow-hidden flex flex-col">
           <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border/40 shrink-0">
             <DialogTitle className="text-base sm:text-lg flex items-center gap-2">
               <Bell className="size-4 sm:size-5 text-primary shrink-0" aria-hidden="true" />
-              <span>
+              <span className="truncate">
                 {editingRule ? `Ubah Aturan: ${editingRule.name}` : "Pasang Aturan Keuangan Baru"}
               </span>
             </DialogTitle>
@@ -187,7 +187,7 @@ export function RuleManager({ rules, timezone }: RuleManagerProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain">
             <RuleBuilderModal
               key={editingRule?.id ?? "new"}
               rule={editingRule}

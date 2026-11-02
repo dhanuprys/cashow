@@ -17,17 +17,17 @@ export const metadata = {
 export default function RulesPage() {
   return (
     <div className="space-y-6">
-      <section className="flex flex-wrap items-end justify-between gap-3">
+      <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
             Automasi &amp; Peringatan
           </p>
-          <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="mt-1 sm:mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
             Aturan Keuangan
           </h1>
         </div>
-        <form action={runRulesAction}>
-          <Button type="submit" variant="outline" size="sm" className="gap-2">
+        <form action={runRulesAction} className="w-full sm:w-auto">
+          <Button type="submit" variant="outline" size="sm" className="w-full sm:w-auto gap-2">
             <Play className="size-3.5 fill-current" />
             Evaluasi sekarang
           </Button>

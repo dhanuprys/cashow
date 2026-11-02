@@ -181,15 +181,17 @@ export function RuleBuilderModal({ rule, onSuccess }: RuleBuilderModalProps) {
                 key={tpl.id}
                 type="button"
                 onClick={() => applyTemplate(tpl)}
-                className="group flex flex-col text-left p-2.5 rounded-xl border border-border/70 bg-card hover:bg-muted/40 hover:border-border transition-colors cursor-pointer"
+                className="group flex flex-col text-left p-3 rounded-xl border border-border/70 bg-card hover:bg-muted/40 hover:border-border transition-colors cursor-pointer"
               >
                 <div className="flex items-center justify-between w-full">
                   <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
                     {tpl.title}
                   </span>
-                  <Zap className="size-3 text-muted-foreground group-hover:text-amber-500 transition-colors" />
+                  <Zap className="size-3 text-muted-foreground group-hover:text-amber-500 transition-colors shrink-0 ml-1.5" />
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{tpl.desc}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 sm:line-clamp-1 leading-snug">
+                  {tpl.desc}
+                </p>
               </button>
             ))}
           </div>
@@ -473,8 +475,8 @@ export function RuleBuilderModal({ rule, onSuccess }: RuleBuilderModalProps) {
           </p>
         )}
 
-        <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none flex justify-end">
-          <SubmitButton className="w-full sm:w-auto">
+        <div className="sticky bottom-0 z-10 -mx-4 -mb-4 sm:-mb-6 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:mb-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none flex justify-end">
+          <SubmitButton className="w-full sm:w-auto h-10 sm:h-9 text-sm font-medium">
             {isEditing ? "Simpan Perubahan" : "Pasang Aturan"}
           </SubmitButton>
         </div>
