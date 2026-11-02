@@ -181,6 +181,10 @@ export async function getBudgetStatus(
       daysElapsed: number;
       totalDays: number;
       monthElapsedPercent: number;
+      from: string;
+      to: string;
+      dailyPacing: bigint;
+      transactionCount: number;
     }>
   >
 > {
@@ -195,13 +199,55 @@ export async function getBudgetStatus(
 
     const result = [];
     if (liveBudgets.length > 0) {
+      // Load all categories for user to resolve parent-child hierarchy
+      const allCategories = await ctx.db.orm.public.Category.where({ userId: ctx.userId })
+        .select("id", "parentId")
+        .all();
+
+      // Build child map: parentId -> Set of child category IDs
+      const childrenByParent = new Map<string, Set<string>>();
+      for (const cat of allCategories) {
+        if (cat.parentId !== null) {
+          let set = childrenByParent.get(cat.parentId);
+          if (!set) {
+            set = new Set<string>();
+            childrenByParent.set(cat.parentId, set);
+          }
+          set.add(cat.id);
+        }
+      }
+
+      // Helper to recursively collect all descendant category IDs
+      function getAllDescendants(parentId: string): Set<string> {
+        const descendants = new Set<string>();
+        const queue = [parentId];
+        while (queue.length > 0) {
+          const current = queue.shift();
+          if (!current) continue;
+          const directChildren = childrenByParent.get(current);
+          if (directChildren) {
+            for (const childId of directChildren) {
+              if (!descendants.has(childId)) {
+                descendants.add(childId);
+                queue.push(childId);
+              }
+            }
+          }
+        }
+        return descendants;
+      }
+
+      // Query expense transactions in period, locked to IDR account currency to avoid multi-currency skew
       const expensesPlan = ctx.db.raw.sql`
         SELECT t."categoryId" AS "categoryId",
-               COALESCE(SUM(t."amount"), 0)::text AS total
+               COALESCE(SUM(t."amount"), 0)::text AS total,
+               COUNT(t."id")::bigint AS count
         FROM "public"."Transaction" t
+        JOIN "public"."Account" acc ON acc."id" = t."accountId"
         WHERE t."userId" = ${ctx.userId}
           AND t."deletedAt" IS NULL
           AND t."type" = 'EXPENSE'
+          AND (acc."currency" = 'IDR' OR acc."currency" IS NULL)
           AND t."occurredOn" >= ${from}::date
           AND t."occurredOn" <= ${to}::date
         GROUP BY t."categoryId"
@@ -209,32 +255,56 @@ export async function getBudgetStatus(
         .returnsRow({
           categoryId: { codecId: "pg/text@1", nullable: true },
           total: "pg/text@1",
+          count: "pg/int8@1",
         })
         .build();
       const expenseRows = await ctx.db.query(expensesPlan);
 
       const categoryTotals = new Map<string, bigint>();
+      const categoryCounts = new Map<string, number>();
       let overallExpense = 0n;
+      let overallCount = 0;
+
       for (const row of expenseRows) {
         const total = BigInt(row.total);
+        const count = Number(row.count ?? 0n);
         overallExpense += total;
+        overallCount += count;
         if (row.categoryId !== null) {
           categoryTotals.set(row.categoryId, total);
+          categoryCounts.set(row.categoryId, count);
         }
       }
 
       const elapsed = Math.max(1, daysBetweenLocal(from, now, settings.timezone));
       const totalDays = Math.max(1, daysBetweenLocal(from, toDateLocal(to), settings.timezone) + 1);
+      const daysRemaining = Math.max(0, totalDays - elapsed);
 
       for (const budget of liveBudgets) {
-        const spent =
-          budget.categoryId === null
-            ? overallExpense
-            : (categoryTotals.get(budget.categoryId) ?? 0n);
+        let spent = 0n;
+        let txCount = 0;
+
+        if (budget.categoryId === null) {
+          spent = overallExpense;
+          txCount = overallCount;
+        } else {
+          // Accumulate target category + all its descendants (roll-up)
+          const allTargetIds = getAllDescendants(budget.categoryId);
+          allTargetIds.add(budget.categoryId);
+
+          for (const catId of allTargetIds) {
+            spent += categoryTotals.get(catId) ?? 0n;
+            txCount += categoryCounts.get(catId) ?? 0;
+          }
+        }
+
         const remaining = budget.amount - spent;
         const projected = (spent * BigInt(totalDays)) / BigInt(elapsed);
         const usedPercent =
           budget.amount === 0n ? 0 : Number((spent * 10000n) / budget.amount) / 100;
+        const dailyPacing =
+          remaining > 0n && daysRemaining > 0 ? remaining / BigInt(daysRemaining) : 0n;
+
         result.push({
           budget,
           spent,
@@ -244,6 +314,10 @@ export async function getBudgetStatus(
           daysElapsed: elapsed,
           totalDays,
           monthElapsedPercent: Math.min(100, Math.round((elapsed / totalDays) * 100)),
+          from,
+          to,
+          dailyPacing,
+          transactionCount: txCount,
         });
       }
     }

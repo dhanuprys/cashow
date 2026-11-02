@@ -1,5 +1,7 @@
 import { formatMoney } from "@cashow/domain";
 import { getBudgetStatus, listBudgets, listCategories } from "@cashow/services";
+import { ArrowUpRight, Clock } from "lucide-react";
+import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { BudgetForm, DeleteBudgetButton } from "@/components/ledger/budget-form";
@@ -87,13 +89,29 @@ async function Budgets() {
               const isOver = (status?.usedPercent ?? 0) >= 100;
               const isWarning = (status?.usedPercent ?? 0) >= 80 && !isOver;
 
+              // Construct drill-down link to transactions for this budget's cycle and category
+              const txQuery = new URLSearchParams();
+              txQuery.set("type", "EXPENSE");
+              if (budget.categoryId) {
+                txQuery.set("categoryId", budget.categoryId);
+              }
+              if (status?.from) {
+                txQuery.set("from", status.from);
+              }
+              if (status?.to) {
+                txQuery.set("to", status.to);
+              }
+              const transactionsUrl = `/app/transactions?${txQuery.toString()}`;
+
               return (
                 <Card key={budget.id}>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-3 p-4 sm:p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium break-words line-clamp-2">{budget.name}</p>
+                          <p className="font-semibold text-foreground text-sm sm:text-base break-words line-clamp-2">
+                            {budget.name}
+                          </p>
                           {status && (
                             <span
                               className={cn(
@@ -110,8 +128,21 @@ async function Budgets() {
                           )}
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground break-words">
-                          {budget.categoryName ?? "Semua pengeluaran"} · batas{" "}
-                          {formatMoney(budget.amount)}
+                          {budget.categoryName ? (
+                            <>
+                              Kategori{" "}
+                              <span className="font-medium text-foreground">
+                                {budget.categoryName}
+                              </span>{" "}
+                              (termasuk subkategori)
+                            </>
+                          ) : (
+                            "Semua pengeluaran"
+                          )}{" "}
+                          · Batas bulanan{" "}
+                          <span className="font-medium text-foreground tabular-nums">
+                            {formatMoney(budget.amount)}
+                          </span>
                         </p>
                       </div>
                       <div className="shrink-0">
@@ -133,13 +164,51 @@ async function Budgets() {
                             style={{ width: `${Math.min(status.usedPercent, 100)}%` }}
                           />
                         </div>
-                        <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs text-muted-foreground">
-                          <p>
-                            Terpakai {formatMoney(status.spent)} dari{" "}
-                            {formatMoney(status.budget.amount)} ({status.usedPercent.toFixed(1)}%) ·
-                            proyeksi akhir bulan {formatMoney(status.projected)}
-                          </p>
-                          <span className="text-[11px]">
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1 border-t border-border/40">
+                          <div className="space-y-1">
+                            <p className="text-muted-foreground">
+                              Terpakai{" "}
+                              <strong className="text-foreground font-semibold tabular-nums">
+                                {formatMoney(status.spent)}
+                              </strong>{" "}
+                              ({status.usedPercent.toFixed(1)}%)
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Sisa anggaran:{" "}
+                              <span
+                                className={cn(
+                                  "font-medium tabular-nums",
+                                  status.remaining >= 0n
+                                    ? "text-emerald-700 dark:text-emerald-400"
+                                    : "text-rose-700 dark:text-rose-400 font-semibold",
+                                )}
+                              >
+                                {formatMoney(status.remaining)}
+                              </span>
+                            </p>
+                          </div>
+
+                          <div className="space-y-1 sm:text-right">
+                            <p className="text-muted-foreground">
+                              Batas aman:{" "}
+                              <strong className="text-primary font-semibold tabular-nums">
+                                {formatMoney(status.dailyPacing)}
+                              </strong>
+                              <span className="text-[11px] text-muted-foreground"> / hari</span>
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Proyeksi akhir bulan:{" "}
+                              <span className="tabular-nums font-medium text-foreground">
+                                {formatMoney(status.projected)}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-[11px] text-muted-foreground border-t border-border/30">
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="size-3 text-muted-foreground" aria-hidden="true" />
                             Hari ke-{status.daysElapsed}/{status.totalDays} (
                             {status.monthElapsedPercent}% waktu) ·{" "}
                             <span
@@ -155,6 +224,14 @@ async function Budgets() {
                                 : "Terkendali"}
                             </span>
                           </span>
+
+                          <Link
+                            href={transactionsUrl}
+                            className="inline-flex items-center gap-1 font-medium text-primary hover:underline hover:text-primary/80 transition-colors"
+                          >
+                            <span>Lihat {status.transactionCount} transaksi</span>
+                            <ArrowUpRight className="size-3" aria-hidden="true" />
+                          </Link>
                         </div>
                       </>
                     )}
