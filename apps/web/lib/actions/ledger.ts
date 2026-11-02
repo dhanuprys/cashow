@@ -640,10 +640,17 @@ export async function createBudgetAction(
   formData: FormData,
 ): Promise<ActionState> {
   const session = await requireLedgerSession();
+  const period = text(formData, "period") || "MONTHLY";
+  const startDate = text(formData, "startDate");
+  const endDate = text(formData, "endDate");
+
   const result = await createBudget(session.ctx, {
     name: text(formData, "name"),
     categoryId: text(formData, "categoryId"),
     amount: text(formData, "amount"),
+    period,
+    startDate: startDate || null,
+    endDate: endDate || null,
   });
   if (!result.ok) return failure(result.error.message);
 
@@ -660,10 +667,17 @@ export async function updateBudgetAction(
   const id = text(formData, "budgetId");
   if (id === "") return failure("Anggaran tidak ditemukan.");
 
+  const period = text(formData, "period");
+  const startDate = text(formData, "startDate");
+  const endDate = text(formData, "endDate");
+
   const result = await updateBudget(session.ctx, id, {
     name: text(formData, "name"),
     categoryId: text(formData, "categoryId"),
     amount: text(formData, "amount"),
+    period: period || undefined,
+    startDate: startDate !== "" ? startDate : null,
+    endDate: endDate !== "" ? endDate : null,
     active:
       formData.get("active") === "true"
         ? true

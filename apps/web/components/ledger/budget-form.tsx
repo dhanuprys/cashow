@@ -40,6 +40,9 @@ export interface BudgetFormValues {
   name: string;
   categoryId: string | null;
   amount: string;
+  period?: "MONTHLY" | "WEEKLY" | "CUSTOM";
+  startDate?: string | null;
+  endDate?: string | null;
   active: boolean;
 }
 
@@ -52,6 +55,12 @@ export function BudgetForm({
   budget?: BudgetFormValues;
   onSuccess?: () => void;
 }) {
+  const [period, setPeriod] = useState<"MONTHLY" | "WEEKLY" | "CUSTOM">(
+    budget?.period ?? "MONTHLY",
+  );
+  const [startDate, setStartDate] = useState(budget?.startDate ?? "");
+  const [endDate, setEndDate] = useState(budget?.endDate ?? "");
+
   const [state, formAction] = useActionState<ActionState, FormData>(
     budget === undefined ? createBudgetAction : updateBudgetAction,
     initialActionState,
@@ -78,11 +87,61 @@ export function BudgetForm({
           name="name"
           defaultValue={budget?.name ?? ""}
           maxLength={80}
-          placeholder="Contoh: Belanja bulanan"
+          placeholder="Contoh: Belanja bulanan / Liburan akhir tahun"
           className="mt-2"
           required
         />
       </Field>
+
+      {/* Siklus Periode Anggaran */}
+      <Field>
+        <FieldLabel htmlFor={`budget-period-${budget?.id ?? "new"}`}>Periode Anggaran</FieldLabel>
+        <NativeSelect
+          id={`budget-period-${budget?.id ?? "new"}`}
+          name="period"
+          value={period}
+          onChange={(e) => setPeriod(e.target.value as "MONTHLY" | "WEEKLY" | "CUSTOM")}
+          className="mt-2 w-full"
+        >
+          <NativeSelectOption value="MONTHLY">Bulanan (Siklus Gajian)</NativeSelectOption>
+          <NativeSelectOption value="WEEKLY">Mingguan (Tiap Pekan)</NativeSelectOption>
+          <NativeSelectOption value="CUSTOM">Rentang Khusus (Proyek / Event)</NativeSelectOption>
+        </NativeSelect>
+      </Field>
+
+      {/* Custom Date Range Inputs */}
+      {period === "CUSTOM" && (
+        <FieldGroup className="grid gap-4 sm:grid-cols-2 rounded-xl border border-border/80 bg-muted/20 p-3 sm:p-4">
+          <Field>
+            <FieldLabel htmlFor={`budget-start-${budget?.id ?? "new"}`} className="text-xs">
+              Tanggal Mulai
+            </FieldLabel>
+            <Input
+              id={`budget-start-${budget?.id ?? "new"}`}
+              type="date"
+              name="startDate"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="mt-1.5"
+              required={period === "CUSTOM"}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={`budget-end-${budget?.id ?? "new"}`} className="text-xs">
+              Tanggal Selesai
+            </FieldLabel>
+            <Input
+              id={`budget-end-${budget?.id ?? "new"}`}
+              type="date"
+              name="endDate"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="mt-1.5"
+              required={period === "CUSTOM"}
+            />
+          </Field>
+        </FieldGroup>
+      )}
 
       <FieldGroup className="grid gap-4 sm:grid-cols-2">
         <Field>

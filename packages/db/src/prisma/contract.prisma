@@ -81,6 +81,13 @@ enum RecurringFrequency {
   YEARLY  = "YEARLY"
 }
 
+enum BudgetPeriod {
+  @@type("pg/text@1")
+  MONTHLY = "MONTHLY"
+  WEEKLY  = "WEEKLY"
+  CUSTOM  = "CUSTOM"
+}
+
 enum AiProviderType {
   @@type("pg/text@1")
   GOOGLE            = "GOOGLE"
@@ -487,22 +494,26 @@ model ReconciliationCheckpoint {
 // confirms or skips each one.
 
 model Budget {
-  id         String    @id @onCreate(uuid(7))
+  id         String       @id @onCreate(uuid(7))
   userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   name       String
   // Null means the budget covers every expense category.
   categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  // Limit in whole rupiah for one budget month.
+  category   Category?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  // Limit in whole rupiah for one period.
   amount     BigInt
-  active     Boolean   @default(true)
+  period     BudgetPeriod @default(MONTHLY)
+  startDate  DateString?
+  endDate    DateString?
+  active     Boolean      @default(true)
   createdAt  TimestamptzString @onCreate(now())
   updatedAt  TimestamptzString @onCreate(now()) @onUpdate(now())
 
   @@index([userId])
   @@index([userId, categoryId])
   @@check(expression: sql`"amount" > 0`, name: "budget_amount_positive")
+  @@check(expression: sql`"startDate" IS NULL OR "endDate" IS NULL OR "startDate" <= "endDate"`, name: "budget_date_range_valid")
 }
 
 model RecurringTemplate {

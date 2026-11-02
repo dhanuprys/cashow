@@ -97,11 +97,14 @@ export async function getSafeToSpend(ctx: UseCaseContext): Promise<Result<SafeTo
     const summary = summaryResult.ok ? summaryResult.value : null;
     const free = summary === null ? 0n : summary.income - summary.expense;
 
-    // Prefer budget remaining when budgets exist.
+    // Prefer budget remaining when budgets exist (only routine MONTHLY/WEEKLY, exclude temporary CUSTOM projects).
     const budgetStatus = await getBudgetStatus(ctx);
     let available = free;
     if (budgetStatus.ok && budgetStatus.value.length > 0) {
-      available = budgetStatus.value.reduce((sum, item) => sum + item.remaining, 0n);
+      const routineBudgets = budgetStatus.value.filter((item) => item.budget.period !== "CUSTOM");
+      if (routineBudgets.length > 0) {
+        available = routineBudgets.reduce((sum, item) => sum + item.remaining, 0n);
+      }
     }
     available -= upcoming;
 

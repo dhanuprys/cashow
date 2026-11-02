@@ -201,6 +201,23 @@
               }
             ]
           },
+          "BudgetPeriod": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "MONTHLY",
+                "value": "MONTHLY"
+              },
+              {
+                "name": "WEEKLY",
+                "value": "WEEKLY"
+              },
+              {
+                "name": "CUSTOM",
+                "value": "CUSTOM"
+              }
+            ]
+          },
           "CategoryKind": {
             "codecId": "pg/text@1",
             "members": [
@@ -1615,6 +1632,13 @@
                   "kind": "scalar"
                 }
               },
+              "endDate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/date-string@1",
+                  "kind": "scalar"
+                }
+              },
               "id": {
                 "nullable": false,
                 "type": {
@@ -1626,6 +1650,26 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "period": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "BudgetPeriod",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "startDate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/date-string@1",
                   "kind": "scalar"
                 }
               },
@@ -1692,11 +1736,20 @@
                 "createdAt": {
                   "column": "createdAt"
                 },
+                "endDate": {
+                  "column": "endDate"
+                },
                 "id": {
                   "column": "id"
                 },
                 "name": {
                   "column": "name"
+                },
+                "period": {
+                  "column": "period"
+                },
+                "startDate": {
+                  "column": "startDate"
                 },
                 "updatedAt": {
                   "column": "updatedAt"
@@ -6412,9 +6465,19 @@
             "Budget": {
               "checks": [
                 {
+                  "expression": "\"period\" IN ('MONTHLY', 'WEEKLY', 'CUSTOM')",
+                  "name": "Budget_period_check_a8c1719c",
+                  "prefix": "Budget_period_check"
+                },
+                {
                   "expression": "\"amount\" > 0",
                   "name": "budget_amount_positive_ed0d10ac",
                   "prefix": "budget_amount_positive"
+                },
+                {
+                  "expression": "\"startDate\" IS NULL OR \"endDate\" IS NULL OR \"startDate\" <= \"endDate\"",
+                  "name": "budget_date_range_valid_85c225a0",
+                  "prefix": "budget_date_range_valid"
                 }
               ],
               "columns": {
@@ -6442,6 +6505,11 @@
                   "dataType": "pg/timestamptz",
                   "nullable": false
                 },
+                "endDate": {
+                  "codecId": "pg/date-string@1",
+                  "dataType": "pg/date",
+                  "nullable": true
+                },
                 "id": {
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
@@ -6451,6 +6519,26 @@
                   "codecId": "pg/text@1",
                   "dataType": "pg/text",
                   "nullable": false
+                },
+                "period": {
+                  "codecId": "pg/text@1",
+                  "dataType": "pg/text",
+                  "default": {
+                    "kind": "literal",
+                    "value": "MONTHLY"
+                  },
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "BudgetPeriod",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "startDate": {
+                  "codecId": "pg/date-string@1",
+                  "dataType": "pg/date",
+                  "nullable": true
                 },
                 "updatedAt": {
                   "codecId": "pg/timestamptz-string@1",
@@ -9422,6 +9510,14 @@
                 "AUTHENTICATION"
               ]
             },
+            "BudgetPeriod": {
+              "kind": "valueSet",
+              "values": [
+                "MONTHLY",
+                "WEEKLY",
+                "CUSTOM"
+              ]
+            },
             "CategoryKind": {
               "kind": "valueSet",
               "values": [
@@ -9474,7 +9570,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "affc841717f5b357f53875d5b0e20c0b4f75f7cb26f0d867d2ac32174b007872"
+    "storageHash": "b8a9108761238d484af357efab4532f80476f4171d132fe3271a6ce265bc01e9"
   },
   "execution": {
     "executionHash": "6eeb5c12327323a21c1431dd5580578a81e088d406b2d4f77775b411f2d4b8e1",

@@ -112,6 +112,18 @@ async function Budgets() {
                           <p className="font-semibold text-foreground text-sm sm:text-base break-words line-clamp-2">
                             {budget.name}
                           </p>
+                          <span className="inline-flex shrink-0 items-center rounded-md border border-border/80 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {budget.period === "WEEKLY"
+                              ? "Mingguan"
+                              : budget.period === "CUSTOM"
+                                ? "Khusus"
+                                : "Bulanan"}
+                          </span>
+                          {status?.isExpired && (
+                            <span className="inline-flex shrink-0 items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              Selesai
+                            </span>
+                          )}
                           {status && (
                             <span
                               className={cn(
@@ -139,10 +151,15 @@ async function Budgets() {
                           ) : (
                             "Semua pengeluaran"
                           )}{" "}
-                          · Batas bulanan{" "}
+                          · Batas{" "}
                           <span className="font-medium text-foreground tabular-nums">
                             {formatMoney(budget.amount)}
                           </span>
+                          {budget.period === "CUSTOM" && budget.startDate && budget.endDate && (
+                            <span className="ml-1 text-[11px] text-muted-foreground/80">
+                              ({budget.startDate} s/d {budget.endDate})
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
@@ -152,6 +169,9 @@ async function Budgets() {
                             name: budget.name,
                             categoryId: budget.categoryId,
                             amount: String(budget.amount),
+                            period: budget.period,
+                            startDate: budget.startDate,
+                            endDate: budget.endDate,
                             active: budget.active,
                           }}
                           categories={categories.map((c) => ({ id: c.id, name: c.name }))}

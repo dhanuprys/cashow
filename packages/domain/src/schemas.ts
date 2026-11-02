@@ -378,24 +378,61 @@ export type SnapshotUpdateInput = z.infer<typeof snapshotUpdateSchema>;
 export type TransferCreateInput = z.infer<typeof transferCreateSchema>;
 export type CheckpointUnlockInput = z.infer<typeof checkpointUnlockSchema>;
 
-/** Render the first issue of a failed parse as an Indonesian sentence. */
-export const budgetInputSchema = z.object({
-  name: z.string().trim().min(1, "Nama anggaran wajib diisi.").max(80, "Maksimal 80 karakter."),
-  categoryId: nullableText(64),
-  amount: positiveMoneyText,
+export const budgetPeriodSchema = z.enum(["MONTHLY", "WEEKLY", "CUSTOM"], {
+  message: "Periode anggaran tidak dikenal.",
 });
+export type BudgetPeriod = z.infer<typeof budgetPeriodSchema>;
 
-export const budgetUpdateSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Nama anggaran wajib diisi.")
-    .max(80, "Maksimal 80 karakter.")
-    .optional(),
-  categoryId: nullablePatchText(64),
-  amount: positiveMoneyText.optional(),
-  active: z.boolean().optional(),
-});
+/** Render the first issue of a failed parse as an Indonesian sentence. */
+export const budgetInputSchema = z
+  .object({
+    name: z.string().trim().min(1, "Nama anggaran wajib diisi.").max(80, "Maksimal 80 karakter."),
+    categoryId: nullableText(64),
+    amount: positiveMoneyText,
+    period: budgetPeriodSchema.default("MONTHLY"),
+    startDate: localDateSchema.optional().nullable(),
+    endDate: localDateSchema.optional().nullable(),
+  })
+  .refine(
+    (data) => {
+      if (data.period === "CUSTOM") {
+        return !!data.startDate && !!data.endDate && data.startDate <= data.endDate;
+      }
+      return true;
+    },
+    {
+      message: "Periode kustom wajib menentukan tanggal mulai dan selesai yang valid.",
+      path: ["startDate"],
+    },
+  );
+
+export const budgetUpdateSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, "Nama anggaran wajib diisi.")
+      .max(80, "Maksimal 80 karakter.")
+      .optional(),
+    categoryId: nullablePatchText(64),
+    amount: positiveMoneyText.optional(),
+    period: budgetPeriodSchema.optional(),
+    startDate: localDateSchema.optional().nullable(),
+    endDate: localDateSchema.optional().nullable(),
+    active: z.boolean().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.period === "CUSTOM" && data.startDate && data.endDate) {
+        return data.startDate <= data.endDate;
+      }
+      return true;
+    },
+    {
+      message: "Tanggal mulai harus sebelum atau sama dengan tanggal selesai.",
+      path: ["startDate"],
+    },
+  );
 
 export const recurringFrequencySchema = z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"], {
   message: "Frekuensi tidak dikenal.",

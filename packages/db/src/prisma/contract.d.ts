@@ -23,7 +23,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'affc841717f5b357f53875d5b0e20c0b4f75f7cb26f0d867d2ac32174b007872'>;
+  StorageHashBase<'b8a9108761238d484af357efab4532f80476f4171d132fe3271a6ce265bc01e9'>;
 export type ExecutionHash =
   ExecutionHashBase<'6eeb5c12327323a21c1431dd5580578a81e088d406b2d4f77775b411f2d4b8e1'>;
 export type ProfileHash =
@@ -265,6 +265,12 @@ type FieldTypeOverrides = {
           readonly input: 'REGISTRATION' | 'AUTHENTICATION';
         };
       };
+      readonly Budget: {
+        readonly period: {
+          readonly output: 'MONTHLY' | 'WEEKLY' | 'CUSTOM';
+          readonly input: 'MONTHLY' | 'WEEKLY' | 'CUSTOM';
+        };
+      };
       readonly Category: {
         readonly kind: {
           readonly output: 'INCOME' | 'EXPENSE';
@@ -358,6 +364,12 @@ type ColumnTypeOverrides = {
       readonly purpose: {
         readonly output: 'REGISTRATION' | 'AUTHENTICATION';
         readonly input: 'REGISTRATION' | 'AUTHENTICATION';
+      };
+    };
+    readonly Budget: {
+      readonly period: {
+        readonly output: 'MONTHLY' | 'WEEKLY' | 'CUSTOM';
+        readonly input: 'MONTHLY' | 'WEEKLY' | 'CUSTOM';
       };
     };
     readonly Category: {
@@ -572,8 +584,11 @@ export namespace Models {
     amount: FieldOutputTypes['public']['Budget']['amount'];
     categoryId: FieldOutputTypes['public']['Budget']['categoryId'];
     createdAt: FieldOutputTypes['public']['Budget']['createdAt'];
+    endDate: FieldOutputTypes['public']['Budget']['endDate'];
     id: FieldOutputTypes['public']['Budget']['id'];
     name: FieldOutputTypes['public']['Budget']['name'];
+    period: FieldOutputTypes['public']['Budget']['period'];
+    startDate: FieldOutputTypes['public']['Budget']['startDate'];
     updatedAt: FieldOutputTypes['public']['Budget']['updatedAt'];
     userId: FieldOutputTypes['public']['Budget']['userId'];
     category: public_Category | null;
@@ -1970,6 +1985,12 @@ type ContractBase = Omit<
                   readonly nullable: false;
                   readonly many: false;
                 };
+                readonly endDate: {
+                  readonly dataType: 'pg/date';
+                  readonly codecId: 'pg/date-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly id: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
@@ -1980,6 +2001,22 @@ type ContractBase = Omit<
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
                   readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly period: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'MONTHLY'>;
+                  };
+                  readonly many: false;
+                };
+                readonly startDate: {
+                  readonly dataType: 'pg/date';
+                  readonly codecId: 'pg/date-string@1';
+                  readonly nullable: true;
                   readonly many: false;
                 };
                 readonly updatedAt: {
@@ -4389,6 +4426,10 @@ type ContractBase = Omit<
               readonly kind: 'valueSet';
               readonly values: readonly ['REGISTRATION', 'AUTHENTICATION'];
             };
+            readonly BudgetPeriod: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['MONTHLY', 'WEEKLY', 'CUSTOM'];
+            };
             readonly CategoryKind: {
               readonly kind: 'valueSet';
               readonly values: readonly ['INCOME', 'EXPENSE'];
@@ -5334,6 +5375,10 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/timestamptz-string@1';
                 };
               };
+              readonly endDate: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/date-string@1' };
+              };
               readonly id: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -5341,6 +5386,14 @@ type ContractBase = Omit<
               readonly name: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly period: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly startDate: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/date-string@1' };
               };
               readonly updatedAt: {
                 readonly nullable: false;
@@ -5385,8 +5438,11 @@ type ContractBase = Omit<
                 readonly amount: { readonly column: 'amount' };
                 readonly categoryId: { readonly column: 'categoryId' };
                 readonly createdAt: { readonly column: 'createdAt' };
+                readonly endDate: { readonly column: 'endDate' };
                 readonly id: { readonly column: 'id' };
                 readonly name: { readonly column: 'name' };
+                readonly period: { readonly column: 'period' };
+                readonly startDate: { readonly column: 'startDate' };
                 readonly updatedAt: { readonly column: 'updatedAt' };
                 readonly userId: { readonly column: 'userId' };
               };
@@ -7684,6 +7740,14 @@ type ContractBase = Omit<
               { readonly name: 'AUTHENTICATION'; readonly value: 'AUTHENTICATION' },
             ];
           };
+          readonly BudgetPeriod: {
+            readonly codecId: 'pg/text@1';
+            readonly members: readonly [
+              { readonly name: 'MONTHLY'; readonly value: 'MONTHLY' },
+              { readonly name: 'WEEKLY'; readonly value: 'WEEKLY' },
+              { readonly name: 'CUSTOM'; readonly value: 'CUSTOM' },
+            ];
+          };
           readonly CategoryKind: {
             readonly codecId: 'pg/text@1';
             readonly members: readonly [
@@ -7753,6 +7817,11 @@ type ContractBase = Omit<
           readonly AuthChallengePurpose: readonly [
             { readonly name: 'REGISTRATION'; readonly value: 'REGISTRATION' },
             { readonly name: 'AUTHENTICATION'; readonly value: 'AUTHENTICATION' },
+          ];
+          readonly BudgetPeriod: readonly [
+            { readonly name: 'MONTHLY'; readonly value: 'MONTHLY' },
+            { readonly name: 'WEEKLY'; readonly value: 'WEEKLY' },
+            { readonly name: 'CUSTOM'; readonly value: 'CUSTOM' },
           ];
           readonly CategoryKind: readonly [
             { readonly name: 'INCOME'; readonly value: 'INCOME' },
