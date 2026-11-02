@@ -271,12 +271,13 @@ export async function getBudgetStatus(
         return descendants;
       }
 
-      // 4. Query all expense transactions in the single bounding-box range in 1 round-trip
+      // 4. Query expense transactions in the single bounding-box range in 1 round-trip,
+      // grouped by (occurredOn, categoryId) to compress data transfer and avoid iterating raw rows.
       const expensesPlan = ctx.db.raw.sql`
-        SELECT t."id" AS id,
+        SELECT t."occurredOn"::text AS "occurredOn",
                t."categoryId" AS "categoryId",
-               t."amount"::text AS amount,
-               t."occurredOn"::text AS "occurredOn"
+               SUM(t."amount")::text AS total,
+               COUNT(*)::bigint AS count
         FROM "public"."Transaction" t
         JOIN "public"."Account" acc ON acc."id" = t."accountId"
         WHERE t."userId" = ${ctx.userId}
@@ -285,15 +286,34 @@ export async function getBudgetStatus(
           AND (acc."currency" = 'IDR' OR acc."currency" IS NULL)
           AND t."occurredOn" >= ${minFrom}::date
           AND t."occurredOn" <= ${maxTo}::date
+        GROUP BY t."occurredOn", t."categoryId"
       `
         .returnsRow({
-          id: "pg/text@1",
-          categoryId: { codecId: "pg/text@1", nullable: true },
-          amount: "pg/text@1",
           occurredOn: "pg/text@1",
+          categoryId: { codecId: "pg/text@1", nullable: true },
+          total: "pg/text@1",
+          count: "pg/int8@1",
         })
         .build();
-      const expenseRows = await ctx.db.query(expensesPlan);
+      const expenseBuckets = await ctx.db.query(expensesPlan);
+
+      // Pre-index expense buckets by date for fast range filtering: Map<occurredOn, Array<{ categoryId, total, count }>>
+      const bucketsByDate = new Map<
+        string,
+        Array<{ categoryId: string | null; total: bigint; count: number }>
+      >();
+      for (const bucket of expenseBuckets) {
+        let list = bucketsByDate.get(bucket.occurredOn);
+        if (!list) {
+          list = [];
+          bucketsByDate.set(bucket.occurredOn, list);
+        }
+        list.push({
+          categoryId: bucket.categoryId,
+          total: BigInt(bucket.total),
+          count: Number(bucket.count ?? 0n),
+        });
+      }
 
       // 5. Evaluate each budget against its own specific date range and categories
       for (let i = 0; i < liveBudgets.length; i++) {
@@ -313,14 +333,16 @@ export async function getBudgetStatus(
         let spent = 0n;
         let txCount = 0;
 
-        for (const row of expenseRows) {
-          if (row.occurredOn < range.from || row.occurredOn > range.to) continue;
-          if (
-            targetCatIds === null ||
-            (row.categoryId !== null && targetCatIds.has(row.categoryId))
-          ) {
-            spent += BigInt(row.amount);
-            txCount += 1;
+        for (const [date, buckets] of bucketsByDate) {
+          if (date < range.from || date > range.to) continue;
+          for (const item of buckets) {
+            if (
+              targetCatIds === null ||
+              (item.categoryId !== null && targetCatIds.has(item.categoryId))
+            ) {
+              spent += item.total;
+              txCount += item.count;
+            }
           }
         }
 
