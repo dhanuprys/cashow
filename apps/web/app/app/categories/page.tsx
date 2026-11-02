@@ -51,17 +51,6 @@ async function Categories() {
   const db = await getDb();
   const ctx = { db, userId: user.id };
   const categories = unwrap(await listCategories(ctx, { withTransactionCount: true }));
-  const byId = new Map(categories.map((category) => [category.id, category]));
-
-  const parentOptions = (kind: "INCOME" | "EXPENSE") =>
-    categories
-      .filter((category) => category.kind === kind && category.archivedAt === null)
-      .map((category) => ({
-        id: category.id,
-        name: category.name,
-        parentName: category.parentId === null ? null : (byId.get(category.parentId)?.name ?? null),
-        kind: category.kind,
-      }));
 
   const categoryItems: CategoryItem[] = categories.map((c) => ({
     id: c.id,
@@ -72,5 +61,5 @@ async function Categories() {
     transactionCount: Number(c.transactionCount),
   }));
 
-  return <CategoryManager categories={categoryItems} parentOptions={parentOptions} />;
+  return <CategoryManager categories={categoryItems} />;
 }

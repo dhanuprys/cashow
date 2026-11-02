@@ -43,13 +43,7 @@ export interface CategoryItem {
   transactionCount: number;
 }
 
-export function CategoryManager({
-  categories,
-  parentOptions,
-}: {
-  categories: CategoryItem[];
-  parentOptions: (kind: "INCOME" | "EXPENSE") => ParentOption[];
-}) {
+export function CategoryManager({ categories }: { categories: CategoryItem[] }) {
   const [activeTab, setActiveTab] = useState<"ALL" | "EXPENSE" | "INCOME">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
@@ -61,6 +55,19 @@ export function CategoryManager({
   const [dialogDefaultParentId, setDialogDefaultParentId] = useState<string | null>(null);
 
   const byId = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+
+  const parentOptions = useMemo(() => {
+    return (kind: "INCOME" | "EXPENSE"): ParentOption[] =>
+      categories
+        .filter((category) => category.kind === kind && category.archivedAt === null)
+        .map((category) => ({
+          id: category.id,
+          name: category.name,
+          parentName:
+            category.parentId === null ? null : (byId.get(category.parentId)?.name ?? null),
+          kind: category.kind,
+        }));
+  }, [categories, byId]);
 
   // Aggregate stats
   const stats = useMemo(() => {
