@@ -2,6 +2,7 @@ import { type LocalDate, toLocalDate } from "@cashow/domain";
 import { getBudgetStatus } from "./budgets";
 import { nowOf, type UseCaseContext, userSettings } from "./context";
 import { toLedgerError } from "./errors";
+import { getGoalReservationTotals } from "./goals";
 import { err, ok, type Result } from "./result";
 
 export type SummaryPeriod =
@@ -67,6 +68,8 @@ export interface SafeToSpend {
   daily: bigint;
   daysLeft: number;
   upcoming: bigint;
+  /** Money set aside for live savings goals; not free to spend. */
+  reserved: bigint;
   available: bigint;
 }
 
@@ -106,10 +109,15 @@ export async function getSafeToSpend(ctx: UseCaseContext): Promise<Result<SafeTo
         available = routineBudgets.reduce((sum, item) => sum + item.remaining, 0n);
       }
     }
-    available -= upcoming;
+    // Money set aside for savings goals is not free to spend. Only live goals
+    // count; archiving a goal releases its reservations.
+    const totalsResult = await getGoalReservationTotals(ctx);
+    const reserved = totalsResult.ok ? totalsResult.value.total : 0n;
+
+    available -= upcoming + reserved;
 
     const daily = available >= 0n ? available / BigInt(daysLeft) : 0n;
-    return ok({ daily, daysLeft, upcoming, available });
+    return ok({ daily, daysLeft, upcoming, reserved, available });
   } catch (error) {
     return err(toLedgerError(error));
   }

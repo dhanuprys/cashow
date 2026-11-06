@@ -1,0 +1,704 @@
+[
+  {
+    "id": "table.Goal",
+    "label": "Create table \"Goal\"",
+    "summary": "Creates table \"Goal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Goal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Goal\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Goal\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"Goal\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Goal\"",
+        "sql": "CREATE TABLE \"public\".\"Goal\" (\n  \"archivedAt\" timestamptz,\n  \"color\" text,\n  \"createdAt\" timestamptz NOT NULL,\n  \"description\" text,\n  \"icon\" text,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"status\" text DEFAULT 'ACTIVE' NOT NULL,\n  \"targetAmount\" int8 NOT NULL,\n  \"targetDate\" date,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"Goal_status_check_a6553ad0\" CHECK (\"status\" IN ('ACTIVE', 'PAUSED', 'COMPLETED')),\n  CONSTRAINT \"goal_target_amount_positive_51e54b7f\" CHECK (\"targetAmount\" > 0)\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Goal\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"Goal\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"Goal\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "table.GoalReservation",
+    "label": "Create table \"GoalReservation\"",
+    "summary": "Creates table \"GoalReservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "GoalReservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"GoalReservation\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GoalReservation\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "table \"GoalReservation\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"GoalReservation\"",
+        "sql": "CREATE TABLE \"public\".\"GoalReservation\" (\n  \"accountId\" text NOT NULL,\n  \"amount\" int8 NOT NULL,\n  \"createdAt\" timestamptz NOT NULL,\n  \"goalId\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"note\" text,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"goal_reservation_amount_positive_ed0d10ac\" CHECK (\"amount\" > 0)\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"GoalReservation\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3))) AS \"result\"",
+        "params": [
+          "\"public\".\"GoalReservation\"",
+          "r",
+          "p"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "table \"GoalReservation\""
+        }
+      }
+    ]
+  },
+  {
+    "id": "column.public.User.googleId",
+    "label": "Add column \"googleId\" to \"User\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "googleId",
+        "table": "User"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"googleId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "User",
+          "googleId"
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "column \"googleId\" on \"User\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"googleId\"",
+        "sql": "ALTER TABLE \"public\".\"User\" ADD COLUMN \"googleId\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"googleId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "User",
+          "googleId"
+        ],
+        "expectation": {
+          "expects": "present",
+          "object": "column \"googleId\" on \"User\""
+        }
+      },
+      {
+        "description": "verify column \"googleId\" has type \"text\"",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_attribute\" AS \"a\" INNER JOIN \"pg_class\" AS \"c\" ON \"c\".\"oid\" = \"a\".\"attrelid\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"relnamespace\" WHERE (\"n\".\"nspname\" = $1 AND \"c\".\"relname\" = $2 AND \"a\".\"attname\" = $3 AND (format_type(\"a\".\"atttypid\", \"a\".\"atttypmod\")) = $4 AND NOT (\"a\".\"attisdropped\"))) AS \"result\"",
+        "params": [
+          "public",
+          "User",
+          "googleId",
+          "text"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.User.User_googleId_key",
+    "label": "Add unique constraint on \"User\" (googleId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "User_googleId_key",
+        "table": "User"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"User_googleId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "User_googleId_key",
+          "public",
+          "\"public\".\"User\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "constraint \"User_googleId_key\" on \"User\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"User_googleId_key\"",
+        "sql": "ALTER TABLE \"public\".\"User\" ADD CONSTRAINT \"User_googleId_key\" UNIQUE (\"googleId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify unique constraint \"User_googleId_key\" exists on (googleId)",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb)) AS \"result\"",
+        "params": [
+          "User_googleId_key",
+          "public",
+          "\"public\".\"User\"",
+          "u",
+          "[\"googleId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Goal.Goal_userId_idx_a489d58a",
+    "label": "Create index \"Goal_userId_idx_a489d58a\" on \"Goal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Goal_userId_idx_a489d58a",
+        "table": "Goal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Goal_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Goal_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Goal_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Goal_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"Goal_userId_idx_a489d58a\" ON \"public\".\"Goal\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Goal_userId_idx_a489d58a\" exists on \"Goal\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Goal_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"Goal\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Goal.Goal_userId_status_idx_e4a128ba",
+    "label": "Create index \"Goal_userId_status_idx_e4a128ba\" on \"Goal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Goal_userId_status_idx_e4a128ba",
+        "table": "Goal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Goal_userId_status_idx_e4a128ba\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Goal_userId_status_idx_e4a128ba\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"Goal_userId_status_idx_e4a128ba\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Goal_userId_status_idx_e4a128ba\"",
+        "sql": "CREATE INDEX \"Goal_userId_status_idx_e4a128ba\" ON \"public\".\"Goal\" (\"userId\", \"status\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Goal_userId_status_idx_e4a128ba\" exists on \"Goal\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"Goal_userId_status_idx_e4a128ba\"",
+          "i",
+          "I",
+          "\"public\".\"Goal\"",
+          "btree",
+          "[\"userId\",\"status\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GoalReservation.GoalReservation_accountId_idx_cbfb3085",
+    "label": "Create index \"GoalReservation_accountId_idx_cbfb3085\" on \"GoalReservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GoalReservation_accountId_idx_cbfb3085",
+        "table": "GoalReservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GoalReservation_accountId_idx_cbfb3085\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GoalReservation_accountId_idx_cbfb3085\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GoalReservation_accountId_idx_cbfb3085\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GoalReservation_accountId_idx_cbfb3085\"",
+        "sql": "CREATE INDEX \"GoalReservation_accountId_idx_cbfb3085\" ON \"public\".\"GoalReservation\" (\"accountId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GoalReservation_accountId_idx_cbfb3085\" exists on \"GoalReservation\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GoalReservation_accountId_idx_cbfb3085\"",
+          "i",
+          "I",
+          "\"public\".\"GoalReservation\"",
+          "btree",
+          "[\"accountId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GoalReservation.GoalReservation_goalId_idx_8733343e",
+    "label": "Create index \"GoalReservation_goalId_idx_8733343e\" on \"GoalReservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GoalReservation_goalId_idx_8733343e",
+        "table": "GoalReservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GoalReservation_goalId_idx_8733343e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GoalReservation_goalId_idx_8733343e\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GoalReservation_goalId_idx_8733343e\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GoalReservation_goalId_idx_8733343e\"",
+        "sql": "CREATE INDEX \"GoalReservation_goalId_idx_8733343e\" ON \"public\".\"GoalReservation\" (\"goalId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GoalReservation_goalId_idx_8733343e\" exists on \"GoalReservation\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GoalReservation_goalId_idx_8733343e\"",
+          "i",
+          "I",
+          "\"public\".\"GoalReservation\"",
+          "btree",
+          "[\"goalId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GoalReservation.GoalReservation_userId_goalId_idx_a0381d00",
+    "label": "Create index \"GoalReservation_userId_goalId_idx_a0381d00\" on \"GoalReservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GoalReservation_userId_goalId_idx_a0381d00",
+        "table": "GoalReservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GoalReservation_userId_goalId_idx_a0381d00\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GoalReservation_userId_goalId_idx_a0381d00\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GoalReservation_userId_goalId_idx_a0381d00\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GoalReservation_userId_goalId_idx_a0381d00\"",
+        "sql": "CREATE INDEX \"GoalReservation_userId_goalId_idx_a0381d00\" ON \"public\".\"GoalReservation\" (\"userId\", \"goalId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GoalReservation_userId_goalId_idx_a0381d00\" exists on \"GoalReservation\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GoalReservation_userId_goalId_idx_a0381d00\"",
+          "i",
+          "I",
+          "\"public\".\"GoalReservation\"",
+          "btree",
+          "[\"userId\",\"goalId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.GoalReservation.GoalReservation_userId_idx_a489d58a",
+    "label": "Create index \"GoalReservation_userId_idx_a489d58a\" on \"GoalReservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "GoalReservation_userId_idx_a489d58a",
+        "table": "GoalReservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"GoalReservation_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"GoalReservation_userId_idx_a489d58a\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "index \"GoalReservation_userId_idx_a489d58a\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"GoalReservation_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"GoalReservation_userId_idx_a489d58a\" ON \"public\".\"GoalReservation\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"GoalReservation_userId_idx_a489d58a\" exists on \"GoalReservation\" with the planned definition",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_class\" AS \"c\" INNER JOIN \"pg_index\" AS \"i\" ON \"i\".\"indexrelid\" = \"c\".\"oid\" INNER JOIN \"pg_am\" AS \"m\" ON \"m\".\"oid\" = \"c\".\"relam\" WHERE (\"c\".\"oid\" = to_regclass($1) AND (\"c\".\"relkind\" = $2 OR \"c\".\"relkind\" = $3) AND \"i\".\"indrelid\" = to_regclass($4) AND NOT (\"i\".\"indisunique\") AND \"m\".\"amname\" = $5 AND (\"i\".\"indexprs\" IS NULL AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"i\".\"indkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"i\".\"indrelid\" AND key_attribute.attnum = key_column.attnum) = ($6)::jsonb) AND \"i\".\"indpred\" IS NULL)) AS \"result\"",
+        "params": [
+          "\"public\".\"GoalReservation_userId_idx_a489d58a\"",
+          "i",
+          "I",
+          "\"public\".\"GoalReservation\"",
+          "btree",
+          "[\"userId\"]"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Goal.Goal_userId_fkey",
+    "label": "Add foreign key \"Goal_userId_fkey\" on \"Goal\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Goal_userId_fkey",
+        "table": "Goal"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Goal_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Goal_userId_fkey",
+          "public",
+          "\"public\".\"Goal\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"Goal_userId_fkey\" on \"Goal\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Goal_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Goal\"\nADD CONSTRAINT \"Goal_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Goal_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "Goal_userId_fkey",
+          "public",
+          "\"public\".\"Goal\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.GoalReservation.GoalReservation_userId_fkey",
+    "label": "Add foreign key \"GoalReservation_userId_fkey\" on \"GoalReservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "GoalReservation_userId_fkey",
+        "table": "GoalReservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"GoalReservation_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GoalReservation_userId_fkey",
+          "public",
+          "\"public\".\"GoalReservation\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"GoalReservation_userId_fkey\" on \"GoalReservation\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"GoalReservation_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"GoalReservation\"\nADD CONSTRAINT \"GoalReservation_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"GoalReservation_userId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "GoalReservation_userId_fkey",
+          "public",
+          "\"public\".\"GoalReservation\"",
+          "f",
+          "[\"userId\"]",
+          "\"public\".\"User\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.GoalReservation.GoalReservation_goalId_fkey",
+    "label": "Add foreign key \"GoalReservation_goalId_fkey\" on \"GoalReservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "GoalReservation_goalId_fkey",
+        "table": "GoalReservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"GoalReservation_goalId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GoalReservation_goalId_fkey",
+          "public",
+          "\"public\".\"GoalReservation\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"GoalReservation_goalId_fkey\" on \"GoalReservation\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"GoalReservation_goalId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"GoalReservation\"\nADD CONSTRAINT \"GoalReservation_goalId_fkey\"\nFOREIGN KEY (\"goalId\")\nREFERENCES \"public\".\"Goal\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"GoalReservation_goalId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "GoalReservation_goalId_fkey",
+          "public",
+          "\"public\".\"GoalReservation\"",
+          "f",
+          "[\"goalId\"]",
+          "\"public\".\"Goal\"",
+          "[\"id\"]",
+          "c",
+          "a"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.GoalReservation.GoalReservation_accountId_fkey",
+    "label": "Add foreign key \"GoalReservation_accountId_fkey\" on \"GoalReservation\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "GoalReservation_accountId_fkey",
+        "table": "GoalReservation"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"GoalReservation_accountId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "GoalReservation_accountId_fkey",
+          "public",
+          "\"public\".\"GoalReservation\""
+        ],
+        "expectation": {
+          "expects": "absent",
+          "object": "FK \"GoalReservation_accountId_fkey\" on \"GoalReservation\""
+        }
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"GoalReservation_accountId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"GoalReservation\"\nADD CONSTRAINT \"GoalReservation_accountId_fkey\"\nFOREIGN KEY (\"accountId\")\nREFERENCES \"public\".\"Account\" (\"id\")\nON DELETE RESTRICT"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"GoalReservation_accountId_fkey\" exists with the planned columns, referenced table and actions",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3) AND \"c\".\"contype\" = $4 AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"conkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"conrelid\" AND key_attribute.attnum = key_column.attnum) = ($5)::jsonb AND \"c\".\"confrelid\" = to_regclass($6) AND (SELECT coalesce(jsonb_agg(key_attribute.attname ORDER BY key_column.position), '[]'::jsonb) FROM unnest(\"c\".\"confkey\"::int2[]) WITH ORDINALITY AS key_column(attnum, position) JOIN pg_attribute key_attribute ON key_attribute.attrelid = \"c\".\"confrelid\" AND key_attribute.attnum = key_column.attnum) = ($7)::jsonb AND \"c\".\"confdeltype\" = $8 AND \"c\".\"confupdtype\" = $9)) AS \"result\"",
+        "params": [
+          "GoalReservation_accountId_fkey",
+          "public",
+          "\"public\".\"GoalReservation\"",
+          "f",
+          "[\"accountId\"]",
+          "\"public\".\"Account\"",
+          "[\"id\"]",
+          "r",
+          "a"
+        ]
+      }
+    ]
+  }
+]

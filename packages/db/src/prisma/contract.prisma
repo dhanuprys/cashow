@@ -96,6 +96,13 @@ enum AiProviderType {
   OPENAI_COMPATIBLE = "OPENAI_COMPATIBLE"
 }
 
+enum GoalStatus {
+  @@type("pg/text@1")
+  ACTIVE    = "ACTIVE"
+  PAUSED    = "PAUSED"
+  COMPLETED = "COMPLETED"
+}
+
 // ---------------------------------------------------------------------------
 // Core entities
 // ---------------------------------------------------------------------------
@@ -104,6 +111,7 @@ model User {
   id                  String  @id @onCreate(uuid(7))
   username            String? @unique
   email               String? @unique
+  googleId            String? @unique // Google OAuth subject ID
   name                String?
   avatar              String? // Avatar preset id or SVG identifier
   bio                 String? // Optional user bio / personal note
@@ -140,6 +148,8 @@ model User {
   chatMessages        ChatMessage[]
   aiFacts             AiFact[]
   aiProviderConfigs   AiProviderConfig[]
+  goals               Goal[]
+  goalReservations    GoalReservation[]
 }
 
 // ---------------------------------------------------------------------------
@@ -233,6 +243,7 @@ model Account {
   recurringAsDestination RecurringTemplate[] @relation("RecurringDestination")
   recurringDraftsAsSource RecurringDraft[] @relation("RecurringDraftSource")
   recurringDraftsAsDestination RecurringDraft[] @relation("RecurringDraftDestination")
+  goalReservations     GoalReservation[]
 
   @@index([userId])
   @@index([userId, type])
@@ -514,6 +525,52 @@ model Budget {
   @@index([userId, categoryId])
   @@check(expression: sql`"amount" > 0`, name: "budget_amount_positive")
   @@check(expression: sql`"startDate" IS NULL OR "endDate" IS NULL OR "startDate" <= "endDate"`, name: "budget_date_range_valid")
+}
+
+// ---------------------------------------------------------------------------
+// Savings Goals & Reservations (Mental Envelopes without fictitious accounts)
+// ---------------------------------------------------------------------------
+//
+// Real bank accounts always match real-world balances. Goals overlay reservations
+// to protect funds from daily discretionary spending and integrate with Safe To Spend.
+
+model Goal {
+  id           String            @id @onCreate(uuid(7))
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  targetAmount BigInt
+  targetDate   DateString?
+  color        String?
+  icon         String?
+  status       GoalStatus        @default(ACTIVE)
+  archivedAt   TimestamptzString?
+  createdAt    TimestamptzString @onCreate(now())
+  updatedAt    TimestamptzString @onCreate(now()) @onUpdate(now())
+
+  reservations GoalReservation[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@check(expression: sql`"targetAmount" > 0`, name: "goal_target_amount_positive")
+}
+
+model GoalReservation {
+  id        String            @id @onCreate(uuid(7))
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId    String
+  goal      Goal              @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account           @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  amount    BigInt
+  note      String?
+  createdAt TimestamptzString @onCreate(now())
+
+  @@index([userId, goalId])
+  @@index([accountId])
+  @@check(expression: sql`"amount" > 0`, name: "goal_reservation_amount_positive")
 }
 
 model RecurringTemplate {

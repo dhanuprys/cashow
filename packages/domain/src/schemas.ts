@@ -484,6 +484,51 @@ export const passwordInputSchema = z.object({
 export type PasswordInput = z.infer<typeof passwordInputSchema>;
 
 // ---------------------------------------------------------------------------
+// Savings Goals & Reservations
+// ---------------------------------------------------------------------------
+
+const goalName = z
+  .string()
+  .trim()
+  .min(1, "Nama target wajib diisi.")
+  .max(120, "Maksimal 120 karakter.");
+
+export const goalStatusSchema = z.enum(["ACTIVE", "PAUSED", "COMPLETED"], {
+  message: "Status target tidak valid.",
+});
+
+export const goalCreateSchema = z.object({
+  name: goalName,
+  description: nullableText(1000),
+  targetAmount: positiveMoneyText,
+  targetDate: localDateSchema.optional(),
+  color: nullableText(32),
+  icon: nullableText(64),
+});
+
+export const goalUpdateSchema = z.object({
+  name: goalName.optional(),
+  description: nullablePatchText(1000),
+  targetAmount: positiveMoneyText.optional(),
+  targetDate: localDateSchema.optional().nullable(),
+  color: nullablePatchText(32),
+  icon: nullablePatchText(64),
+  status: goalStatusSchema.optional(),
+});
+
+export const goalReservationSchema = z.object({
+  goalId: idText,
+  accountId: idText,
+  amount: positiveMoneyText,
+  note: nullableText(500),
+});
+
+export type GoalCreateInput = z.infer<typeof goalCreateSchema>;
+export type GoalUpdateInput = z.infer<typeof goalUpdateSchema>;
+export type GoalReservationInput = z.infer<typeof goalReservationSchema>;
+export type GoalStatus = z.infer<typeof goalStatusSchema>;
+
+// ---------------------------------------------------------------------------
 // Rules & Alerts
 // ---------------------------------------------------------------------------
 

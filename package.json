@@ -22,6 +22,7 @@
     "test:chains": "bun --env-file=.env scripts/test-chains.ts",
     "test:summary": "bun --env-file=.env scripts/test-summary.ts",
     "test:rules": "bun --env-file=.env scripts/test-rules.ts",
+    "test:goals": "bun --env-file=.env scripts/test-goals.ts",
     "smoke": "bun scripts/smoke-db.ts",
     "smoke:compat": "bun --env-file=.env scripts/smoke-compat.ts",
     "seed": "bun --env-file=.env scripts/seed-100k.ts",

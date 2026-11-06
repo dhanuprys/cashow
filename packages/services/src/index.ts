@@ -17,6 +17,7 @@ export * from "./context";
 export * from "./context-pack";
 export * from "./defaults";
 export * from "./errors";
+export * from "./goals";
 export * from "./json";
 export * from "./notifications";
 export * from "./outbox";

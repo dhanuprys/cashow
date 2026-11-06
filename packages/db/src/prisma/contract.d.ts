@@ -23,9 +23,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'b8a9108761238d484af357efab4532f80476f4171d132fe3271a6ce265bc01e9'>;
+  StorageHashBase<'a41d29d45b1f5c97b61e50add8d4aff110ce41dfadcc58c4eacafb70358da44b'>;
 export type ExecutionHash =
-  ExecutionHashBase<'6eeb5c12327323a21c1431dd5580578a81e088d406b2d4f77775b411f2d4b8e1'>;
+  ExecutionHashBase<'367b367edbed4be418ac0d697bb3a6c8a5e3094faf908f2e96bd28a5021ca04c'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -277,6 +277,12 @@ type FieldTypeOverrides = {
           readonly input: 'INCOME' | 'EXPENSE';
         };
       };
+      readonly Goal: {
+        readonly status: {
+          readonly output: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+          readonly input: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+        };
+      };
       readonly OutboxEvent: {
         readonly status: {
           readonly output: 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
@@ -378,6 +384,12 @@ type ColumnTypeOverrides = {
         readonly input: 'INCOME' | 'EXPENSE';
       };
     };
+    readonly Goal: {
+      readonly status: {
+        readonly output: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+        readonly input: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+      };
+    };
     readonly OutboxEvent: {
       readonly status: {
         readonly output: 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
@@ -453,6 +465,7 @@ export namespace Models {
     updatedAt: FieldOutputTypes['public']['Account']['updatedAt'];
     userId: FieldOutputTypes['public']['Account']['userId'];
     checkpoints: public_ReconciliationCheckpoint[];
+    goalReservations: public_GoalReservation[];
     recurringAsDestination: public_RecurringTemplate[];
     recurringAsSource: public_RecurringTemplate[];
     recurringDraftsAsDestination: public_RecurringDraft[];
@@ -462,6 +475,7 @@ export namespace Models {
     user: public_User;
     readonly [RelationKeys]?:
       | 'checkpoints'
+      | 'goalReservations'
       | 'recurringAsDestination'
       | 'recurringAsSource'
       | 'recurringDraftsAsDestination'
@@ -657,6 +671,36 @@ export namespace Models {
     messages: public_ChatMessage[];
     user: public_User;
     readonly [RelationKeys]?: 'messages' | 'user';
+  };
+  export type public_Goal = {
+    archivedAt: FieldOutputTypes['public']['Goal']['archivedAt'];
+    color: FieldOutputTypes['public']['Goal']['color'];
+    createdAt: FieldOutputTypes['public']['Goal']['createdAt'];
+    description: FieldOutputTypes['public']['Goal']['description'];
+    icon: FieldOutputTypes['public']['Goal']['icon'];
+    id: FieldOutputTypes['public']['Goal']['id'];
+    name: FieldOutputTypes['public']['Goal']['name'];
+    status: FieldOutputTypes['public']['Goal']['status'];
+    targetAmount: FieldOutputTypes['public']['Goal']['targetAmount'];
+    targetDate: FieldOutputTypes['public']['Goal']['targetDate'];
+    updatedAt: FieldOutputTypes['public']['Goal']['updatedAt'];
+    userId: FieldOutputTypes['public']['Goal']['userId'];
+    reservations: public_GoalReservation[];
+    user: public_User;
+    readonly [RelationKeys]?: 'reservations' | 'user';
+  };
+  export type public_GoalReservation = {
+    accountId: FieldOutputTypes['public']['GoalReservation']['accountId'];
+    amount: FieldOutputTypes['public']['GoalReservation']['amount'];
+    createdAt: FieldOutputTypes['public']['GoalReservation']['createdAt'];
+    goalId: FieldOutputTypes['public']['GoalReservation']['goalId'];
+    id: FieldOutputTypes['public']['GoalReservation']['id'];
+    note: FieldOutputTypes['public']['GoalReservation']['note'];
+    userId: FieldOutputTypes['public']['GoalReservation']['userId'];
+    account: public_Account;
+    goal: public_Goal;
+    user: public_User;
+    readonly [RelationKeys]?: 'account' | 'goal' | 'user';
   };
   export type public_Notification = {
     body: FieldOutputTypes['public']['Notification']['body'];
@@ -919,6 +963,7 @@ export namespace Models {
     createdAt: FieldOutputTypes['public']['User']['createdAt'];
     currency: FieldOutputTypes['public']['User']['currency'];
     email: FieldOutputTypes['public']['User']['email'];
+    googleId: FieldOutputTypes['public']['User']['googleId'];
     id: FieldOutputTypes['public']['User']['id'];
     name: FieldOutputTypes['public']['User']['name'];
     password: FieldOutputTypes['public']['User']['password'];
@@ -936,6 +981,8 @@ export namespace Models {
     chatMessages: public_ChatMessage[];
     chatThreads: public_ChatThread[];
     checkpoints: public_ReconciliationCheckpoint[];
+    goalReservations: public_GoalReservation[];
+    goals: public_Goal[];
     notifications: public_Notification[];
     passkeys: public_Passkey[];
     paymentPlans: public_PaymentPlan[];
@@ -958,6 +1005,8 @@ export namespace Models {
       | 'chatMessages'
       | 'chatThreads'
       | 'checkpoints'
+      | 'goalReservations'
+      | 'goals'
       | 'notifications'
       | 'passkeys'
       | 'paymentPlans'
@@ -988,6 +1037,8 @@ export declare const models: {
     ChannelEndpoint: Models.public_ChannelEndpoint;
     ChatMessage: Models.public_ChatMessage;
     ChatThread: Models.public_ChatThread;
+    Goal: Models.public_Goal;
+    GoalReservation: Models.public_GoalReservation;
     Notification: Models.public_Notification;
     NotificationDelivery: Models.public_NotificationDelivery;
     OutboxEvent: Models.public_OutboxEvent;
@@ -2494,6 +2545,228 @@ type ContractBase = Omit<
                   readonly target: {
                     readonly namespaceId: 'public' & NamespaceId;
                     readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
+            readonly Goal: {
+              columns: {
+                readonly archivedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly color: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly createdAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly description: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly icon: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly name: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly status: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'ACTIVE'>;
+                  };
+                  readonly many: false;
+                };
+                readonly targetAmount: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly targetDate: {
+                  readonly dataType: 'pg/date';
+                  readonly codecId: 'pg/date-string@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly updatedAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly userId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'Goal_userId_idx_a489d58a';
+                  readonly prefix: 'Goal_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'Goal_userId_status_idx_e4a128ba';
+                  readonly prefix: 'Goal_userId_status_idx';
+                  readonly columns: readonly ['userId', 'status'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Goal';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
+            readonly GoalReservation: {
+              columns: {
+                readonly accountId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly amount: {
+                  readonly dataType: 'pg/int8';
+                  readonly codecId: 'pg/int8@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly createdAt: {
+                  readonly dataType: 'pg/timestamptz';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly goalId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly id: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+                readonly note: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
+                readonly userId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly many: false;
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'GoalReservation_accountId_idx_cbfb3085';
+                  readonly prefix: 'GoalReservation_accountId_idx';
+                  readonly columns: readonly ['accountId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'GoalReservation_goalId_idx_8733343e';
+                  readonly prefix: 'GoalReservation_goalId_idx';
+                  readonly columns: readonly ['goalId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'GoalReservation_userId_goalId_idx_a0381d00';
+                  readonly prefix: 'GoalReservation_userId_goalId_idx';
+                  readonly columns: readonly ['userId', 'goalId'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'GoalReservation_userId_idx_a489d58a';
+                  readonly prefix: 'GoalReservation_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'GoalReservation';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'User';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'GoalReservation';
+                    readonly columns: readonly ['goalId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Goal';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'GoalReservation';
+                    readonly columns: readonly ['accountId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'Account';
                     readonly columns: readonly ['id'];
                   };
                 },
@@ -4349,6 +4622,12 @@ type ContractBase = Omit<
                   readonly nullable: true;
                   readonly many: false;
                 };
+                readonly googleId: {
+                  readonly dataType: 'pg/text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly many: false;
+                };
                 readonly id: {
                   readonly dataType: 'pg/text';
                   readonly codecId: 'pg/text@1';
@@ -4404,6 +4683,7 @@ type ContractBase = Omit<
               uniques: readonly [
                 { readonly columns: readonly ['username'] },
                 { readonly columns: readonly ['email'] },
+                { readonly columns: readonly ['googleId'] },
               ];
               indexes: readonly [];
               foreignKeys: readonly [];
@@ -4433,6 +4713,10 @@ type ContractBase = Omit<
             readonly CategoryKind: {
               readonly kind: 'valueSet';
               readonly values: readonly ['INCOME', 'EXPENSE'];
+            };
+            readonly GoalStatus: {
+              readonly kind: 'valueSet';
+              readonly values: readonly ['ACTIVE', 'PAUSED', 'COMPLETED'];
             };
             readonly OutboxStatus: {
               readonly kind: 'valueSet';
@@ -4509,6 +4793,11 @@ type ContractBase = Omit<
     readonly ChatThread: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'ChatThread';
+    };
+    readonly Goal: { readonly namespace: 'public' & NamespaceId; readonly model: 'Goal' };
+    readonly GoalReservation: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'GoalReservation';
     };
     readonly Notification: {
       readonly namespace: 'public' & NamespaceId;
@@ -4613,6 +4902,17 @@ type ContractBase = Omit<
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
                   readonly model: 'ReconciliationCheckpoint';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['accountId'];
+                };
+              };
+              readonly goalReservations: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'GoalReservation';
                 };
                 readonly cardinality: '1:N';
                 readonly on: {
@@ -5835,6 +6135,187 @@ type ContractBase = Omit<
                 readonly modelId: { readonly column: 'modelId' };
                 readonly title: { readonly column: 'title' };
                 readonly updatedAt: { readonly column: 'updatedAt' };
+                readonly userId: { readonly column: 'userId' };
+              };
+            };
+          };
+          readonly Goal: {
+            readonly fields: {
+              readonly archivedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly color: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly description: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly icon: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly name: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly targetAmount: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly targetDate: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/date-string@1' };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: {
+              readonly reservations: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'GoalReservation';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['goalId'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'Goal';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly archivedAt: { readonly column: 'archivedAt' };
+                readonly color: { readonly column: 'color' };
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly description: { readonly column: 'description' };
+                readonly icon: { readonly column: 'icon' };
+                readonly id: { readonly column: 'id' };
+                readonly name: { readonly column: 'name' };
+                readonly status: { readonly column: 'status' };
+                readonly targetAmount: { readonly column: 'targetAmount' };
+                readonly targetDate: { readonly column: 'targetDate' };
+                readonly updatedAt: { readonly column: 'updatedAt' };
+                readonly userId: { readonly column: 'userId' };
+              };
+            };
+          };
+          readonly GoalReservation: {
+            readonly fields: {
+              readonly accountId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly amount: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int8@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-string@1';
+                };
+              };
+              readonly goalId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly note: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+            };
+            readonly relations: {
+              readonly account: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'Account';
+                };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['accountId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly goal: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'Goal' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['goalId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'GoalReservation';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly accountId: { readonly column: 'accountId' };
+                readonly amount: { readonly column: 'amount' };
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly goalId: { readonly column: 'goalId' };
+                readonly id: { readonly column: 'id' };
+                readonly note: { readonly column: 'note' };
                 readonly userId: { readonly column: 'userId' };
               };
             };
@@ -7422,6 +7903,10 @@ type ContractBase = Omit<
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly googleId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly id: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
@@ -7565,6 +8050,25 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['userId'];
                 };
               };
+              readonly goalReservations: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'GoalReservation';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
+              readonly goals: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'Goal' };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
               readonly notifications: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -7694,6 +8198,7 @@ type ContractBase = Omit<
                 readonly createdAt: { readonly column: 'createdAt' };
                 readonly currency: { readonly column: 'currency' };
                 readonly email: { readonly column: 'email' };
+                readonly googleId: { readonly column: 'googleId' };
                 readonly id: { readonly column: 'id' };
                 readonly name: { readonly column: 'name' };
                 readonly password: { readonly column: 'password' };
@@ -7753,6 +8258,14 @@ type ContractBase = Omit<
             readonly members: readonly [
               { readonly name: 'INCOME'; readonly value: 'INCOME' },
               { readonly name: 'EXPENSE'; readonly value: 'EXPENSE' },
+            ];
+          };
+          readonly GoalStatus: {
+            readonly codecId: 'pg/text@1';
+            readonly members: readonly [
+              { readonly name: 'ACTIVE'; readonly value: 'ACTIVE' },
+              { readonly name: 'PAUSED'; readonly value: 'PAUSED' },
+              { readonly name: 'COMPLETED'; readonly value: 'COMPLETED' },
             ];
           };
           readonly OutboxStatus: {
@@ -7826,6 +8339,11 @@ type ContractBase = Omit<
           readonly CategoryKind: readonly [
             { readonly name: 'INCOME'; readonly value: 'INCOME' },
             { readonly name: 'EXPENSE'; readonly value: 'EXPENSE' },
+          ];
+          readonly GoalStatus: readonly [
+            { readonly name: 'ACTIVE'; readonly value: 'ACTIVE' },
+            { readonly name: 'PAUSED'; readonly value: 'PAUSED' },
+            { readonly name: 'COMPLETED'; readonly value: 'COMPLETED' },
           ];
           readonly OutboxStatus: readonly [
             { readonly name: 'PENDING'; readonly value: 'PENDING' },
@@ -8165,6 +8683,47 @@ type ContractBase = Omit<
           readonly ref: {
             readonly entry: 'ChatThread';
             readonly field: 'updatedAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'Goal';
+            readonly field: 'createdAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'Goal';
+            readonly field: 'id';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly onUpdate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'Goal';
+            readonly field: 'updatedAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'timestamptzStringNow'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'GoalReservation';
+            readonly field: 'createdAt';
+            readonly namespace: 'public';
+          };
+        },
+        {
+          readonly onCreate: { readonly id: 'uuidv7'; readonly kind: 'generator' };
+          readonly ref: {
+            readonly entry: 'GoalReservation';
+            readonly field: 'id';
             readonly namespace: 'public';
           };
         },
