@@ -12,7 +12,8 @@ import {
 import { getDb } from "@/lib/db";
 
 const bodySchema = z.object({
-  username: z.string().trim(),
+  identifier: z.string().trim().optional(),
+  username: z.string().trim().optional(),
   password: z.string().trim(),
 });
 
@@ -39,18 +40,35 @@ export async function POST(request: Request) {
   }
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return json({ error: "Username atau kata sandi salah." }, { status: 401 });
+  if (!parsed.success)
+    return json({ error: "Username/email atau kata sandi salah." }, { status: 401 });
+
+  const rawIdentifier = parsed.data.identifier || parsed.data.username;
+  if (!rawIdentifier) {
+    return json({ error: "Username/email atau kata sandi salah." }, { status: 401 });
+  }
 
   const db = await getDb();
 
-  // Find user by username
-  const user = await db.orm.public.User.where({ username: parsed.data.username }).first();
-  if (user === null) return json({ error: "Username atau kata sandi salah." }, { status: 401 });
+  // Look up user by email if it contains '@', otherwise try username first, then fallback to email
+  let user = null;
+  if (rawIdentifier.includes("@")) {
+    user = await db.orm.public.User.where({ email: rawIdentifier.toLowerCase() }).first();
+  } else {
+    user = await db.orm.public.User.where({ username: rawIdentifier }).first();
+    if (user === null) {
+      user = await db.orm.public.User.where({ email: rawIdentifier.toLowerCase() }).first();
+    }
+  }
+
+  if (user === null)
+    return json({ error: "Username/email atau kata sandi salah." }, { status: 401 });
 
   // Check password
   const passwordValid = await checkPassword(parsed.data.password, user.password);
 
-  if (!passwordValid) return json({ error: "Username atau kata sandi salah." }, { status: 401 });
+  if (!passwordValid)
+    return json({ error: "Username/email atau kata sandi salah." }, { status: 401 });
 
   // Create session
   const token = newSessionToken();

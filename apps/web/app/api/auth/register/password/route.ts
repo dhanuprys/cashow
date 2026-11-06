@@ -17,6 +17,7 @@ const bodySchema = z.object({
     .trim()
     .min(3, "Username minimal 3 karakter.")
     .max(64, "Maksimal 64 karakter."),
+  email: z.string().trim().email("Format email tidak valid.").optional().or(z.literal("")),
   name: z.string().trim().max(80).optional(),
   avatar: z.string().trim().max(64).optional(),
   bio: z.string().trim().max(250).optional(),
@@ -54,6 +55,15 @@ export async function POST(request: Request) {
     return json({ error: "Username sudah terdaftar." }, { status: 409 });
   }
 
+  // Check if email already exists if provided
+  const normalizedEmail = parsed.data.email ? parsed.data.email.toLowerCase() : null;
+  if (normalizedEmail) {
+    const existingEmail = await db.orm.public.User.where({ email: normalizedEmail }).first();
+    if (existingEmail !== null) {
+      return json({ error: "Email sudah terdaftar." }, { status: 409 });
+    }
+  }
+
   // Hash the password
   const hashedPassword = await hashPassword(parsed.data.password);
   const token = newSessionToken();
@@ -61,9 +71,10 @@ export async function POST(request: Request) {
   const expiresAt = sessionExpiry();
 
   await db.transaction(async (tx) => {
-    // Create the user with username and password
+    // Create the user with username, optional email, and password
     await tx.orm.public.User.create({
       username: parsed.data.username,
+      email: normalizedEmail,
       name: parsed.data.name || null,
       avatar: parsed.data.avatar || null,
       bio: parsed.data.bio || null,

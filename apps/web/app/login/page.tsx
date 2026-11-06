@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/auth/login-form";
+import { getAuthConfig } from "@/lib/auth/config";
 import { getSessionUser } from "@/lib/auth/session";
 
 export const metadata = {
@@ -34,6 +35,8 @@ async function LoginGate() {
   const user = await getSessionUser();
   if (user !== null) redirect("/app");
 
+  const config = getAuthConfig();
+
   return (
     <AuthShell
       title="Masuk ke Buku Kas"
@@ -44,7 +47,7 @@ async function LoginGate() {
         actionText: "Daftar di sini",
       }}
     >
-      <LoginForm hasExistingUser={true} />
+      <LoginForm hasExistingUser={true} googleAuthEnabled={config.googleAuthEnabled} />
     </AuthShell>
   );
 }

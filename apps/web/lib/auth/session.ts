@@ -18,13 +18,15 @@ const PASSWORD_KEY_LENGTH = 64;
 export const SESSION_COOKIE = "cashow_session";
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-type SessionUser = {
+export type SessionUser = {
   id: string;
   name: string | null;
   avatar: string | null;
   bio: string | null;
   email: string | null;
   username: string | null;
+  googleId: string | null;
+  hasPassword: boolean;
   timezone: string;
   currency: string;
 };
@@ -75,9 +77,20 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     .first();
   if (session === null) return null;
 
-  // Load user data - supports both passkey-only and password-enabled users
+  // Load user data - supports passkey, password, and Google OAuth users
   const user = await db.orm.public.User.where({ id: session.userId })
-    .select("id", "name", "avatar", "bio", "email", "username", "timezone", "currency", "password")
+    .select(
+      "id",
+      "name",
+      "avatar",
+      "bio",
+      "email",
+      "username",
+      "googleId",
+      "timezone",
+      "currency",
+      "password",
+    )
     .first();
 
   if (user === null) return null;
@@ -89,6 +102,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     bio: user.bio ?? null,
     email: user.email,
     username: user.username,
+    googleId: user.googleId ?? null,
+    hasPassword: user.password !== null && user.password !== "",
     timezone: user.timezone,
     currency: user.currency,
   };

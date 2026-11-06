@@ -12,8 +12,10 @@ import { PasskeyManager } from "@/components/auth/passkey-manager";
 import { AiModelManager } from "@/components/ledger/ai-model-manager";
 import { AuditOutboxViewer } from "@/components/ledger/audit-outbox-viewer";
 import { BackupExportCard } from "@/components/ledger/backup-export-card";
+import { ConnectedAccountsCard } from "@/components/ledger/connected-accounts-card";
 import { LinkButton } from "@/components/ledger/link-button";
 import { NotificationSettingsCard } from "@/components/ledger/notification-settings-card";
+import { PasswordCard } from "@/components/ledger/password-card";
 import { PrivacySettingsCard } from "@/components/ledger/privacy-settings-card";
 import { SettingsForm } from "@/components/ledger/settings-form";
 import { SettingsShell } from "@/components/ledger/settings-shell";
@@ -26,6 +28,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getAuthConfig } from "@/lib/auth/config";
 import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { unwrap } from "@/lib/ledger";
@@ -107,7 +110,7 @@ async function Settings() {
   const activeAiConfigs = aiConfigs.ok ? aiConfigs.value : [];
 
   const profileSlot = (
-    <Card>
+    <Card key="profile-slot">
       <CardHeader>
         <CardTitle>Profil &amp; Preferensi Buku Kas</CardTitle>
         <CardDescription>
@@ -132,7 +135,7 @@ async function Settings() {
   );
 
   const aiSlot = (
-    <Card id="ai-models">
+    <Card id="ai-models" key="ai-slot">
       <CardHeader>
         <CardTitle>Model AI &amp; API Key</CardTitle>
         <CardDescription>
@@ -158,13 +161,23 @@ async function Settings() {
   );
 
   const passkeySlot = (
-    <div className="space-y-6">
+    <div key="passkey-slot" className="space-y-6">
+      <ConnectedAccountsCard
+        isGoogleLinked={Boolean(user.googleId)}
+        googleAuthEnabled={getAuthConfig().googleAuthEnabled}
+        userEmail={user.email}
+      />
+
+      {getAuthConfig().passwordAuthEnabled && (
+        <PasswordCard hasPassword={user.hasPassword} username={user.username} email={user.email} />
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Kunci Masuk (Passkey)</CardTitle>
           <CardDescription>
-            Satu-satunya metode autentikasi aman tanpa kata sandi. Daftarkan perangkat Anda
-            (biometrik atau kunci fisik).
+            Metode autentikasi biometrik atau kunci fisik tanpa kata sandi. Daftarkan perangkat
+            Anda.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -199,7 +212,7 @@ async function Settings() {
   );
 
   const appearanceSlot = (
-    <div className="space-y-6">
+    <div key="appearance-slot" className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Tampilan Visual Antarmuka</CardTitle>
@@ -227,7 +240,7 @@ async function Settings() {
   );
 
   const notificationsSlot = (
-    <Card>
+    <Card key="notifications-slot">
       <CardHeader>
         <CardTitle>Pemberitahuan &amp; Notifikasi</CardTitle>
         <CardDescription>
@@ -241,7 +254,7 @@ async function Settings() {
   );
 
   const backupSlot = (
-    <Card>
+    <Card key="backup-slot">
       <CardHeader>
         <CardTitle>Pusat Data (Impor &amp; Ekspor)</CardTitle>
         <CardDescription>
@@ -256,11 +269,16 @@ async function Settings() {
   );
 
   const auditSlot = (
-    <AuditOutboxViewer auditEntries={audit} outboxEvents={outbox} timezone={user.timezone} />
+    <div key="audit-slot">
+      <AuditOutboxViewer auditEntries={audit} outboxEvents={outbox} timezone={user.timezone} />
+    </div>
   );
 
   const footerInfo = (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border/40 text-xs text-muted-foreground">
+    <div
+      key="settings-footer-info"
+      className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border/40 text-xs text-muted-foreground"
+    >
       <div className="flex items-center gap-2">
         <span>
           Mata Uang Baku: <strong className="text-foreground">{data.currency}</strong>

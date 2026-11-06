@@ -20,6 +20,10 @@ export type AuthConfig = {
   setupToken: string | undefined;
   /** True when username/password auth is enabled. */
   passwordAuthEnabled: boolean;
+  /** True when Google OAuth is configured. */
+  googleAuthEnabled: boolean;
+  googleClientId?: string;
+  googleClientSecret?: string;
 };
 
 export function getAuthConfig(request?: Request): AuthConfig {
@@ -85,5 +89,8 @@ export function getAuthConfig(request?: Request): AuthConfig {
     setupTokenRequired: env.SETUP_TOKEN !== undefined,
     setupToken: env.SETUP_TOKEN,
     passwordAuthEnabled: env.WEB_PASSWORD_AUTH !== "false",
+    googleAuthEnabled: Boolean(env.GOOGLE_CLIENT_ID) && Boolean(env.GOOGLE_CLIENT_SECRET),
+    googleClientId: env.GOOGLE_CLIENT_ID,
+    googleClientSecret: env.GOOGLE_CLIENT_SECRET,
   };
 }

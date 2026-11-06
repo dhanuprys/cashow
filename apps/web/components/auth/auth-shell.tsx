@@ -1,4 +1,3 @@
-import { ShieldCheck } from "@phosphor-icons/react/dist/ssr";
 import Image from "next/image";
 import Link from "next/link";
 import type React from "react";
@@ -30,7 +29,7 @@ export function AuthShell({
 
       <section className="w-full max-w-md">
         {/* Top brand identity link */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center">
           <Link
             href="/"
             className="inline-flex items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -48,11 +47,6 @@ export function AuthShell({
               Cashow
             </span>
           </Link>
-
-          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
-            <ShieldCheck className="size-3 text-primary" weight="fill" />
-            Server Mandiri
-          </span>
         </div>
 
         {/* Page header */}

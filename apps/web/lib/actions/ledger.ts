@@ -2,11 +2,14 @@
 
 import { quickAddSchema, uuidv7 } from "@cashow/domain";
 import {
+  addGoalReservation,
+  archiveGoal,
   confirmRecurringDraft,
   createAccount,
   createAiProviderConfig,
   createBudget,
   createCategory,
+  createGoal,
   createPlan,
   createPlanItem,
   createRecurring,
@@ -24,6 +27,7 @@ import {
   listAccounts,
   listCategories,
   markNotificationRead,
+  removeGoalReservation,
   restoreTransaction,
   runDueRecurring,
   runRules,
@@ -43,6 +47,7 @@ import {
   updateAiProviderConfig,
   updateBudget,
   updateCategory,
+  updateGoal,
   updatePlan,
   updatePlanItem,
   updateProfile,
@@ -52,11 +57,13 @@ import {
   updateTransaction,
   uploadAttachment,
   verifyCheckpoint,
+  writeAudit,
 } from "@cashow/services";
 import { generateText } from "ai";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { buildLanguageModel } from "@/lib/ai-model";
+import { checkPassword, hashPassword } from "@/lib/auth/session";
 import { nowLocalInput } from "@/lib/format";
 import { requireLedgerSession } from "@/lib/ledger";
 import { attachmentStorage } from "@/lib/storage";
@@ -413,6 +420,118 @@ export async function updateSettingsAction(
   return { status: "success" };
 }
 
+export async function changePasswordAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const currentPassword = text(formData, "currentPassword");
+  const newPassword = text(formData, "newPassword");
+  const confirmPassword = text(formData, "confirmPassword");
+  const usernameInput = text(formData, "username").trim();
+
+  const user = await session.db.orm.public.User.where({ id: session.user.id })
+    .select("id", "username", "email", "password")
+    .first();
+
+  if (user === null) {
+    return failure("Pengguna tidak ditemukan.");
+  }
+
+  const hasExistingPassword = user.password !== null && user.password !== "";
+
+  if (hasExistingPassword) {
+    if (!currentPassword) {
+      return failure("Kata sandi saat ini wajib diisi.");
+    }
+    const isValid = await checkPassword(currentPassword, user.password);
+    if (!isValid) {
+      return failure("Kata sandi saat ini tidak sesuai.");
+    }
+  }
+
+  if (newPassword.length < 6) {
+    return failure("Kata sandi baru minimal 6 karakter.");
+  }
+
+  if (newPassword.length > 128) {
+    return failure("Kata sandi baru maksimal 128 karakter.");
+  }
+
+  if (newPassword !== confirmPassword) {
+    return failure("Konfirmasi kata sandi baru tidak cocok.");
+  }
+
+  if (hasExistingPassword && currentPassword === newPassword) {
+    return failure("Kata sandi baru tidak boleh sama dengan kata sandi saat ini.");
+  }
+
+  let usernameToSet: string | undefined;
+  if (!user.username && usernameInput) {
+    if (usernameInput.length < 3 || usernameInput.length > 64) {
+      return failure("Username minimal 3 dan maksimal 64 karakter.");
+    }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(usernameInput)) {
+      return failure(
+        "Username hanya boleh berisi huruf, angka, underscore, titik, atau tanda minus.",
+      );
+    }
+    const taken = await session.db.orm.public.User.where({ username: usernameInput }).first();
+    if (taken !== null && taken.id !== session.user.id) {
+      return failure("Username ini sudah digunakan akun lain.");
+    }
+    usernameToSet = usernameInput;
+  } else if (!user.username && !user.email) {
+    if (!usernameInput) {
+      return failure("Masukkan username agar Anda dapat masuk menggunakan kata sandi.");
+    }
+    if (usernameInput.length < 3 || usernameInput.length > 64) {
+      return failure("Username minimal 3 dan maksimal 64 karakter.");
+    }
+    if (!/^[a-zA-Z0-9_.-]+$/.test(usernameInput)) {
+      return failure(
+        "Username hanya boleh berisi huruf, angka, underscore, titik, atau tanda minus.",
+      );
+    }
+    const taken = await session.db.orm.public.User.where({ username: usernameInput }).first();
+    if (taken !== null && taken.id !== session.user.id) {
+      return failure("Username ini sudah digunakan akun lain.");
+    }
+    usernameToSet = usernameInput;
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+
+  await session.db.transaction(async (tx) => {
+    const updatePayload: { password: string; updatedAt: string; username?: string } = {
+      password: hashedPassword,
+      updatedAt: new Date().toISOString(),
+    };
+    if (usernameToSet !== undefined) {
+      updatePayload.username = usernameToSet;
+    }
+
+    await tx.orm.public.User.where({ id: session.user.id }).update(updatePayload);
+
+    await writeAudit(tx, {
+      userId: session.user.id,
+      entityType: "User",
+      entityId: session.user.id,
+      action: "UPDATE",
+      before: { hasPassword: hasExistingPassword },
+      after: { hasPassword: true, usernameSet: usernameToSet !== undefined },
+    });
+  });
+
+  revalidatePath("/app/settings");
+  return {
+    status: "success",
+    message: hasExistingPassword
+      ? "Kata sandi berhasil diperbarui."
+      : "Kata sandi berhasil dibuat.",
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Payment plans
 // ---------------------------------------------------------------------------
@@ -742,7 +861,7 @@ export async function updateRecurringAction(
   const id = text(formData, "recurringId");
   if (id === "") return failure("Template tidak ditemukan.");
 
-  const _result = await updateRecurring(session.ctx, id, {
+  const result = await updateRecurring(session.ctx, id, {
     amount: text(formData, "amount"),
     accountId: text(formData, "accountId"),
     destinationAccountId: text(formData, "destinationAccountId"),
@@ -765,7 +884,26 @@ export async function updateRecurringAction(
           ? false
           : undefined,
   });
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath("/app/recurring");
   return { status: "success" };
+}
+
+export async function toggleRecurringActiveAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "recurringId");
+  if (id === "") return;
+
+  const activeRaw = text(formData, "active");
+  const result = await updateRecurring(session.ctx, id, {
+    active: activeRaw === "" ? undefined : activeRaw === "true",
+  });
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  revalidatePath("/app/recurring");
 }
 
 export async function deleteRecurringAction(formData: FormData): Promise<void> {
@@ -1247,4 +1385,100 @@ export async function getAiTokenUsageStatsAction(options?: {
     throw new Error(res.error.message);
   }
   return res.value;
+}
+
+// ---------------------------------------------------------------------------
+// Savings Goals & Reservations
+// ---------------------------------------------------------------------------
+
+export async function createGoalAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const result = await createGoal(session.ctx, {
+    name: text(formData, "name"),
+    description: text(formData, "description"),
+    targetAmount: text(formData, "targetAmount"),
+    targetDate: text(formData, "targetDate") || undefined,
+    color: text(formData, "color") || undefined,
+  });
+
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath("/app/goals");
+  return { status: "success", message: "Target tabungan berhasil dibuat." };
+}
+
+export async function updateGoalAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "goalId");
+  if (!id) return failure("Target tidak ditemukan.");
+
+  const statusRaw = text(formData, "status");
+  const result = await updateGoal(session.ctx, id, {
+    name: text(formData, "name") || undefined,
+    description: text(formData, "description") || null,
+    targetAmount: text(formData, "targetAmount") || undefined,
+    targetDate: text(formData, "targetDate") || null,
+    status:
+      statusRaw === "ACTIVE" || statusRaw === "PAUSED" || statusRaw === "COMPLETED"
+        ? statusRaw
+        : undefined,
+  });
+
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath("/app/goals");
+  return { status: "success", message: "Target tabungan berhasil diperbarui." };
+}
+
+export async function archiveGoalAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "goalId");
+  if (!id) return;
+
+  const result = await archiveGoal(session.ctx, id);
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  revalidatePath("/app/goals");
+}
+
+export async function addGoalReservationAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireLedgerSession();
+  const result = await addGoalReservation(session.ctx, {
+    goalId: text(formData, "goalId"),
+    accountId: text(formData, "accountId"),
+    amount: text(formData, "amount"),
+    note: text(formData, "note") || null,
+  });
+
+  if (!result.ok) return failure(result.error.message);
+
+  revalidateLedger();
+  revalidatePath("/app/goals");
+  revalidatePath("/app/accounts");
+  return { status: "success", message: "Dana berhasil dicadangkan untuk target." };
+}
+
+export async function removeGoalReservationAction(formData: FormData): Promise<void> {
+  const session = await requireLedgerSession();
+  const id = text(formData, "reservationId");
+  if (!id) return;
+
+  const result = await removeGoalReservation(session.ctx, id);
+  if (!result.ok) throw result.error;
+
+  revalidateLedger();
+  revalidatePath("/app/goals");
+  revalidatePath("/app/accounts");
 }

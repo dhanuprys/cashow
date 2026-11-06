@@ -36,5 +36,12 @@ async function SetupGate() {
   const user = await getSessionUser();
   if (user !== null) redirect("/app");
 
-  return <SetupForm setupTokenRequired={getAuthConfig().setupTokenRequired} />;
+  const config = getAuthConfig();
+
+  return (
+    <SetupForm
+      setupTokenRequired={config.setupTokenRequired}
+      googleAuthEnabled={config.googleAuthEnabled}
+    />
+  );
 }
