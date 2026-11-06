@@ -1,302 +1,345 @@
 # Cashow
 
-**Ikuti ke mana uangmu mengalir.** A self-hosted money traceability ledger:
-income arrives, expenses draw from it through explicit allocations, and every
-balance is derived rather than stored.
+> **Ikuti ke mana uangmu mengalir.**  
+> *A self-hosted money traceability ledger: income arrives, expenses draw from it through explicit allocations, bank balances stay 100% faithful to reality, and every figure is derived rather than stored.*
 
-This repository is Phase 0, the Phase 1 core ledger, and Phase 2 chains and
-balances: the monorepo, PostgreSQL schema and migrations, environment
-validation, passkey authentication, the deployment stack, the seeded
-performance benchmark, the account and category pages, income/expense capture
-with quick add, allocation of expenses to incomes, attachments, payment plans
-with derived status, balance snapshots and reconciliation, checkpoints that lock
-settled periods, transfers with fees, audit log, soft delete, and a
-transactional outbox. Budgets, rules, notifications and AI build on top.
+Cashow is a modern personal finance and cashflow tracking platform engineered for sovereign data ownership, mathematical accuracy, and proactive financial intelligence. It rejects traditional "black box" aggregate balances in favor of **envelope traceability**, **virtual goal reservations**, **safe-to-spend guardrails**, and **human-in-the-loop AI assistance**.
 
-## Stack
+---
 
-| Layer                     | Choice                                                           |
-| ------------------------- | ---------------------------------------------------------------- |
-| Runtime / package manager | Bun 1.4.2, workspaces, one `bun.lock`                            |
-| Web                       | Next.js 16 App Router, Tailwind v4, shadcn/ui, standalone output |
-| Database                  | PostgreSQL 17 (`pgvector/pgvector:pg17`)                         |
-| Data layer                | Prisma 8 contract-first (`contract.prisma` → `contract.json`)    |
-| Auth                      | Passkeys via `@simplewebauthn/server`, sessions in Postgres      |
-| Validation                | Zod environment schema, validated at boot                        |
-| Lint / format             | Biome 2                                                          |
-| Deployment                | Docker Compose: Caddy, web, worker, migrate, Postgres, backup    |
-| Money                     | 64-bit integer rupiah (`bigint` / `BigInt`), never floats        |
-| Attachments               | metadata in Postgres, bytes on a local volume (ADR 0009)         |
+## Highlights
 
-## Layout
+- **Traceable Allocations (Envelope Method):** Expenses explicitly link to the income sources funding them. You always know which paycheck, invoice, or side-income funded each expense.
+- **Virtual Savings Goals:** Real bank balances remain 100% faithful to bank statements. Savings goals are non-destructive reservation overlays that protect funds by deducting from your daily safe-to-spend allowance without mutating account balances.
+- **Safe-to-Spend Engine:** Live calculation of your daily spending allowance based on remaining days, upcoming recurring bills, and active goal reservations. Includes disruptive deficit warnings if physical balances fall below goal commitments.
+- **AI Financial Assistant (`/app/chat`):** Integrated conversational intelligence (DeepSeek, Google Gemini, OpenAI/compatible) with strict write-tool approval gates. Capable of parsing free-form dated transaction lists (e.g. `53k`, `1,5jt`), asking clarifying questions when data is ambiguous, and batch-recording entries with a single confirmation.
+- **Reconciliation & Lock Checkpoints:** Periodic balance snapshots, zero-gap reconciliation checks, and period checkpoints that lock settled historical ranges against retroactive tampering.
+- **Strict Integer Arithmetic:** All monetary amounts are represented as 64-bit integer rupiah (`bigint` / `BigInt`). No floating-point rounding errors.
+- **Flexible & Secure Authentication:** Native WebAuthn Passkeys (biometrics/hardware keys), scrypt-hashed passwords with live strength validation, and Google OAuth integration.
+- **Production-Ready Containerization:** Multi-stage Bun Docker image (~70 MB standalone output) with separate web and worker targets, automated migrations, health checks, and GitHub Actions CI/CD to GitHub Container Registry (`ghcr.io/dhanuprys/cashow`).
+
+---
+
+## Tech Stack
+
+| Layer                         | Technology                                                                      | Details                                                                     |
+| :---------------------------- | :------------------------------------------------------------------------------ | :-------------------------------------------------------------------------- |
+| **Runtime & Package Manager** | [Bun](https://bun.sh) 1.4.2+                                                    | Workspaces monorepo, fast package resolution, single `bun.lock`             |
+| **Web Framework**             | [Next.js](https://nextjs.org) 16 (App Router)                                   | Standalone output, Server Actions, Cache Components, React 19               |
+| **UI & Styling**              | [Tailwind CSS](https://tailwindcss.com) v4 + [shadcn/ui](https://ui.shadcn.com) | Mobile-first responsive design, Base UI primitives, dark mode               |
+| **Database**                  | [PostgreSQL](https://www.postgresql.org) 17                                     | `pgvector/pgvector:pg17`, custom PL/pgSQL triggers for cross-row invariants |
+| **ORM & Data Layer**          | [Prisma](https://www.prisma.io) 8                                               | Contract-first workflow (`contract.prisma` → `contract.json`)               |
+| **Authentication**            | Passkeys + Passwords + OAuth                                                    | SimpleWebAuthn, scrypt (`crypto.scrypt`), Google OAuth, session cookies     |
+| **AI Integration**            | [Vercel AI SDK](https://sdk.vercel.ai)                                          | Multi-provider streaming, dynamic tools, human-approval execution gates     |
+| **Background Processing**     | Custom Outbox Worker                                                            | Transactional outbox pattern, scheduled rule engine, push notifications     |
+| **Quality & Linter**          | [Biome](https://biomejs.dev) 2 + TypeScript                                     | Fast linting, code formatting, strict TypeScript configuration              |
+| **Containerization**          | Docker & Compose v2                                                             | Multi-stage build, rootless execution, automated migration orchestrator     |
+
+---
+
+## Architecture & Monorepo Layout
 
 ```
-apps/web                 Next.js app and health endpoints
-apps/worker              background worker entrypoint
-packages/domain          money, dates, allocation math, formatters (pure)
-packages/config          Zod env schema + `_FILE` secret loading
-packages/db              Prisma contract, client, migrations, generated types
-packages/services        use cases: accounts, categories, transactions, attachments
-packages/notify          notification channels
-packages/ai              DeepSeek / AI SDK integration
-deploy                   Caddyfile, backup and restore scripts, backup image
-docs/adr                 architecture decision records
-scripts                  smoke test and one-off utilities
+cashow/
+├── apps/
+│   ├── web/                     # Next.js 16 frontend, Server Actions & API endpoints
+│   └── worker/                  # Background daemon: outbox events, rules & notification delivery
+├── packages/
+│   ├── domain/                  # Pure business logic: money math, pacing, schemas & formatters
+│   ├── services/                # Use-cases: accounts, transactions, goals, budgets & audit log
+│   ├── db/                      # Prisma 8 contract, migrations, generated client & seeds
+│   ├── config/                  # Validated Zod environment configuration & Docker secrets loader
+│   ├── ai/                      # AI provider abstraction (DeepSeek, Gemini, OpenAI)
+│   └── notify/                  # Notification transports (Web Push, ntfy)
+├── deploy/                      # Backup scripts, age encryption keys, recovery tooling
+├── docs/                        # Architecture Decision Records (ADRs) and design specs
+├── scripts/                     # Integration tests, benchmarks (100k seed), and verification gates
+├── Dockerfile                   # Production multi-stage Docker build (targets: web, worker)
+└── docker-compose.yml           # Self-contained stack: web, worker, migrate, postgres, backup
 ```
 
-## Prerequisites
+---
 
-- [Bun](https://bun.sh) 1.4.2
-- PostgreSQL 17 reachable over TCP (local container or the Compose service)
-- Docker with Compose v2 for the deployment stack
+## Getting Started (Local Development)
 
-## Local development
+### Prerequisites
+
+- [Bun](https://bun.sh) (v1.4.2 or higher)
+- PostgreSQL 17 (local instance or Docker container)
+- Docker & Docker Compose v2 (optional, for containerized run)
+
+### 1. Clone & Install Dependencies
 
 ```bash
-cp .env.example .env          # fill in DATABASE_URL and secrets
+git clone https://github.com/dhanuprys/cashow.git
+cd cashow
 bun install
-bun run db:migrate            # apply migrations to an empty database
-bun run dev                   # http://localhost:3000, then open /setup
 ```
 
-`packages/db/.env` may hold a separate `DATABASE_URL` for the Prisma CLI; the
-root `.env` is canonical and is also the fallback for the CLI. `bun run dev`,
-`start` and `worker` load the root `.env` explicitly (`bun --env-file=.env`),
-so one file configures every local process.
+### 2. Environment Configuration
 
-Create the database once if you are not using Compose:
-
-```bash
-createdb -h localhost -U default cashow
-```
-
-Uploaded receipts go to `STORAGE_DIR` (default `./data/uploads`, resolved from
-the web app's working directory). Point it at a persistent path outside the
-repository for a real deployment; Compose uses `/app/data/uploads` on the shared
-`files` volume.
-
-### Useful commands
-
-| Command                            | What it does                                                      |
-| ---------------------------------- | ----------------------------------------------------------------- |
-| `bun run dev`                      | Next.js dev server (Turbopack)                                    |
-| `bun run build` / `bun run start`  | production build / serve                                          |
-| `bun run worker`                   | run the background worker                                         |
-| `bun run lint` / `bun run format`  | Biome check / rewrite                                             |
-| `bun run typecheck`                | `tsc` for packages and the web app                                |
-| `bun run test`                     | `bun test` (domain unit tests)                                    |
-| `bun run test:ledger`              | Phase 1 gate: allocation rules enforced by the DB                 |
-| `bun run test:chains`              | Phase 2 gate: payment plans, snapshots, reconciliation, transfers |
-| `bun run test:summary`             | Phase 3 gate: summary totals, budgets, recurring templates        |
-| `bun run smoke`                    | write/read a `BigInt` row through the typed client                |
-| `bun run seed`                     | seed 100,000 transactions over three years                        |
-| `bun run bench`                    | check the §8 read/write budgets on that seed                      |
-| `bun run seed:clean`               | remove the benchmark owner, reopening `/setup`                    |
-| `bun run test:e2e:auth`            | passkey E2E in Chrome (needs a DB with no users)                  |
-| `bun run smoke:compat`             | Server Action / streaming / abort gates                           |
-| `bun run db:migrate`               | apply pending migrations                                          |
-| `bun run db:status`                | migration path and pending state                                  |
-| `bun run db:verify`                | compare the live schema with the contract                         |
-| `bun run db:plan -- --name <slug>` | plan a migration from contract changes                            |
-| `bun run db:emit`                  | re-emit `contract.json` / `contract.d.ts`                         |
-
-> `bun run typecheck` needs Next.js route types, which `bun run build` generates
-> on a fresh checkout. Run the build once before typechecking `apps/web`.
-
-### Signing in (passkeys)
-
-There are no passwords and no public signup. On an empty database `/setup`
-creates the owner and their first passkey; after that the page redirects to
-`/login` and only registered passkeys can enter. `/app` lists the owner's
-passkeys, lets them add another device, and refuses to revoke the last one.
-
-- **Before the domain is final:** `WEB_ORIGIN` (and therefore the WebAuthn RP
-  ID) defines where passkeys work. Do not create the real owner passkey on
-  `localhost` or a temporary name — see [ADR 0006](docs/adr/0006-access-option.md).
-- **Exposed before setup:** set `SETUP_TOKEN`; `/setup` then requires it.
-  Remove the value once the owner exists.
-- **Lost every passkey:** register a new one from the server with database
-  access (delete the owner's `Passkey` rows, then run `/setup` again after
-  deleting the user). There is no email recovery, by design.
-- **How it works:** [ADR 0007](docs/adr/0007-passkey-auth.md).
-
-```bash
-# End-to-end passkey flow in headless Chrome with a virtual authenticator.
-bun run test:e2e:auth          # CHROME_PATH overrides the browser binary
-```
-
-### The core ledger (Phase 1)
-
-After setup, `/app` is the daily surface:
-
-| Route                                 | What it does                                                                  |
-| ------------------------------------- | ----------------------------------------------------------------------------- |
-| `/app`                                | Month summary, quick add, recent transactions, balances, top expenses         |
-| `/app/transactions`                   | Filter, search, paginate; deleted rows are opt-in                             |
-| `/app/transactions/new`               | Full form: type, amount, account, category, time, allocations                 |
-| `/app/transactions/:id`               | Detail, attachments, soft delete/restore                                      |
-| `/app/accounts`                       | Accounts, opening balances, snapshots and reconciliation (balance is derived) |
-| `/app/categories`                     | One-level categories, separate income/expense trees                           |
-| `/app/plans`                          | Payment plans: steps, derived status, partial payments, progress              |
-| `/app/budgets`                        | Monthly budgets with usage and projection                                     |
-| `/app/recurring`                      | Recurring transaction templates and due-run                                   |
-| `/app/transactions/new?type=TRANSFER` | Transfer between two accounts with an optional fee                            |
-| `/app/settings`                       | Profile, timezone, week/budget start, passkeys, audit, outbox                 |
-
-Amounts are typed as text and parsed once: `35rb`, `1,5jt`, `Rp 35.000`. Money
-stays a positive `bigint` in the database. An expense can draw from one or more
-incomes; the database triggers enforce that allocations never exceed either the
-expense or the income's free amount, that both sides belong to the same owner,
-and that a deleted expense cannot keep live allocations.
-
-Attachments are receipt photos, invoices and contracts. Images are downscaled
-in the browser before upload; metadata is stored in Postgres and bytes on the
-`STORAGE_DIR` volume. Serving is session-scoped (`/api/attachments/:id`) and
-never public. See [ADR 0009](docs/adr/0009-attachment-storage.md).
-
-### Performance seed and benchmark
-
-```bash
-bun run seed                   # 100k transactions, 20k allocations, ~10s
-bun run bench                  # exits non-zero when a p95 misses its budget
-bun run seed:clean             # remove it afterwards
-```
-
-The benchmark checks the plan §8 budgets at 100,000 transactions: dashboard
-reads (balances, monthly cashflow, recent transactions, allocation outstanding)
-p95 under 100 ms and transaction creation p95 under 150 ms. It also scans for
-allocation sums that exceed either side, which would mean a trigger failed.
-Nightly CI runs the same seed and benchmark.
-
-### Framework compatibility gates
-
-Two opt-in routes prove the Next.js-on-Bun behaviours from plan §6: a Server
-Action driven by a plain HTML form post, and a streaming route with a
-server-observed abort. They answer 404 unless `COMPAT_TOKEN` is set, so leave
-it unset on a real deployment.
-
-```bash
-COMPAT_TOKEN=… bun run smoke:compat
-SMOKE_BASE_URL=https://cashow.example.com COMPAT_TOKEN=… bun run smoke:compat
-```
-
-`SMOKE_BASE_URL` points at whatever should be tested — `bun run dev`, the
-standalone server, or Compose behind Caddy.
-
-### Schema workflow
-
-1. Edit `packages/db/src/prisma/contract.prisma`.
-2. `bun run db:emit` to regenerate the typed contract.
-3. `bun run db:plan -- --name <slug>` and review the new package under
-   `packages/db/migrations/app/`.
-4. `bun run db:migrate`, then `bun run db:verify`.
-
-Cross-row rules that a SQL `CHECK` cannot express (allocation sums) are
-PL/pgSQL triggers created by the baseline migration. If you edit a migration by
-hand, re-run it with Node to re-emit `ops.json` and attest the package, then run
-`prisma migration check`.
-
-## Deployment
+Copy the example environment file and adjust your database connection:
 
 ```bash
 cp .env.example .env
-# set POSTGRES_PASSWORD, CASHOW_DOMAIN and WEB_ORIGIN
-docker compose up -d --build
 ```
 
-Compose starts Postgres, waits for it to be healthy, runs the one-shot
-`migrate` service, then starts `web` and `worker` behind Caddy. Only the proxy
-publishes ports (80/443). Postgres is on an internal network with no host port.
-`web` and `worker` run as a non-root user with a read-only root filesystem.
+Ensure `DATABASE_URL` points to an active PostgreSQL database:
 
-- **Access:** default to a private network (Tailscale/WireGuard) and point
-  `CASHOW_DOMAIN` at the private name. Cloudflare Tunnel and a public domain are
-  documented alternatives — see [ADR 0006](docs/adr/0006-access-option.md).
-- **Domain first:** passkeys are bound to `CASHOW_DOMAIN`; changing it later
-  breaks every passkey and push subscription. Run `/setup` on the final name.
-- **Setup:** with `SETUP_TOKEN` unset, `/setup` is open to anyone who reaches
-  the app while it has no users. Set the token, complete setup, then remove it.
-- **Secrets:** put them in `.env` for a small deployment, or use
-  `<NAME>_FILE=/run/secrets/<name>` with Docker secrets/read-only mounts. Images
-  contain no secrets.
-- **Secrets to keep:** database password, VAPID private key, DeepSeek key,
-  backup age key. Keep an offline copy; without the age key, encrypted backups
-  are unreadable.
-
-### Backups and restore
-
-The `backup` service is opt-in so the base stack starts without a key:
-
-```bash
-mkdir -p secrets
-age-keygen -o secrets/age.key          # keep the private key offline
-# put the public key in BACKUP_AGE_RECIPIENT in .env
-docker compose --profile backup up -d
+```env
+DATABASE_URL="postgresql://default:default@localhost:5432/cashow"
+WEB_ORIGIN="http://localhost:3000"
 ```
 
-It runs nightly at 02:15 UTC: `pg_dump` (custom format) **and** a tar of the
-attachment directory (`STORAGE_DIR`, default `/files/uploads`) → `age`
-encryption → a local directory, with retention. Both artifacts are encrypted
-with the same recipient and written together; a database restore without the
-uploads archive leaves every attachment row pointing at a missing blob.
-
-`deploy/restore.sh` restores a dump into a throwaway database and checks that
-the ledger tables exist. `deploy/restore-files.sh` restores the uploads archive
-into a target directory and fails when it finds no files. Run both drill steps
-monthly; a backup that was never restored is a hope, not a backup.
-
-The backup target is a **plain local path** (ADR 0006): `BACKUP_DIR` in `.env`
-(default `./backups`) is bind-mounted into the `backup` service, so the artifacts
-are ordinary files on the host. There is no dedicated volume, no rclone remote,
-and no third-party upload tool. Point `BACKUP_DIR` at a directory that survives
-losing the machine — an attached disk or a synced folder — and keep an off-site
-copy if the data matters beyond fire and theft.
+### 3. Initialize Database & Run Migrations
 
 ```bash
-STAMP=20261027T021500Z
+# Apply all Prisma migrations to the database
+bun run db:migrate
+
+# Verify schema matches the contract
+bun run db:verify
+```
+
+### 4. Start Development Servers
+
+```bash
+# Start Next.js development server (Turbopack)
+bun run dev
+
+# (Optional) In a separate terminal, start the background worker
+bun run worker
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser. If no users exist, you will be directed to `/setup` to initialize the owner account.
+
+---
+
+## Core Features & Route Overview
+
+### 1. Dashboard (`/app`)
+
+- **3-Tier Modular Bento Layout:**
+  - **KPI Strip:** Net Cashflow, Safe-to-Spend, Total Liquid Balance, and Active Goal Reservations.
+  - **Tier 1 (Guardrails & Targets):** `SafeToSpendCard` (daily limit, days left, recurring buffer) side-by-side with `DashboardGoalsCard` (compact target progress, top 3 active goals, inline "Sisihkan" reserve action).
+  - **Tier 2 (Trends):** Daily cashflow chart and spending-by-category distribution chart.
+  - **Tier 3 (Activity & Balances):** Recent transactions feed alongside liquid balances per account and an inline quick-add form.
+
+### 2. Virtual Savings Goals (`/app/goals`)
+
+- **Real Balance Preservation:** Bank balances are untouched. Goals allocate a virtual hold on your free cash.
+- **Pacing Metrics:** Calculates whether you are _Ahead_, _On Track_, or _Behind_ based on monthly target deadlines.
+- **Account Selector with Free Cash Guard:** Shows exactly how much unreserved cash is available in each account before committing.
+- **Smart Presets:** One-click chips for "Sisa Target" and "Saran Bulanan".
+- **Archiving Lifecycle:** Archiving a goal automatically releases its reserved funds back to free cash in a single transaction.
+
+### 3. AI Financial Assistant (`/app/chat`)
+
+- **Multi-Model Support:** Switch between DeepSeek (`deepseek-chat`, `deepseek-reasoner`), Google Gemini, and OpenAI-compatible endpoints configured in Settings.
+- **Thread Management:** Create, rename, switch, and delete chat conversations.
+- **Bulk Transaction Ingestion:** Paste free-form dated notes (e.g., `1 November: bensin 53k, kopi 25rb`)—Cashow parses shorthand amounts and asks clarifying questions if dates, accounts, or amounts are missing.
+- **Human-in-the-Loop Approval:** Financial write actions (`createTransaction`, `createBatchTransactions`, `createTransfer`) render an interactive summary card. Nothing is written to the ledger until you explicitly click **Setujui**.
+
+### 4. Transactions & Allocations (`/app/transactions`)
+
+- Full ledger list with searching, filtering, and pagination.
+- **Envelope Allocations:** Link expenses to specific income entries to enforce spending discipline.
+- **Transfers with Fee Tracking:** Atomic balance movement between accounts with explicit fee categorization.
+- **Attachment Storage:** Upload proof-of-payment receipts downscaled client-side; stored securely on local storage volumes.
+
+### 5. Accounts & Reconciliation (`/app/accounts`)
+
+- Support for Bank, E-Wallet, Cash, and Investment accounts.
+- **Reconciliation Snapshots:** Compare real bank statements against calculated balances and record variance adjustments.
+- **Checkpoint Locking:** Freeze past accounting periods so historical figures cannot be retroactively modified.
+- **Reserved Badges:** Real-time visibility into how much of each account's balance is locked into savings goals.
+
+### 6. Settings & Security (`/app/settings`)
+
+- **Profile Preferences:** Currency, timezone (WIB, WITA, WIT), week start day, and budget payday offset.
+- **Password Management:** Set or change passwords with real-time strength scoring and confirmation checks.
+- **Passkeys (WebAuthn):** Add, manage, and label biometric devices or hardware security keys.
+- **Connected Accounts:** Google OAuth account linkage.
+- **AI Model Keys:** Configure API credentials for external AI providers locally.
+- **Audit & Outbox Viewer:** Inspect historical audit logs and system event processing queues.
+
+---
+
+## Production Deployment (Docker)
+
+Cashow ships with a production-ready, rootless multi-stage `Dockerfile` and a streamlined `docker-compose.yml`.
+
+### Architecture
+
+```
+                  ┌──────────────────────────────────────────────┐
+                  │ External Reverse Proxy (Host Nginx / Caddy /  │
+                  │ Cloudflare Tunnel / Traefik)                 │
+                  └──────────────────────┬───────────────────────┘
+                                         │ HTTP :3000
+                                         ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ Docker Network: backend                                                │
+│                                                                        │
+│   ┌────────────────────┐     ┌───────────────────┐                     │
+│   │   cashow-web       │     │   cashow-worker   │                     │
+│   │   (Next.js Stand.) │     │   (Outbox Daemon) │                     │
+│   └─────────┬──────────┘     └─────────┬─────────┘                     │
+│             │                          │                               │
+│             │ depends_on               │ depends_on                    │
+│             ▼                          ▼                               │
+│   ┌──────────────────────────────────────────────┐                     │
+│   │   cashow-migrate (Runs migrations & exits)   │                     │
+│   └──────────────────────┬───────────────────────┘                     │
+│                          │                                             │
+│                          ▼                                             │
+│   ┌──────────────────────────────────────────────┐                     │
+│   │   cashow-postgres (PostgreSQL 17 + pgvector) │                     │
+│   └──────────────────────────────────────────────┘                     │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Deploying with Prebuilt GHCR Images
+
+1. **Clone the repository or copy `docker-compose.yml` and `.env.example`:**
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Configure your `.env`:**
+
+   ```env
+   NODE_ENV="production"
+   POSTGRES_USER="cashow"
+   POSTGRES_PASSWORD="generate-a-strong-password"
+   POSTGRES_DB="cashow"
+   WEB_PORT="3000"
+   WEB_ORIGIN="https://cashow.yourdomain.com"
+   AUTH_SECRET="generate-a-32-byte-hex-string"
+   ```
+
+3. **Start the stack:**
+
+   ```bash
+   docker compose pull
+   docker compose up -d
+   ```
+
+   _The `migrate` container will automatically run pending migrations and exit before `web` and `worker` start serving traffic._
+
+4. **Verify Container Health:**
+
+   ```bash
+   docker compose ps
+   curl -I http://localhost:3000/api/health   # Liveness check (200 OK)
+   curl -I http://localhost:3000/api/ready    # Readiness check (200 OK)
+   ```
+
+5. **Connect Your Reverse Proxy:**
+   Point your external reverse proxy (Caddy, Nginx, Traefik, or Cloudflare Tunnel) to `http://127.0.0.1:3000` with standard WebSocket and proxy headers enabled.
+
+---
+
+## Automated Backups & Disaster Recovery
+
+An automated, encrypted backup container is provided via the `backup` Compose profile.
+
+### Setting Up Encrypted Backups
+
+1. Generate an [age](https://github.com/FiloSottile/age) encryption keypair:
+
+   ```bash
+   mkdir -p secrets
+   age-keygen -o secrets/age.key
+   ```
+2. Set the public key in your `.env`:
+
+   ```env
+   BACKUP_AGE_RECIPIENT="age1..."
+   BACKUP_DIR="./backups"
+   ```
+3. Start the backup container:
+
+   ```bash
+   docker compose --profile backup up -d
+   ```
+
+Backups execute nightly at **02:15 UTC**, creating two encrypted artifacts in `BACKUP_DIR`:
+1. `cashow-<timestamp>.dump.age`: PostgreSQL database dump (`pg_dump` custom format).
+2. `cashow-<timestamp>-files.tar.gz.age`: Compressed archive of all attachment receipts.
+
+### Testing Restore Drills
+
+Test disaster recovery into a throwaway database:
+
+```bash
+STAMP="20261106T021500Z"
+
+# Restore database dump into a test database
 docker compose --profile backup run --rm backup /usr/local/bin/restore.sh \
   "/backups/cashow-$STAMP.dump.age" cashow_drill
+
+# Restore receipt attachments into a test folder
 docker compose --profile backup run --rm backup /usr/local/bin/restore-files.sh \
-  "/backups/cashow-$STAMP-files.tar.gz.age" /tmp/cashow_drill_uploads
+  "/backups/cashow-$STAMP-files.tar.gz.age" /tmp/drill_uploads
 ```
 
-The `files` volume (`/app/data` in `web`/`worker`) holds the attachment bytes.
-Back it up or move it with the database; see
-[ADR 0009](docs/adr/0009-attachment-storage.md).
+---
 
-### Health endpoints
+## Testing & Quality Verification Suite
 
-- `GET /api/health` — liveness (process is up)
-- `GET /api/ready` — readiness (Postgres reachable and schema queryable)
+Cashow enforces strict domain testing and verification gates:
 
-## Verification gates
+```bash
+# Code quality and style checks (Biome)
+bun run check
 
-CI runs, in order: frozen install, lint/format, production build, typecheck,
-unit tests, migrations against an empty Postgres, `db verify`, the database
-smoke test, the Phase 1 ledger gate (`test:ledger`: the Rp500.000/Rp250.000 flow plus database rejections for
-over-allocation, wrong direction, cross-user references, category-kind mismatch
-and restore-after-shrink), `test:chains` (a three-step plan with one partial
-payment, derived progress, a backdated snapshot that recomputes later gaps,
-checkpoint locking/unlocking, transfer fee cascades, ownership guards), the
-framework compatibility gates (Server Action, streaming, abort), and a Docker
-build of both runtime targets. A nightly job seeds 100,000 transactions and runs
-the §8 performance budgets.
+# TypeScript type validation across all workspaces
+bun run typecheck
 
-Local-only gates: `bun run test:e2e:auth` (Chrome with a virtual authenticator;
-it now also drives the ledger smoke: defaults, quick add, the
-Rp500.000/Rp250.000 allocation, an attachment upload/serve, a three-step plan
-with a partial payment, and a transfer with a fee). The passkey gate in plan §6
-additionally requires the real HTTPS domain, so run it once after the deployment
-name is final.
+# Fast domain unit tests
+bun run test
 
-## Decisions
+# Database-level allocation and integrity gate
+bun run test:ledger
 
-Architecture decisions live in [docs/adr](docs/adr/). Authentication is recorded
-in [ADR 0007](docs/adr/0007-passkey-auth.md), the compatibility probes in
-[ADR 0008](docs/adr/0008-compat-probes.md), and attachment storage in
-[ADR 0009](docs/adr/0009-attachment-storage.md). The open one is the access
-option and permanent domain (ADR 0006); the backup target is settled as an
-external drive.
+# Payment plan milestones, chains, and reconciliation gate
+bun run test:chains
+
+# Cashflow summaries, budget calculations, and pacing gate
+bun run test:summary
+
+# Background rules, triggers, and notification delivery gate
+bun run test:rules
+
+# Virtual savings goals, reserve limits, and pacing gate
+bun run test:goals
+
+# 100,000 transaction performance benchmark (p95 latency checks)
+bun run seed
+bun run bench
+bun run seed:clean
+```
+
+---
+
+## Architecture Decision Records (ADRs)
+
+Core technical choices are documented under [`docs/adr/`](docs/adr/):
+
+- **[ADR 0001: Next.js App Router on Bun](docs/adr/0001-nextjs-app-router-on-bun.md)**
+- **[ADR 0002: PostgreSQL 17 via Prisma 8](docs/adr/0002-postgres-17-prisma-8.md)**
+- **[ADR 0003: Monetary Representation as BigInt](docs/adr/0003-monetary-representation.md)**
+- **[ADR 0004: Allocation Invariants via SQL Triggers](docs/adr/0004-allocation-invariants.md)**
+- **[ADR 0005: Biome for Tooling & Style](docs/adr/0005-biome-tooling.md)**
+- **[ADR 0006: Self-Hosted Deployment & Network Isolation](docs/adr/0006-access-option.md)**
+- **[ADR 0007: WebAuthn Passkeys & Identity Security](docs/adr/0007-passkey-auth.md)**
+- **[ADR 0008: Compatibility & Readiness Probes](docs/adr/0008-compat-probes.md)**
+- **[ADR 0009: Receipt Attachment Storage Architecture](docs/adr/0009-attachment-storage.md)**
+- **[Savings Goals Design Spec](docs/ideas/savings-goals.md)**
+
+---
 
 ## License
 

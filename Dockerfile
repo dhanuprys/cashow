@@ -1,13 +1,11 @@
 # syntax=docker/dockerfile:1.7
 
-# Cashow — one repository, two runtime targets.
+# Cashow — production multi-stage build.
 #
-#   web     multi-stage Next.js standalone output on Bun, non-root
-#   worker  the same source and dependencies, running the worker entrypoint
+#   web     Next.js standalone output on Bun, running as non-root user
+#   worker  background worker and database migration runner
 #
-# Both targets share the dependency layer so `docker build --target web` and
-# `--target worker` reuse the same install step. The `migrate` Compose service
-# reuses the worker target with a different command.
+# Both targets share the dependencies layer for fast, cached builds.
 
 ARG BUN_VERSION=1.4.2
 
@@ -38,41 +36,36 @@ COPY . .
 RUN bun run --filter @cashow/web build
 
 # ---------------------------------------------------------------------------
-# Shared runtime user
+# Shared runtime user & directories
 # ---------------------------------------------------------------------------
 FROM base AS runtime-base
 RUN addgroup -S cashow && adduser -S -G cashow cashow \
-  && mkdir -p /app/data && chown cashow:cashow /app/data
+  && mkdir -p /app/data /app/apps/web/.next/cache \
+  && chown -R cashow:cashow /app
 
 # ---------------------------------------------------------------------------
-# web — only the standalone server, static assets and public files
+# Target 1: web (Next.js standalone server)
 # ---------------------------------------------------------------------------
 FROM runtime-base AS web
-ENV NODE_ENV=production \
-    PORT=3000 \
-    HOSTNAME=0.0.0.0
-
+USER cashow
 COPY --from=builder --chown=cashow:cashow /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=cashow:cashow /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=cashow:cashow /app/apps/web/public ./apps/web/public
 
-USER cashow
 EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1
 
 CMD ["bun", "apps/web/server.js"]
 
 # ---------------------------------------------------------------------------
-# worker — full source + dependencies (also used by the migrate job)
+# Target 2: worker (background jobs + migrations)
 # ---------------------------------------------------------------------------
 FROM runtime-base AS worker
-ENV NODE_ENV=production
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY --chown=cashow:cashow . .
-
 USER cashow
+COPY --from=builder --chown=cashow:cashow /app ./
 
 CMD ["bun", "apps/worker/src/index.ts"]

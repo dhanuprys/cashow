@@ -35,6 +35,8 @@ coverage
 *.log
 .DS_Store
 apps/web/public/*.svg.tmp
+backups
+**/backups
 
 # Tests and docs do not need to ship in the runtime image
 docs

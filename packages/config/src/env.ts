@@ -60,6 +60,10 @@ export const envSchema = z.object({
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1).optional(),
   GOOGLE_MODEL: z.string().default("gemini-3.5-flash"),
 
+  /** Google OAuth configuration (optional) */
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+
   /**
    * Opt-in password authentication. When "true", users can register/login with
    * username/password in addition to passkeys. Default "true" enables Option A.

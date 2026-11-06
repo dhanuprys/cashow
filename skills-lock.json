@@ -31,6 +31,12 @@
       "skillPath": "skills/frontend-ui-engineering/SKILL.md",
       "computedHash": "49bb6ccfc41753bdd679f368ce75629ae9d424c5b8abc33faf949a4a55f919a1"
     },
+    "git-workflow-and-versioning": {
+      "source": "addyosmani/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/git-workflow-and-versioning/SKILL.md",
+      "computedHash": "620a972a0163372c263bf3cd31e9766573353b6d93210ff34812e83c300fba89"
+    },
     "idea-refine": {
       "source": "addyosmani/agent-skills",
       "sourceType": "github",

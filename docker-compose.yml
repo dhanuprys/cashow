@@ -1,13 +1,12 @@
-# Cashow — single-host Docker Compose stack (plan section 7).
+# Cashow — single-host Docker Compose stack.
 #
-#   proxy     Caddy: TLS, routing, security headers          (ports 80/443)
-#   web       Next.js standalone output on Bun               (edge + backend)
-#   worker    background jobs on the same image              (backend)
+#   web       Next.js standalone output on Bun               (port 3000)
+#   worker    background jobs and notifications              (backend)
 #   migrate   one-shot schema migration before web/worker     (backend)
-#   postgres  pinned major, internal only, named volume       (backend)
-#   backup    nightly pg_dump + age -> local BACKUP_DIR (profile: backup)
+#   postgres  pinned pgvector/pgvector:pg17, named volume     (backend)
+#   backup    nightly pg_dump + age -> local BACKUP_DIR      (profile: backup)
 #
-# Postgres is never published to the host. Only the proxy binds host ports.
+# Postgres is internal only. An external reverse proxy routes traffic to `web:3000`.
 # Start:   docker compose up -d --build
 # Migrate: docker compose run --rm migrate
 # Backup:  docker compose --profile backup up -d
@@ -20,42 +19,32 @@ name: cashow
 x-app-env: &app-env
   NODE_ENV: production
   DATABASE_URL: postgresql://${POSTGRES_USER:-cashow}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-cashow}
-  WEB_ORIGIN: ${WEB_ORIGIN:-https://localhost}
+  WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
   AUTH_SECRET: ${AUTH_SECRET:-}
   SETUP_TOKEN: ${SETUP_TOKEN:-}
   WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
   WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Cashow}
-  # Empty by default: the compatibility probes answer 404 unless CI sets it.
   COMPAT_TOKEN: ${COMPAT_TOKEN:-}
   GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:-}
-  GOOGLE_MODEL: ${GOOGLE_MODEL:-gemini-3.5-flash}
+  GOOGLE_MODEL: ${GOOGLE_MODEL:-gemini-2.5-flash}
   DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
   DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
-  DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
-  DEEPSEEK_PRO_MODEL: ${DEEPSEEK_PRO_MODEL:-deepseek-v4-pro}
+  DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+  DEEPSEEK_PRO_MODEL: ${DEEPSEEK_PRO_MODEL:-deepseek-reasoner}
   VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
   VAPID_SUBJECT: ${VAPID_SUBJECT:-}
   NTFY_TOPIC: ${NTFY_TOPIC:-}
-  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-  SMTP_URL: ${SMTP_URL:-}
-  LOG_LEVEL: ${LOG_LEVEL:-info}
-  # Attachment bytes live on the shared `files` volume (ADR 0009).
-  STORAGE_DIR: ${STORAGE_DIR:-/app/data/uploads}
-  TZ: UTC
+  NTFY_SERVER: ${NTFY_SERVER:-https://ntfy.sh}
+  NTFY_TOKEN: ${NTFY_TOKEN:-}
+  STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+  STORAGE_DIR: /app/data/uploads
+  TZ: ${TZ:-Asia/Jakarta}
 
 x-app-service: &app-service
-  build:
-    context: .
-  image: ${CASHOW_WEB_IMAGE:-cashow:local-web}
   restart: unless-stopped
   security_opt:
     - no-new-privileges:true
-  depends_on:
-    migrate:
-      condition: service_completed_successfully
-  networks:
-    - backend
 
 services:
   postgres:
@@ -65,17 +54,15 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-cashow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-cashow}
-      # Keep the cluster in UTC; per-user timezones are application settings.
       TZ: UTC
-      PGDATA: /var/lib/postgresql/data/pgdata
+    security_opt:
+      - no-new-privileges:true
     command:
       - postgres
       - -c
+      - max_connections=100
+      - -c
       - shared_buffers=256MB
-      - -c
-      - effective_cache_size=768MB
-      - -c
-      - max_connections=50
       - -c
       - work_mem=8MB
       - -c
@@ -99,7 +86,7 @@ services:
     build:
       context: .
       target: worker
-    image: ${CASHOW_WORKER_IMAGE:-cashow:local-worker}
+    image: ${CASHOW_WORKER_IMAGE:-ghcr.io/dhanuprys/cashow:worker}
     command: ["bun", "run", "--filter", "@cashow/db", "db:migrate"]
     environment: *app-env
     restart: "no"
@@ -116,6 +103,7 @@ services:
     build:
       context: .
       target: web
+    image: ${CASHOW_WEB_IMAGE:-ghcr.io/dhanuprys/cashow:latest}
     environment:
       <<: *app-env
       PORT: "3000"
@@ -127,23 +115,27 @@ services:
       - files:/app/data
       - next_cache:/app/apps/web/.next/cache
     ports:
-      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+      - "${WEB_PORT:-3000}:3000"
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - backend
-      - edge
 
   worker:
     <<: *app-service
     build:
       context: .
       target: worker
-    image: ${CASHOW_WORKER_IMAGE:-cashow:local-worker}
+    image: ${CASHOW_WORKER_IMAGE:-ghcr.io/dhanuprys/cashow:worker}
     environment:
       <<: *app-env
       # The freshness rule reads last-run.json / last-drill.json from here.
@@ -153,33 +145,14 @@ services:
       - /tmp
     volumes:
       - files:/app/data
-      # Read-only view of the backup directory so the worker can see the
-      # status files the backup/drill jobs write (the freshness rule).
       - ${BACKUP_DIR:-./backups}:/backups:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - backend
-
-  proxy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    depends_on:
-      web:
-        condition: service_healthy
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      CASHOW_DOMAIN: ${CASHOW_DOMAIN:-localhost}
-      WEB_ORIGIN: ${WEB_ORIGIN:-https://localhost}
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      - edge
 
   # Nightly backup. Disabled by default so the base stack starts without a
   # backup key; enable with: docker compose --profile backup up -d
@@ -196,14 +169,12 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       PGDATABASE: ${POSTGRES_DB:-cashow}
       BACKUP_DIR: /backups
-      # Attachment bytes live in the shared `files` volume, not in the dump.
       STORAGE_DIR: /files/uploads
       BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
       BACKUP_AGE_KEY: ${BACKUP_AGE_KEY:-/secrets/age.key}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
       TZ: UTC
     volumes:
-      # Plain local relative path on the host; nothing third-party involved.
       - ${BACKUP_DIR:-./backups}:/backups
       - files:/files:ro
       - ./secrets:/secrets:ro
@@ -219,13 +190,7 @@ volumes:
   pgdata:
   files:
   next_cache:
-  caddy_data:
-  caddy_config:
 
 networks:
-  # No host ports; Postgres, web and worker talk here.
   backend:
-    driver: bridge
-  # Only the proxy and web join the edge network.
-  edge:
     driver: bridge
