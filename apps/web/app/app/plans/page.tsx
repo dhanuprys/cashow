@@ -8,7 +8,14 @@ import { LinkButton } from "@/components/ledger/link-button";
 import { ContentSkeleton } from "@/components/ledger/page-skeleton";
 import { PlanForm } from "@/components/ledger/plan-form";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
@@ -99,28 +106,29 @@ async function Plans() {
               return (
                 <Link key={plan.id} href={`/app/plans/${plan.id}`} className="block">
                   <Card className="transition-colors hover:bg-muted/30">
-                    <CardContent className="space-y-3">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted">
-                            <Layers className="size-4" aria-hidden="true" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="flex flex-wrap items-center gap-2 font-medium">
-                              <span className="truncate">{plan.name}</span>
-                              <Badge variant={statusVariant(plan.status)}>
-                                {PLAN_STATUS_LABEL[plan.status] ?? plan.status}
-                              </Badge>
-                              {plan.archivedAt === null ? null : (
-                                <Badge variant="secondary">Arsip</Badge>
-                              )}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {plan.itemCount} tahap · diterima {formatMoney(plan.receivedTotal)}{" "}
-                              dari {formatMoney(plan.expectedTotal)}
-                            </p>
-                          </div>
+                    <CardHeader>
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted">
+                          <Layers className="size-4" aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0">
+                          <CardTitle className="flex flex-wrap items-center gap-2 font-medium">
+                            <span className="truncate">{plan.name}</span>
+                            <Badge variant={statusVariant(plan.status)}>
+                              {PLAN_STATUS_LABEL[plan.status] ?? plan.status}
+                            </Badge>
+                            {plan.archivedAt === null ? null : (
+                              <Badge variant="secondary">Arsip</Badge>
+                            )}
+                          </CardTitle>
+                          <CardDescription className="truncate text-xs text-muted-foreground">
+                            {plan.itemCount} tahap · diterima {formatMoney(plan.receivedTotal)} dari{" "}
+                            {formatMoney(plan.expectedTotal)}
+                          </CardDescription>
                         </div>
+                      </div>
+
+                      <CardAction>
                         <div className="flex items-center gap-2">
                           <div className="text-right">
                             <p className="text-sm font-semibold tabular-nums">
@@ -133,8 +141,10 @@ async function Plans() {
                             aria-hidden="true"
                           />
                         </div>
-                      </div>
+                      </CardAction>
+                    </CardHeader>
 
+                    <CardContent className="space-y-3">
                       <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                         <div
                           className={cn(

@@ -17,6 +17,33 @@ export interface CurrencyInputProps
   onValueChange?: (plainAmount: string) => void;
   currencyPrefix?: string;
   allowShorthand?: boolean;
+  /**
+   * If true, displays quick preset chips (e.g. +10rb, +50rb, +100rb, +500rb)
+   * or a custom array of presets like ["10000", "50000", "100000"].
+   */
+  presets?: boolean | string[];
+  /**
+   * If true, tapping a preset adds to the current amount instead of replacing it.
+   * Defaults to false (replaces value).
+   */
+  additivePresets?: boolean;
+}
+
+const DEFAULT_PRESETS = ["10000", "20000", "50000", "100000", "500000"];
+
+function formatPresetLabel(amountStr: string): string {
+  try {
+    const val = BigInt(amountStr);
+    if (val >= 1_000_000n && val % 1_000_000n === 0n) {
+      return `${val / 1_000_000n}jt`;
+    }
+    if (val >= 1_000n && val % 1_000n === 0n) {
+      return `${val / 1_000n}rb`;
+    }
+    return formatAmount(val);
+  } catch {
+    return amountStr;
+  }
 }
 
 /**
@@ -36,6 +63,8 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       onValueChange,
       currencyPrefix = "Rp",
       allowShorthand = true,
+      presets,
+      additivePresets = false,
       className,
       placeholder = "0",
       disabled,
@@ -139,41 +168,90 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       onFocus?.(event);
     }
 
+    const presetList = Array.isArray(presets) ? presets : presets === true ? DEFAULT_PRESETS : null;
+
+    function applyPreset(presetAmount: string) {
+      if (disabled) return;
+      try {
+        const presetVal = BigInt(presetAmount);
+        let finalVal = presetVal;
+
+        if (additivePresets) {
+          const currentVal = rawValue ? BigInt(rawValue) : 0n;
+          finalVal = currentVal + presetVal;
+        }
+
+        const raw = finalVal.toString();
+        const formatted = formatAmount(finalVal);
+        setRawValue(raw);
+        setDisplayValue(formatted);
+        onValueChange?.(raw);
+      } catch {
+        setRawValue(presetAmount);
+        setDisplayValue(presetAmount);
+        onValueChange?.(presetAmount);
+      }
+    }
+
     return (
-      <InputGroup
-        className={cn(
-          "w-full transition-shadow",
-          disabled && "cursor-not-allowed opacity-50",
-          className,
-        )}
-      >
-        {currencyPrefix ? (
-          <InputGroupAddon
-            align="inline-start"
-            className="pr-1 font-semibold text-xs tracking-wider"
-          >
-            <InputGroupText>{currencyPrefix}</InputGroupText>
-          </InputGroupAddon>
+      <div className="w-full space-y-1.5">
+        <InputGroup
+          className={cn(
+            "w-full transition-shadow",
+            disabled && "cursor-not-allowed opacity-50",
+            className,
+          )}
+        >
+          {currencyPrefix ? (
+            <InputGroupAddon
+              align="inline-start"
+              className="pr-1 font-semibold text-xs tracking-wider"
+            >
+              <InputGroupText>{currencyPrefix}</InputGroupText>
+            </InputGroupAddon>
+          ) : null}
+          <InputGroupInput
+            {...props}
+            ref={ref}
+            id={inputId}
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            value={displayValue}
+            onChange={handleInputChange}
+            onBlur={handleInputBlur}
+            onFocus={handleInputFocus}
+            placeholder={placeholder}
+            disabled={disabled}
+            required={required}
+            className="font-mono tabular-nums"
+          />
+          {/* Hidden input to ensure FormData / form submission receives the exact clean unformatted integer */}
+          {name ? <input type="hidden" name={name} value={rawValue} disabled={disabled} /> : null}
+        </InputGroup>
+
+        {presetList && presetList.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {presetList.map((preset) => {
+              const label = formatPresetLabel(preset);
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => applyPreset(preset)}
+                  className={cn(
+                    "inline-flex items-center rounded-lg border border-border/80 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                    disabled && "opacity-50 cursor-not-allowed",
+                  )}
+                >
+                  {additivePresets ? `+${label}` : label}
+                </button>
+              );
+            })}
+          </div>
         ) : null}
-        <InputGroupInput
-          {...props}
-          ref={ref}
-          id={inputId}
-          type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          value={displayValue}
-          onChange={handleInputChange}
-          onBlur={handleInputBlur}
-          onFocus={handleInputFocus}
-          placeholder={placeholder}
-          disabled={disabled}
-          required={required}
-          className="font-mono tabular-nums"
-        />
-        {/* Hidden input to ensure FormData / form submission receives the exact clean unformatted integer */}
-        {name ? <input type="hidden" name={name} value={rawValue} disabled={disabled} /> : null}
-      </InputGroup>
+      </div>
     );
   },
 );

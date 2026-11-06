@@ -6,7 +6,14 @@ import { Suspense } from "react";
 import { DatePicker } from "@/components/ledger/date-picker";
 import { LinkButton } from "@/components/ledger/link-button";
 import { TransactionList } from "@/components/ledger/transaction-list";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -192,6 +199,12 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
       </div>
 
       <Card>
+        <CardHeader className="pb-3 border-b border-border/40">
+          <CardTitle>Filter &amp; Pencarian</CardTitle>
+          <CardDescription>
+            Saring transaksi berdasarkan akun, kategori, tanggal, atau kata kunci.
+          </CardDescription>
+        </CardHeader>
         <CardContent className="p-3.5 sm:p-5">
           <form className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end" method="get">
             <div className="relative w-full sm:min-w-[200px] sm:flex-1">
@@ -282,7 +295,22 @@ async function Transactions({ searchParams }: { searchParams: Promise<Transactio
       </Card>
 
       <Card>
-        <CardContent className="p-2 sm:p-6">
+        <CardHeader className="pb-3 border-b border-border/40">
+          <CardTitle>Daftar Transaksi</CardTitle>
+          <CardDescription>
+            {list.total > 0
+              ? `Menampilkan ${list.items.length} dari ${list.total} transaksi`
+              : "Belum ada transaksi yang ditemukan"}
+          </CardDescription>
+          {list.total > 0 ? (
+            <CardAction>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                Hal {page} dari {totalPages}
+              </span>
+            </CardAction>
+          ) : null}
+        </CardHeader>
+        <CardContent className="p-2 sm:p-4">
           <TransactionList
             items={list.items}
             empty={

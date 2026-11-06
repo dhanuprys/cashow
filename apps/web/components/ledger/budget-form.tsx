@@ -171,6 +171,7 @@ export function BudgetForm({
             defaultValue={budget?.amount ?? ""}
             placeholder="3jt atau 3.000.000"
             className="mt-2"
+            presets={["500000", "1000000", "2000000", "5000000", "10000000"]}
             required
           />
         </Field>

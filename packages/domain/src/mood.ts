@@ -59,7 +59,7 @@ export function deriveFinancialMood(input: FinancialMoodInput): FinancialMood {
     return {
       status: "BALANCED",
       label: "Terkendali",
-      description: "Anggaran berjalan aman, mendekati batas akhir siklus.",
+      description: "Arus kas dan anggaran masih berada di batas aman.",
       ringClass: "ring-2 ring-amber-500/70 shadow-[0_0_12px_rgba(245,158,11,0.35)]",
       badgeVariant: "outline",
       accentColor: "#F59E0B",

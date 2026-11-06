@@ -13,6 +13,7 @@ import {
   PiggyBank,
   Settings,
   Tags,
+  Target,
   Upload,
   Wallet,
 } from "lucide-react";
@@ -47,6 +48,7 @@ const navigation = {
     { href: "/app/budgets", label: "Anggaran", icon: PiggyBank, exact: false },
   ],
   secondary: [
+    { href: "/app/goals", label: "Target", icon: Target, exact: false },
     { href: "/app/inbox", label: "Kotak Masuk", icon: Bell, exact: false },
     { href: "/app/recurring", label: "Berulang", icon: CalendarClock, exact: false },
     { href: "/app/rules", label: "Aturan", icon: Gauge, exact: false },

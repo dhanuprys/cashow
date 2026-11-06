@@ -84,6 +84,7 @@ export function TransferForm({
             onValueChange={setAmount}
             placeholder="2jt atau 2.000.000"
             className="mt-2 h-12 text-lg"
+            presets={["50000", "100000", "500000", "1000000", "2000000"]}
             required
           />
         </Field>

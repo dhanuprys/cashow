@@ -6,7 +6,15 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { BudgetForm, DeleteBudgetButton, EditBudgetDialog } from "@/components/ledger/budget-form";
 import { ContentSkeleton } from "@/components/ledger/page-skeleton";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
@@ -105,63 +113,61 @@ async function Budgets() {
 
               return (
                 <Card key={budget.id}>
-                  <CardContent className="space-y-3 p-4 sm:p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold text-foreground text-sm sm:text-base break-words line-clamp-2">
-                            {budget.name}
-                          </p>
-                          <span className="inline-flex shrink-0 items-center rounded-md border border-border/80 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                            {budget.period === "WEEKLY"
-                              ? "Mingguan"
-                              : budget.period === "CUSTOM"
-                                ? "Khusus"
-                                : "Bulanan"}
-                          </span>
-                          {status?.isExpired && (
-                            <span className="inline-flex shrink-0 items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              Selesai
-                            </span>
+                  <CardHeader>
+                    <CardTitle className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-foreground text-sm sm:text-base break-words line-clamp-2">
+                        {budget.name}
+                      </span>
+                      <span className="inline-flex shrink-0 items-center rounded-md border border-border/80 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {budget.period === "WEEKLY"
+                          ? "Mingguan"
+                          : budget.period === "CUSTOM"
+                            ? "Khusus"
+                            : "Bulanan"}
+                      </span>
+                      {status?.isExpired && (
+                        <span className="inline-flex shrink-0 items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          Selesai
+                        </span>
+                      )}
+                      {status && (
+                        <span
+                          className={cn(
+                            "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums whitespace-nowrap",
+                            isOver
+                              ? "bg-rose-500/15 text-rose-700 dark:text-rose-400"
+                              : isWarning
+                                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
                           )}
-                          {status && (
-                            <span
-                              className={cn(
-                                "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums whitespace-nowrap",
-                                isOver
-                                  ? "bg-rose-500/15 text-rose-700 dark:text-rose-400"
-                                  : isWarning
-                                    ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                                    : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-                              )}
-                            >
-                              {status.usedPercent.toFixed(0)}%
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-0.5 text-xs text-muted-foreground break-words">
-                          {budget.categoryName ? (
-                            <>
-                              Kategori{" "}
-                              <span className="font-medium text-foreground">
-                                {budget.categoryName}
-                              </span>{" "}
-                              (termasuk subkategori)
-                            </>
-                          ) : (
-                            "Semua pengeluaran"
-                          )}{" "}
-                          · Batas{" "}
-                          <span className="font-medium text-foreground tabular-nums">
-                            {formatMoney(budget.amount)}
-                          </span>
-                          {budget.period === "CUSTOM" && budget.startDate && budget.endDate && (
-                            <span className="ml-1 text-[11px] text-muted-foreground/80">
-                              ({budget.startDate} s/d {budget.endDate})
-                            </span>
-                          )}
-                        </p>
-                      </div>
+                        >
+                          {status.usedPercent.toFixed(0)}%
+                        </span>
+                      )}
+                    </CardTitle>
+
+                    <CardDescription className="text-xs text-muted-foreground break-words">
+                      {budget.categoryName ? (
+                        <>
+                          Kategori{" "}
+                          <span className="font-medium text-foreground">{budget.categoryName}</span>{" "}
+                          (termasuk subkategori)
+                        </>
+                      ) : (
+                        "Semua pengeluaran"
+                      )}{" "}
+                      · Batas{" "}
+                      <span className="font-medium text-foreground tabular-nums">
+                        {formatMoney(budget.amount)}
+                      </span>
+                      {budget.period === "CUSTOM" && budget.startDate && budget.endDate && (
+                        <span className="ml-1 text-[11px] text-muted-foreground/80">
+                          ({budget.startDate} s/d {budget.endDate})
+                        </span>
+                      )}
+                    </CardDescription>
+
+                    <CardAction>
                       <div className="flex items-center gap-1 shrink-0">
                         <EditBudgetDialog
                           budget={{
@@ -178,7 +184,10 @@ async function Budgets() {
                         />
                         <DeleteBudgetButton budgetId={budget.id} />
                       </div>
-                    </div>
+                    </CardAction>
+                  </CardHeader>
+
+                  <CardContent className="space-y-3">
                     {status === undefined ? null : (
                       <>
                         <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -235,37 +244,39 @@ async function Budgets() {
                             </p>
                           </div>
                         </div>
-
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-[11px] text-muted-foreground border-t border-border/30">
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="size-3 text-muted-foreground" aria-hidden="true" />
-                            Hari ke-{status.daysElapsed}/{status.totalDays} (
-                            {status.monthElapsedPercent}% waktu) ·{" "}
-                            <span
-                              className={cn(
-                                "font-semibold",
-                                status.usedPercent > status.monthElapsedPercent + 10
-                                  ? "text-rose-600 dark:text-rose-400"
-                                  : "text-emerald-600 dark:text-emerald-400",
-                              )}
-                            >
-                              {status.usedPercent > status.monthElapsedPercent + 10
-                                ? "Pace cepat (waspada)"
-                                : "Terkendali"}
-                            </span>
-                          </span>
-
-                          <Link
-                            href={transactionsUrl}
-                            className="inline-flex items-center gap-1 font-medium text-primary hover:underline hover:text-primary/80 transition-colors"
-                          >
-                            <span>Lihat {status.transactionCount} transaksi</span>
-                            <ArrowUpRight className="size-3" aria-hidden="true" />
-                          </Link>
-                        </div>
                       </>
                     )}
                   </CardContent>
+
+                  {status && (
+                    <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-border/30 pt-3 text-[11px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="size-3 text-muted-foreground" aria-hidden="true" />
+                        Hari ke-{status.daysElapsed}/{status.totalDays} (
+                        {status.monthElapsedPercent}% waktu) ·{" "}
+                        <span
+                          className={cn(
+                            "font-semibold",
+                            status.usedPercent > status.monthElapsedPercent + 10
+                              ? "text-rose-600 dark:text-rose-400"
+                              : "text-emerald-600 dark:text-emerald-400",
+                          )}
+                        >
+                          {status.usedPercent > status.monthElapsedPercent + 10
+                            ? "Pace cepat (waspada)"
+                            : "Terkendali"}
+                        </span>
+                      </span>
+
+                      <Link
+                        href={transactionsUrl}
+                        className="inline-flex items-center gap-1 font-medium text-primary hover:underline hover:text-primary/80 transition-colors"
+                      >
+                        <span>Lihat {status.transactionCount} transaksi</span>
+                        <ArrowUpRight className="size-3" aria-hidden="true" />
+                      </Link>
+                    </CardFooter>
+                  )}
                 </Card>
               );
             })

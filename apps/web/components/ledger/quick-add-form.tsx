@@ -63,7 +63,11 @@ export function QuickAddForm({
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="clientRequestId" value={requestId} />
       <div className="flex items-center justify-between gap-3">
-        <div className="flex rounded-full bg-muted p-1">
+        <div
+          role="radiogroup"
+          aria-label="Tipe transaksi"
+          className="flex rounded-full bg-muted p-1"
+        >
           {(
             [
               { value: "EXPENSE", label: "Keluar" },
@@ -111,9 +115,10 @@ export function QuickAddForm({
           name="amount"
           value={amount}
           onValueChange={setAmount}
-          placeholder="Jumlah — 35rb, 1,5jt, atau 50000"
+          placeholder="Nominal (cth. 50rb, 1.5jt, atau 25000)"
           className="h-11 text-base"
           aria-label="Jumlah"
+          presets={["10000", "20000", "50000", "100000"]}
           required
         />
         {parsedAmount !== null && parsedAmount > 0n ? (
@@ -122,7 +127,7 @@ export function QuickAddForm({
           </p>
         ) : amount.trim() !== "" && parsedAmount === null ? (
           <p className="mt-1 px-1 text-xs text-muted-foreground">
-            Contoh format: 50k, 35rb, 1,5jt, atau 50000
+            Format didukung: 50k, 35rb, 1.5jt, atau 50000
           </p>
         ) : null}
       </div>
@@ -168,7 +173,7 @@ export function QuickAddForm({
       ) : null}
 
       <Button type="submit" className="h-11 w-full" disabled={pending}>
-        {pending ? "Menyimpan…" : "Catat cepat"}
+        {pending ? "Menyimpan…" : "Simpan Transaksi"}
       </Button>
     </form>
   );

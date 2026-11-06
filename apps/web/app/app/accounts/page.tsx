@@ -1,6 +1,14 @@
 import { formatMoney, parseDbTimestamp, toLocalDateTimeInput } from "@cashow/domain";
-import { listAccounts, listSnapshots } from "@cashow/services";
-import { Archive, ArchiveRestore, ArrowLeftRight, ChevronDown, Scale, Wallet } from "lucide-react";
+import { listAccounts, listGoals, listSnapshots } from "@cashow/services";
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowLeftRight,
+  ChevronDown,
+  Lock,
+  Scale,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -14,7 +22,15 @@ import { ContentSkeleton } from "@/components/ledger/page-skeleton";
 import { SnapshotForm } from "@/components/ledger/snapshot-form";
 import { SubmitButton } from "@/components/ledger/submit-button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { archiveAccountAction, deleteSnapshotAction } from "@/lib/actions/ledger";
 import { requireUser } from "@/lib/auth/session";
@@ -59,7 +75,19 @@ async function Accounts() {
   const user = await requireUser();
   const db = await getDb();
   const ctx = { db, userId: user.id };
-  const accounts = unwrap(await listAccounts(ctx));
+  const [accountsResult, goalsResult] = await Promise.all([listAccounts(ctx), listGoals(ctx)]);
+  const accounts = unwrap(accountsResult);
+  const goals = unwrap(goalsResult);
+
+  // Map reservations by accountId
+  const reservedByAccount = new Map<string, bigint>();
+  for (const g of goals) {
+    for (const r of g.reservations) {
+      const current = reservedByAccount.get(r.accountId) ?? 0n;
+      reservedByAccount.set(r.accountId, current + r.amount);
+    }
+  }
+
   const timelines = await Promise.all(
     accounts.map(async (account) => ({
       accountId: account.id,
@@ -99,51 +127,98 @@ async function Accounts() {
               const newestFirst = [...snapshots].reverse();
               return (
                 <Card key={account.id}>
-                  <CardContent className="space-y-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="flex min-w-0 flex-1 items-start gap-3">
-                        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted">
-                          <Wallet className="size-4" aria-hidden="true" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="flex flex-wrap items-center gap-2 font-medium">
-                            <Link
-                              href={`/app/transactions?accountId=${account.id}`}
-                              className="hover:text-primary hover:underline break-words line-clamp-2"
-                            >
-                              {account.name}
-                            </Link>
-                            {account.archivedAt === null ? null : (
-                              <Badge variant="secondary" className="shrink-0">
-                                Arsip
-                              </Badge>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground break-words">
-                            {ACCOUNT_TYPE_LABEL[account.type] ?? account.type} · {account.currency}{" "}
-                            · saldo awal {formatMoney(account.openingBalance)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p
-                          className={cn(
-                            "text-lg font-semibold tabular-nums",
-                            account.balance < 0n ? "text-rose-700 dark:text-rose-400" : "",
+                  <CardHeader>
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted">
+                        <Wallet className="size-4" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="flex flex-wrap items-center gap-2 font-medium">
+                          <Link
+                            href={`/app/transactions?accountId=${account.id}`}
+                            className="hover:text-primary hover:underline break-words line-clamp-2"
+                          >
+                            {account.name}
+                          </Link>
+                          {account.archivedAt === null ? null : (
+                            <Badge variant="secondary" className="shrink-0">
+                              Arsip
+                            </Badge>
                           )}
-                        >
-                          {formatMoney(account.balance)}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {account.snapshotRecordedAt === null
-                            ? "saldo awal + semua transaksi"
-                            : `snapshot ${displayDateTime(
-                                account.snapshotRecordedAt,
-                                user.timezone,
-                              )} + sesudahnya`}
-                        </p>
+                        </CardTitle>
+                        <CardDescription className="text-xs text-muted-foreground break-words">
+                          {ACCOUNT_TYPE_LABEL[account.type] ?? account.type} · {account.currency} ·
+                          saldo awal {formatMoney(account.openingBalance)}
+                        </CardDescription>
                       </div>
                     </div>
+
+                    <CardAction className="text-right">
+                      <p
+                        className={cn(
+                          "text-lg font-semibold tabular-nums",
+                          account.balance < 0n ? "text-rose-700 dark:text-rose-400" : "",
+                        )}
+                      >
+                        {formatMoney(account.balance)}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {account.snapshotRecordedAt === null
+                          ? "saldo awal + semua transaksi"
+                          : `snapshot ${displayDateTime(
+                              account.snapshotRecordedAt,
+                              user.timezone,
+                            )} + sesudahnya`}
+                      </p>
+                    </CardAction>
+                  </CardHeader>
+
+                  <CardContent className="space-y-3">
+                    {/* Reserved Funds for Goals indicator */}
+                    {(reservedByAccount.get(account.id) ?? 0n) > 0n && (
+                      <div
+                        className={cn(
+                          "flex flex-wrap items-center justify-between gap-2 rounded-xl p-2.5 text-xs",
+                          account.balance - (reservedByAccount.get(account.id) ?? 0n) < 0n
+                            ? "bg-destructive/10"
+                            : "bg-muted/40",
+                        )}
+                      >
+                        <Link
+                          href="/app/goals"
+                          className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group"
+                        >
+                          <Lock
+                            className={cn(
+                              "size-3 transition-colors",
+                              account.balance - (reservedByAccount.get(account.id) ?? 0n) < 0n
+                                ? "text-destructive"
+                                : "text-primary group-hover:text-primary",
+                            )}
+                          />
+                          <span className="underline-offset-2 group-hover:underline">
+                            Dicadangkan untuk Target:
+                          </span>
+                        </Link>
+                        <div className="space-y-0.5 text-right">
+                          <span className="font-semibold text-foreground tabular-nums">
+                            {formatMoney(reservedByAccount.get(account.id) ?? 0n)}
+                          </span>
+                          {account.balance - (reservedByAccount.get(account.id) ?? 0n) < 0n ? (
+                            <span className="text-[11px] font-medium text-destructive block">
+                              Cadangan melebihi saldo — target perlu disesuaikan
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground block">
+                              Saldo bebas:{" "}
+                              {formatMoney(
+                                account.balance - (reservedByAccount.get(account.id) ?? 0n),
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                       {account.snapshotAgeDays === null ? null : (
@@ -159,51 +234,6 @@ async function Accounts() {
                           Checkpoint {displayDateTime(account.lastCheckpointAt, user.timezone)}
                         </Badge>
                       )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2">
-                      <div className="flex items-center gap-1">
-                        <EditAccountDialog
-                          account={{
-                            id: account.id,
-                            name: account.name,
-                            type: account.type,
-                            openingBalance: account.openingBalance.toString(),
-                            currency: account.currency,
-                          }}
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Link
-                          href={`/app/transactions?accountId=${account.id}`}
-                          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        >
-                          <ArrowLeftRight className="size-3" aria-hidden="true" />
-                          <span>Mutasi</span>
-                        </Link>
-                        <form action={archiveAccountAction} className="shrink-0">
-                          <input type="hidden" name="accountId" value={account.id} />
-                          <input
-                            type="hidden"
-                            name="archived"
-                            value={account.archivedAt === null ? "true" : "false"}
-                          />
-                          <SubmitButton variant="ghost" size="sm" pendingLabel="Menyimpan…">
-                            {account.archivedAt === null ? (
-                              <>
-                                <Archive aria-hidden="true" />
-                                <span>Arsipkan</span>
-                              </>
-                            ) : (
-                              <>
-                                <ArchiveRestore aria-hidden="true" />
-                                <span>Aktifkan</span>
-                              </>
-                            )}
-                          </SubmitButton>
-                        </form>
-                      </div>
                     </div>
 
                     <details className="group rounded-2xl border border-border bg-muted/20 p-4 transition-colors open:bg-card">
@@ -348,6 +378,51 @@ async function Accounts() {
                       </div>
                     </details>
                   </CardContent>
+
+                  <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
+                    <div className="flex items-center gap-1">
+                      <EditAccountDialog
+                        account={{
+                          id: account.id,
+                          name: account.name,
+                          type: account.type,
+                          openingBalance: account.openingBalance.toString(),
+                          currency: account.currency,
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Link
+                        href={`/app/transactions?accountId=${account.id}`}
+                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        <ArrowLeftRight className="size-3" aria-hidden="true" />
+                        <span>Mutasi</span>
+                      </Link>
+                      <form action={archiveAccountAction} className="shrink-0">
+                        <input type="hidden" name="accountId" value={account.id} />
+                        <input
+                          type="hidden"
+                          name="archived"
+                          value={account.archivedAt === null ? "true" : "false"}
+                        />
+                        <SubmitButton variant="ghost" size="sm" pendingLabel="Menyimpan…">
+                          {account.archivedAt === null ? (
+                            <>
+                              <Archive aria-hidden="true" />
+                              <span>Arsipkan</span>
+                            </>
+                          ) : (
+                            <>
+                              <ArchiveRestore aria-hidden="true" />
+                              <span>Aktifkan</span>
+                            </>
+                          )}
+                        </SubmitButton>
+                      </form>
+                    </div>
+                  </CardFooter>
                 </Card>
               );
             })

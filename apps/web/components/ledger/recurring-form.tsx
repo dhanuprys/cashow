@@ -1,6 +1,7 @@
 "use client";
 
 import { formatMoney } from "@cashow/domain";
+import { Pencil } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { CurrencyInput } from "@/components/ledger/currency-input";
 import { DatePicker } from "@/components/ledger/date-picker";
@@ -16,6 +17,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -27,6 +35,7 @@ import {
   deleteRecurringAction,
   runRecurringAction,
   skipRecurringDraftAction,
+  toggleRecurringActiveAction,
   updateRecurringAction,
 } from "@/lib/actions/ledger";
 import { type ActionState, initialActionState } from "@/lib/actions/state";
@@ -61,10 +70,12 @@ export function RecurringForm({
   accounts,
   categories,
   template,
+  onSuccess,
 }: {
   accounts: RecurringFormAccount[];
   categories: RecurringFormCategory[];
   template?: RecurringFormValues;
+  onSuccess?: () => void;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(
     template === undefined ? createRecurringAction : updateRecurringAction,
@@ -74,7 +85,8 @@ export function RecurringForm({
   useEffect(() => {
     if (state.status !== "success") return;
     toast.add({ title: "Tersimpan", description: state.message ?? "Perubahan tersimpan." });
-  }, [state]);
+    onSuccess?.();
+  }, [state, onSuccess]);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -106,6 +118,7 @@ export function RecurringForm({
             defaultValue={template?.amount ?? ""}
             placeholder="500rb atau 500.000"
             className="mt-2"
+            presets={["50000", "100000", "250000", "500000", "1000000"]}
             required
           />
         </Field>
@@ -250,6 +263,73 @@ export function RunRecurringButton() {
       <SubmitButton size="sm" variant="outline" pendingLabel="Menjalankan…">
         Buat draf yang jatuh tempo
       </SubmitButton>
+    </form>
+  );
+}
+
+export function EditRecurringDialog({
+  template,
+  accounts,
+  categories,
+}: {
+  template: RecurringFormValues;
+  accounts: RecurringFormAccount[];
+  categories: RecurringFormCategory[];
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen(true)}
+        className="h-8 gap-1 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+      >
+        <Pencil className="size-3" aria-hidden="true" />
+        <span>Ubah</span>
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="w-full max-w-lg sm:rounded-xl">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base sm:text-lg flex items-center gap-2">
+              <Pencil className="size-4 text-primary" aria-hidden="true" />
+              <span>Ubah Template Berulang</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Sesuaikan nominal, jadwal, akun, atau kategori transaksi.
+            </DialogDescription>
+          </DialogHeader>
+
+          <RecurringForm
+            key={template.id}
+            template={template}
+            accounts={accounts}
+            categories={categories}
+            onSuccess={() => setOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+export function ToggleRecurringActiveButton({ id, active }: { id: string; active: boolean }) {
+  return (
+    <form action={toggleRecurringActiveAction}>
+      <input type="hidden" name="recurringId" value={id} />
+      <input type="hidden" name="active" value={active ? "false" : "true"} />
+      <Button
+        type="submit"
+        variant="outline"
+        size="sm"
+        className="h-8 px-2 text-xs"
+        title={active ? "Jeda template" : "Aktifkan template"}
+      >
+        {active ? "Jeda" : "Aktifkan"}
+      </Button>
     </form>
   );
 }

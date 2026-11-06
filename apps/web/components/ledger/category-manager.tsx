@@ -11,6 +11,7 @@ import {
   Search,
   TrendingDown,
   TrendingUp,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -148,29 +149,31 @@ export function CategoryManager({ categories }: { categories: CategoryItem[] }) 
 
   return (
     <div className="space-y-6">
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
+      {/* Metric Quick Filters */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <button
           type="button"
           onClick={() => setActiveTab(activeTab === "EXPENSE" ? "ALL" : "EXPENSE")}
           className={cn(
-            "flex flex-row items-center justify-between sm:flex-col sm:items-start rounded-2xl border p-3.5 shadow-2xs transition-all cursor-pointer text-left w-full",
+            "flex flex-row items-center justify-between sm:flex-col sm:items-start rounded-2xl border p-4 sm:p-5 shadow-2xs transition-all cursor-pointer text-left w-full min-h-[96px]",
             activeTab === "EXPENSE"
               ? "border-rose-500/50 bg-rose-500/10 ring-1 ring-rose-500/30"
               : "border-border/80 bg-card/80 hover:bg-muted/40",
           )}
         >
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-medium text-rose-700 dark:text-rose-400">
-              <TrendingDown className="size-3.5" aria-hidden="true" />
-              <span>Kategori Pengeluaran</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-semibold text-rose-700 dark:text-rose-400">
+              <span className="grid size-6 place-items-center rounded-lg bg-rose-500/15">
+                <TrendingDown className="size-3.5" aria-hidden="true" />
+              </span>
+              <span>Pengeluaran</span>
             </div>
-            <p className="text-[11px] text-muted-foreground hidden sm:block mt-0.5">
-              {stats.expenseTxCount} total mutasi terkait
+            <p className="text-xs text-muted-foreground hidden sm:block">
+              {stats.expenseTxCount} mutasi terkait
             </p>
           </div>
-          <div className="text-right sm:text-left sm:mt-2">
-            <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+          <div className="text-right sm:text-left sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {stats.expenseCount}
             </p>
           </div>
@@ -180,23 +183,25 @@ export function CategoryManager({ categories }: { categories: CategoryItem[] }) 
           type="button"
           onClick={() => setActiveTab(activeTab === "INCOME" ? "ALL" : "INCOME")}
           className={cn(
-            "flex flex-row items-center justify-between sm:flex-col sm:items-start rounded-2xl border p-3.5 shadow-2xs transition-all cursor-pointer text-left w-full",
+            "flex flex-row items-center justify-between sm:flex-col sm:items-start rounded-2xl border p-4 sm:p-5 shadow-2xs transition-all cursor-pointer text-left w-full min-h-[96px]",
             activeTab === "INCOME"
               ? "border-emerald-500/50 bg-emerald-500/10 ring-1 ring-emerald-500/30"
               : "border-border/80 bg-card/80 hover:bg-muted/40",
           )}
         >
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-              <TrendingUp className="size-3.5" aria-hidden="true" />
-              <span>Kategori Pemasukan</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="grid size-6 place-items-center rounded-lg bg-emerald-500/15">
+                <TrendingUp className="size-3.5" aria-hidden="true" />
+              </span>
+              <span>Pemasukan</span>
             </div>
-            <p className="text-[11px] text-muted-foreground hidden sm:block mt-0.5">
-              {stats.incomeTxCount} total mutasi terkait
+            <p className="text-xs text-muted-foreground hidden sm:block">
+              {stats.incomeTxCount} mutasi terkait
             </p>
           </div>
-          <div className="text-right sm:text-left sm:mt-2">
-            <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+          <div className="text-right sm:text-left sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {stats.incomeCount}
             </p>
           </div>
@@ -206,32 +211,34 @@ export function CategoryManager({ categories }: { categories: CategoryItem[] }) 
           type="button"
           onClick={() => setShowArchived(!showArchived)}
           className={cn(
-            "flex flex-row items-center justify-between sm:flex-col sm:items-start rounded-2xl border p-3.5 shadow-2xs transition-all cursor-pointer text-left w-full",
+            "flex flex-row items-center justify-between sm:flex-col sm:items-start rounded-2xl border p-4 sm:p-5 shadow-2xs transition-all cursor-pointer text-left w-full min-h-[96px]",
             showArchived
               ? "border-primary/50 bg-primary/10 ring-1 ring-primary/30"
               : "border-border/80 bg-card/80 hover:bg-muted/40",
           )}
         >
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Archive className="size-3.5" aria-hidden="true" />
-              <span>Arsip Kategori</span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+              <span className="grid size-6 place-items-center rounded-lg bg-muted">
+                <Archive className="size-3.5" aria-hidden="true" />
+              </span>
+              <span>Arsip</span>
             </div>
-            <p className="text-[11px] text-muted-foreground hidden sm:block mt-0.5">
+            <p className="text-xs text-muted-foreground hidden sm:block">
               {showArchived ? "Menampilkan arsip" : "Disembunyikan"}
             </p>
           </div>
-          <div className="text-right sm:text-left sm:mt-2">
-            <p className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+          <div className="text-right sm:text-left sm:mt-3">
+            <p className="text-xl sm:text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {stats.archivedCount}
             </p>
           </div>
         </button>
       </div>
 
-      {/* Toolbar & Filters */}
-      <Card>
-        <CardContent className="p-3.5 sm:p-4">
+      {/* Toolbar, Search & Filter Bar */}
+      <Card size="sm">
+        <CardContent className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             {/* Search Input */}
             <div className="relative flex-1 min-w-[200px]">
@@ -243,63 +250,137 @@ export function CategoryManager({ categories }: { categories: CategoryItem[] }) 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari kategori atau subkategori…"
-                className="pl-9 w-full"
+                className="pl-9 pr-8 w-full"
                 aria-label="Cari kategori"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-sm"
+                  aria-label="Hapus pencarian"
+                >
+                  <X className="size-3.5" aria-hidden="true" />
+                </button>
+              )}
             </div>
 
             {/* Filter buttons & Action CTA */}
-            <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
-              <div className="inline-flex rounded-lg border border-border/80 bg-muted/40 p-0.5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full sm:w-auto">
+              <fieldset
+                aria-label="Filter jenis kategori"
+                className="m-0 flex w-full sm:w-auto rounded-xl border border-border/80 bg-muted/40 p-1"
+              >
                 <button
                   type="button"
+                  aria-pressed={activeTab === "ALL"}
                   onClick={() => setActiveTab("ALL")}
                   className={cn(
-                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                    "flex-1 sm:flex-initial text-center rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
                     activeTab === "ALL"
                       ? "bg-background text-foreground shadow-2xs font-semibold"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  Semua
+                  Semua ({categories.filter((c) => showArchived || c.archivedAt === null).length})
                 </button>
                 <button
                   type="button"
+                  aria-pressed={activeTab === "EXPENSE"}
                   onClick={() => setActiveTab("EXPENSE")}
                   className={cn(
-                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                    "flex-1 sm:flex-initial text-center rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
                     activeTab === "EXPENSE"
                       ? "bg-background text-rose-700 dark:text-rose-400 shadow-2xs font-semibold"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  Pengeluaran
+                  Pengeluaran ({stats.expenseCount})
                 </button>
                 <button
                   type="button"
+                  aria-pressed={activeTab === "INCOME"}
                   onClick={() => setActiveTab("INCOME")}
                   className={cn(
-                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                    "flex-1 sm:flex-initial text-center rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
                     activeTab === "INCOME"
                       ? "bg-background text-emerald-700 dark:text-emerald-400 shadow-2xs font-semibold"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  Pemasukan
+                  Pemasukan ({stats.incomeCount})
                 </button>
-              </div>
+              </fieldset>
 
               <Button
                 type="button"
                 size="sm"
                 onClick={() => handleOpenCreate()}
-                className="gap-1.5 cursor-pointer w-full sm:w-auto"
+                className="gap-1.5 cursor-pointer w-full sm:w-auto shrink-0"
               >
                 <Plus className="size-3.5" aria-hidden="true" />
                 Tambah Kategori
               </Button>
             </div>
           </div>
+
+          {/* Active Filter Chips Bar (Shown when filtered) */}
+          {(activeTab !== "ALL" || showArchived || searchQuery.trim() !== "") && (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-2 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-medium text-muted-foreground/80">
+                  Filter aktif:
+                </span>
+                {activeTab !== "ALL" && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] gap-1 py-0.5 px-2 cursor-pointer hover:bg-muted",
+                      activeTab === "EXPENSE"
+                        ? "border-rose-500/30 text-rose-700 dark:text-rose-400"
+                        : "border-emerald-500/30 text-emerald-700 dark:text-emerald-400",
+                    )}
+                    onClick={() => setActiveTab("ALL")}
+                  >
+                    <span>{activeTab === "EXPENSE" ? "Pengeluaran" : "Pemasukan"}</span>
+                    <X className="size-3" aria-hidden="true" />
+                  </Badge>
+                )}
+                {showArchived && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] gap-1 py-0.5 px-2 cursor-pointer hover:bg-muted text-foreground"
+                    onClick={() => setShowArchived(false)}
+                  >
+                    <span>Termasuk Arsip</span>
+                    <X className="size-3" aria-hidden="true" />
+                  </Badge>
+                )}
+                {searchQuery.trim() !== "" && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] gap-1 py-0.5 px-2 cursor-pointer hover:bg-muted text-foreground"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <span>Kata kunci: "{searchQuery}"</span>
+                    <X className="size-3" aria-hidden="true" />
+                  </Badge>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("ALL");
+                  setShowArchived(false);
+                  setSearchQuery("");
+                }}
+                className="text-[11px] text-muted-foreground hover:text-foreground font-medium underline cursor-pointer"
+              >
+                Reset filter
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

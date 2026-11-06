@@ -221,6 +221,7 @@ export function TransactionForm({
             onValueChange={setAmount}
             placeholder="35rb, 1,5jt, atau 35.000"
             className="mt-2 h-12 text-lg"
+            presets={["10000", "20000", "50000", "100000", "500000"]}
             required
             aria-invalid={overAllocated}
           />
@@ -418,17 +419,34 @@ export function TransactionForm({
 
       {initial === undefined ? (
         <div className="space-y-2">
-          <FieldLabel htmlFor="attachment">
-            Bukti <span className="font-normal text-muted-foreground">(opsional)</span>
-          </FieldLabel>
+          <div className="flex items-center justify-between gap-2">
+            <FieldLabel htmlFor="attachment">
+              Lampiran <span className="font-normal text-muted-foreground">(opsional)</span>
+            </FieldLabel>
+            <NativeSelect
+              id="attachmentKind"
+              name="attachmentKind"
+              defaultValue="PROOF"
+              size="sm"
+              aria-label="Jenis lampiran"
+              className="w-auto"
+            >
+              <NativeSelectOption value="PROOF">Bukti</NativeSelectOption>
+              <NativeSelectOption value="RECEIPT">Struk</NativeSelectOption>
+              <NativeSelectOption value="INVOICE">Faktur</NativeSelectOption>
+              <NativeSelectOption value="CONTRACT">Kontrak</NativeSelectOption>
+            </NativeSelect>
+          </div>
           <DropzoneFileInput
             id="attachment"
             name="attachment"
-            accept="image/*,application/pdf"
+            accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
             maxSizeBytes={10 * 1024 * 1024}
             description="Tarik struk atau bukti pembayaran ke sini, atau klik untuk memilih"
           />
-          <FieldDescription>Foto struk atau PDF. Maksimal 10 MB.</FieldDescription>
+          <FieldDescription>
+            Foto struk, faktur, bukti bayar, atau PDF. Maksimal 10 MB.
+          </FieldDescription>
         </div>
       ) : null}
 

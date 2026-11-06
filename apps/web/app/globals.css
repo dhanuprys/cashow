@@ -154,9 +154,14 @@
 
 /* Print: a clean report of the dashboard. */
 @media print {
+  @page {
+    margin: 1.5cm;
+    size: auto;
+  }
   header,
   nav,
-  .no-print {
+  .no-print,
+  [data-slot="card-action"] {
     /* biome-ignore lint/complexity/noImportantStyles: print override must win */
     display: none !important;
   }
@@ -178,6 +183,8 @@
     /* biome-ignore lint/complexity/noImportantStyles: print override must win */
     box-shadow: none !important;
     /* biome-ignore lint/complexity/noImportantStyles: print override must win */
-    border: 1px solid #e5e5e5 !important;
+    border: 1px solid #e2e8f0 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: print override must win */
+    background: transparent !important;
   }
 }

@@ -11,7 +11,7 @@ import { LinkButton } from "@/components/ledger/link-button";
 import { PageSkeleton } from "@/components/ledger/page-skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   deleteAttachmentAction,
   deleteTransactionAction,
@@ -98,60 +98,60 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
       )}
 
       <Card className="overflow-hidden">
-        <CardHeader className="bg-muted/15 border-b border-border/40 p-4 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge
-                  variant={income ? "default" : transfer ? "outline" : "secondary"}
-                  className="font-medium"
-                >
-                  {feeForTransfer
-                    ? "Biaya transfer"
-                    : transfer
-                      ? "Transfer"
-                      : income
-                        ? "Pemasukan"
-                        : "Pengeluaran"}
+        <CardHeader className="bg-muted/15 border-b border-border/40">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant={income ? "default" : transfer ? "outline" : "secondary"}
+                className="font-medium"
+              >
+                {feeForTransfer
+                  ? "Biaya transfer"
+                  : transfer
+                    ? "Transfer"
+                    : income
+                      ? "Pemasukan"
+                      : "Pengeluaran"}
+              </Badge>
+              {transaction.source === "QUICK_ADD" ? (
+                <Badge variant="outline" className="border-dashed text-xs">
+                  Catat cepat
                 </Badge>
-                {transaction.source === "QUICK_ADD" ? (
-                  <Badge variant="outline" className="border-dashed text-xs">
-                    Catat cepat
-                  </Badge>
-                ) : null}
-              </div>
-
-              <CardTitle className="text-xl sm:text-2xl font-bold break-words [overflow-wrap:anywhere] text-foreground">
-                {title}
-              </CardTitle>
-
-              <div className="pt-1">
-                <p
-                  className={cn(
-                    "text-3xl sm:text-4xl font-bold tabular-nums tracking-tight break-words",
-                    income
-                      ? "text-emerald-700 dark:text-emerald-400"
-                      : transfer
-                        ? "text-sky-600 dark:text-sky-400"
-                        : "text-foreground",
-                  )}
-                >
-                  {income ? "+" : transfer ? "" : "−"}
-                  {formatMoney(transaction.amount)}
-                </p>
-                {transfer && transaction.transferFeeAmount !== null ? (
-                  <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
-                    <span>Termasuk biaya</span>
-                    <span className="font-medium tabular-nums">
-                      {formatMoney(transaction.transferFeeAmount)}
-                    </span>
-                    <span>di akun asal</span>
-                  </p>
-                ) : null}
-              </div>
+              ) : null}
             </div>
 
-            {/* Quick Actions Bar */}
+            <CardTitle className="text-xl sm:text-2xl font-bold break-words [overflow-wrap:anywhere] text-foreground">
+              {title}
+            </CardTitle>
+
+            <div className="pt-1">
+              <p
+                className={cn(
+                  "text-3xl sm:text-4xl font-bold tabular-nums tracking-tight break-words",
+                  income
+                    ? "text-emerald-700 dark:text-emerald-400"
+                    : transfer
+                      ? "text-sky-600 dark:text-sky-400"
+                      : "text-foreground",
+                )}
+              >
+                {income ? "+" : transfer ? "" : "−"}
+                {formatMoney(transaction.amount)}
+              </p>
+              {transfer && transaction.transferFeeAmount !== null ? (
+                <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
+                  <span>Termasuk biaya</span>
+                  <span className="font-medium tabular-nums">
+                    {formatMoney(transaction.transferFeeAmount)}
+                  </span>
+                  <span>di akun asal</span>
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Quick Actions Bar */}
+          <CardAction className="w-full sm:w-auto">
             <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
               {feeForTransfer && transaction.transferId !== null ? (
                 <LinkButton
@@ -215,7 +215,7 @@ async function TransactionDetail({ params }: { params: Promise<{ id: string }> }
                 </form>
               )}
             </div>
-          </div>
+          </CardAction>
         </CardHeader>
 
         <CardContent className="p-4 sm:p-6 space-y-4">

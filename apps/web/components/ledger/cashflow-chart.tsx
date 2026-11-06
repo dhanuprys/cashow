@@ -73,7 +73,7 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
   }
 
   return (
-    <figure className="m-0">
+    <figure className="m-0 w-full min-w-0 overflow-hidden">
       <figcaption className="sr-only">
         Grafik batang arus kas harian. Total pemasukan {money(totals.income)} dan total pengeluaran{" "}
         {money(totals.expense)} pada periode ini. Rincian per hari tersedia pada tabel setelah
@@ -81,7 +81,7 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
       </figcaption>
       <ChartContainer
         config={chartConfig}
-        className="h-56 w-full sm:h-64"
+        className="h-56 w-full min-w-0 sm:h-64"
         role="img"
         aria-label={`Arus kas harian: masuk ${money(totals.income)}, keluar ${money(totals.expense)}.`}
       >

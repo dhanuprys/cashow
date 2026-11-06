@@ -4,7 +4,14 @@ import { AlertCircle, Clock, Pencil, Power, Trash2 } from "lucide-react";
 import { ConfirmSubmitButton } from "@/components/ledger/confirm-submit-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { deleteRuleAction, toggleRuleActiveAction } from "@/lib/actions/ledger";
 import { displayDateTime } from "@/lib/format";
 import { describeRuleCondition, describeRuleTrigger, RULE_SEVERITY } from "@/lib/rule-helpers";
@@ -41,35 +48,31 @@ export function RuleCardItem({ rule, timezone = "Asia/Jakarta", onEdit }: RuleCa
   const severityInfo = RULE_SEVERITY[settings.severity ?? "INFO"] ?? RULE_SEVERITY.INFO;
 
   return (
-    <Card className={!rule.active ? "opacity-75 bg-muted/20" : undefined}>
-      <CardContent className="p-3.5 sm:p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 sm:gap-3">
-          <div className="space-y-1 min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <span className="font-semibold text-sm sm:text-base text-foreground break-words leading-tight">
-                {rule.name}
-              </span>
-              <Badge
-                variant={rule.active ? "default" : "outline"}
-                className="text-[10px] py-0 px-1.5"
-              >
-                {rule.active ? "Aktif" : "Nonaktif"}
-              </Badge>
-              {settings.severity && (
-                <span
-                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${severityInfo.color}`}
-                >
-                  {severityInfo.label}
-                </span>
-              )}
-            </div>
-            {rule.description && (
-              <p className="text-xs text-muted-foreground break-words line-clamp-2 sm:line-clamp-none">
-                {rule.description}
-              </p>
-            )}
-          </div>
+    <Card size="sm" className={!rule.active ? "opacity-75 bg-muted/20" : undefined}>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span className="font-semibold text-sm sm:text-base text-foreground break-words leading-tight">
+            {rule.name}
+          </span>
+          <Badge variant={rule.active ? "default" : "outline"} className="text-[10px] py-0 px-1.5">
+            {rule.active ? "Aktif" : "Nonaktif"}
+          </Badge>
+          {settings.severity && (
+            <span
+              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${severityInfo.color}`}
+            >
+              {severityInfo.label}
+            </span>
+          )}
+        </CardTitle>
 
+        {rule.description && (
+          <CardDescription className="text-xs text-muted-foreground break-words line-clamp-2 sm:line-clamp-none">
+            {rule.description}
+          </CardDescription>
+        )}
+
+        <CardAction className="w-full sm:w-auto">
           <div className="flex items-center gap-1.5 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40 w-full sm:w-auto justify-end">
             {onEdit && (
               <Button
@@ -116,8 +119,10 @@ export function RuleCardItem({ rule, timezone = "Asia/Jakarta", onEdit }: RuleCa
               </ConfirmSubmitButton>
             </form>
           </div>
-        </div>
+        </CardAction>
+      </CardHeader>
 
+      <CardContent className="space-y-3">
         {/* Visual condition badge container */}
         <div className="rounded-lg border bg-muted/40 p-2.5 text-xs space-y-1.5">
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 text-muted-foreground">

@@ -6,18 +6,21 @@ import {
   listOpenIncomes,
   listPlanItemOptions,
 } from "@cashow/services";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileText, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { AttachmentUploader } from "@/components/ledger/attachment-uploader";
+import { ConfirmSubmitButton } from "@/components/ledger/confirm-submit-button";
 import { LinkButton } from "@/components/ledger/link-button";
 import { PageSkeleton } from "@/components/ledger/page-skeleton";
 import { TransactionForm } from "@/components/ledger/transaction-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { deleteAttachmentAction } from "@/lib/actions/ledger";
 import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
-import { displayLocalDate } from "@/lib/format";
+import { ATTACHMENT_KIND_LABEL, displayLocalDate, formatBytes } from "@/lib/format";
 import { ledgerErrorCode, unwrap } from "@/lib/ledger";
 
 export const metadata = {
@@ -161,6 +164,82 @@ async function EditTransaction({ params }: { params: Promise<{ id: string }> }) 
             )}
             timezone={user.timezone}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Lampiran</CardTitle>
+          <CardDescription>
+            Bukti pembayaran, nota, invoice, atau berkas pendukung lainnya.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {transaction.attachments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Belum ada berkas lampiran.</p>
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {transaction.attachments.map((attachment) => {
+                const isImage = attachment.mimeType.startsWith("image/");
+                const source = `/api/attachments/${attachment.id}`;
+                return (
+                  <li
+                    key={attachment.id}
+                    className="overflow-hidden rounded-2xl border border-border"
+                  >
+                    {isImage ? (
+                      <a href={source} target="_blank" rel="noreferrer" className="block">
+                        {/* biome-ignore lint/performance/noImgElement: same-origin attachment preview; the Next image optimizer would proxy it */}
+                        <img
+                          src={source}
+                          alt={attachment.fileName}
+                          loading="lazy"
+                          decoding="async"
+                          className="h-36 w-full object-cover"
+                        />
+                      </a>
+                    ) : (
+                      <a
+                        href={source}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex h-36 items-center justify-center bg-muted/40"
+                      >
+                        <FileText className="size-8 text-muted-foreground" aria-hidden="true" />
+                      </a>
+                    )}
+                    <div className="flex items-center justify-between gap-2 p-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium" title={attachment.fileName}>
+                          {attachment.fileName}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {ATTACHMENT_KIND_LABEL[attachment.kind] ?? attachment.kind} ·{" "}
+                          {formatBytes(attachment.byteSize)}
+                        </p>
+                      </div>
+                      <form action={deleteAttachmentAction}>
+                        <input type="hidden" name="attachmentId" value={attachment.id} />
+                        <input type="hidden" name="transactionId" value={transaction.id} />
+                        <ConfirmSubmitButton
+                          size="icon-xs"
+                          message="Hapus lampiran ini?"
+                          variant="ghost"
+                        >
+                          <Trash2 aria-hidden="true" />
+                          <span className="sr-only">Hapus lampiran</span>
+                        </ConfirmSubmitButton>
+                      </form>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {transaction.deletedAt === null ? (
+            <AttachmentUploader transactionId={transaction.id} />
+          ) : null}
         </CardContent>
       </Card>
     </div>
