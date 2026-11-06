@@ -685,6 +685,198 @@ export async function POST(request: Request) {
       },
     }),
 
+    createBatchTransactions: tool({
+      description:
+        "Catat banyak transaksi sekaligus (batch). Gunakan ini saat pengguna memberikan daftar beberapa transaksi atau catatan harian. Butuh persetujuan pengguna.",
+      inputSchema: z.object({
+        accountName: z
+          .string()
+          .nullish()
+          .describe(
+            "Nama akun pembayaran default persis dari tool saldo; boleh kosong jika tiap item punya akun atau hanya ada 1 akun aktif.",
+          ),
+        transactions: z
+          .array(
+            z.object({
+              type: z
+                .enum(["INCOME", "EXPENSE"])
+                .describe("Jenis: INCOME (pemasukan) atau EXPENSE (pengeluaran)."),
+              amount: z.coerce
+                .string()
+                .min(1)
+                .describe("Nominal rupiah bulat, mis. 53000, 123000."),
+              accountName: z
+                .string()
+                .nullish()
+                .describe("Nama akun spesifik jika berbeda dari akun default."),
+              categoryName: z.string().nullish().describe("Nama kategori transaksi yang relevan."),
+              occurredAtLocal: z
+                .string()
+                .describe("Tanggal transaksi YYYY-MM-DD atau YYYY-MM-DDTHH:mm."),
+              merchant: z.string().nullish(),
+              note: z
+                .string()
+                .nullish()
+                .describe("Keterangan transaksi, mis. bensin, clandys, dll."),
+            }),
+          )
+          .min(1)
+          .max(50)
+          .describe("Daftar transaksi yang akan dicatat."),
+      }),
+      execute: async (input, { toolCallId }) => {
+        const accounts = await listAccounts(ctx);
+        if (!accounts.ok) return { error: accounts.error.message };
+        const active = accounts.value.filter((a) => a.archivedAt === null);
+        if (active.length === 0) return { error: "Belum ada akun aktif." };
+
+        let defaultAccount: { id: string; name: string } | null = null;
+        if (input.accountName && input.accountName.trim() !== "") {
+          const resolved = resolveByName(active, input.accountName, "akun");
+          if (!resolved.ok) return { error: resolved.error };
+          defaultAccount = resolved.value;
+        } else if (active.length === 1 && active[0]) {
+          defaultAccount = active[0];
+        }
+
+        const categories = await listCategories(ctx);
+        const allCategories = categories.ok ? categories.value : [];
+        const timezone = await userTimezone(ctx.db, ctx.userId);
+
+        interface ResolvedItem {
+          index: number;
+          type: "INCOME" | "EXPENSE";
+          amount: string;
+          account: { id: string; name: string };
+          categoryId: string | null;
+          occurredAtLocal: string;
+          merchant: string | null;
+          note: string | null;
+        }
+
+        const resolvedItems: ResolvedItem[] = [];
+        const issues: string[] = [];
+        const warnings: string[] = [];
+
+        // Resolve every account and category before writing anything: a partial
+        // batch is worse than a question, and a missing account must not guess.
+        for (let i = 0; i < input.transactions.length; i++) {
+          const item = input.transactions[i];
+          if (!item) continue;
+
+          const label = `Item ${i + 1} (${item.note ?? item.merchant ?? item.amount})`;
+
+          let itemAccount = defaultAccount;
+          if (item.accountName && item.accountName.trim() !== "") {
+            const resolved = resolveByName(active, item.accountName, "akun");
+            if (!resolved.ok) {
+              issues.push(`${label}: ${resolved.error}`);
+              continue;
+            }
+            itemAccount = resolved.value;
+          }
+
+          if (!itemAccount) {
+            issues.push(`${label}: akun belum jelas.`);
+            continue;
+          }
+
+          let categoryId: string | null = null;
+          if (item.categoryName && item.categoryName.trim() !== "") {
+            const matching = allCategories.filter(
+              (c) => c.archivedAt === null && c.kind === item.type,
+            );
+            const resolved = resolveByName(matching, item.categoryName, "kategori");
+            if (resolved.ok) {
+              categoryId = resolved.value.id;
+            } else {
+              warnings.push(`${label}: ${resolved.error} Transaksi tetap dicatat tanpa kategori.`);
+            }
+          }
+
+          resolvedItems.push({
+            index: i,
+            type: item.type,
+            amount: item.amount,
+            account: itemAccount,
+            categoryId,
+            occurredAtLocal: item.occurredAtLocal,
+            merchant: item.merchant ?? null,
+            note: item.note ?? null,
+          });
+        }
+
+        if (issues.length > 0) {
+          const accountHint =
+            active.length > 1
+              ? ` Akun aktif: ${active
+                  .slice(0, 8)
+                  .map((a) => a.name)
+                  .join(", ")}.`
+              : "";
+          return {
+            error: `Data belum lengkap, belum ada transaksi yang dicatat. ${issues.join(
+              " ",
+            )}${accountHint} Tanyakan kekurangan ini ke pengguna, lalu panggil ulang tool.`,
+          };
+        }
+
+        const createdItems: Array<{
+          type: string;
+          amount: string;
+          account: string;
+          category: string | null;
+          date: string;
+          note: string | null;
+        }> = [];
+
+        const errors: string[] = [];
+
+        for (const item of resolvedItems) {
+          const result = await createTransaction(ctx, {
+            type: item.type,
+            amount: item.amount,
+            accountId: item.account.id,
+            categoryId: item.categoryId,
+            occurredAtLocal: normalizeLocalDateTime(item.occurredAtLocal, timezone, nowOf(ctx)),
+            merchant: item.merchant,
+            note: item.note,
+            clientRequestId: `chat-${toolCallId}-${item.index}`,
+          });
+
+          if (!result.ok) {
+            errors.push(
+              `Item ${item.index + 1} (${item.note ?? item.amount}): ${result.error.message}`,
+            );
+          } else {
+            createdItems.push({
+              type: result.value.type,
+              amount: result.value.amount.toString(),
+              account: result.value.accountName,
+              category: result.value.categoryName,
+              date: result.value.occurredOn,
+              note: clip(result.value.note ?? result.value.merchant),
+            });
+          }
+        }
+
+        if (createdItems.length === 0 && errors.length > 0) {
+          return { error: `Gagal mencatat transaksi: ${errors.join("; ")}` };
+        }
+
+        const totalAmount = createdItems.reduce((sum, item) => sum + BigInt(item.amount), 0n);
+        const allWarnings = [...warnings, ...errors];
+
+        return {
+          status: "created",
+          totalCreated: createdItems.length,
+          totalAmount: totalAmount.toString(),
+          items: createdItems,
+          warnings: allWarnings.length > 0 ? allWarnings : undefined,
+        };
+      },
+    }),
+
     createTransfer: tool({
       description: "Catat transfer antar akun milik pengguna. Butuh persetujuan pengguna.",
       inputSchema: z.object({
@@ -750,6 +942,7 @@ export async function POST(request: Request) {
     // the owner first, then replays the signed approval on the next step.
     toolApproval: {
       createTransaction: "user-approval",
+      createBatchTransactions: "user-approval",
       createTransfer: "user-approval",
     },
     experimental_toolApprovalSecret: process.env.TOOL_APPROVAL_SECRET ?? process.env.AUTH_SECRET,

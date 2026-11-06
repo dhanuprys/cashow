@@ -26,6 +26,18 @@ const createTransaction = (onExecute: () => void) =>
     },
   });
 
+const createBatchTransactions = (onExecute: (count: number) => void) =>
+  tool({
+    inputSchema: z.object({
+      accountName: z.string().optional(),
+      transactions: z.array(z.object({ amount: z.string(), note: z.string() })),
+    }),
+    execute: async (input) => {
+      onExecute(input.transactions.length);
+      return { status: "created", count: input.transactions.length };
+    },
+  });
+
 describe("write-tool approval gate", () => {
   it("requests approval instead of executing the tool", async () => {
     let executed = 0;
@@ -50,6 +62,43 @@ describe("write-tool approval gate", () => {
       messages: [{ role: "user", content: "catat kopi 25rb" }],
       tools: { createTransaction: createTransaction(() => (executed += 1)) },
       toolApproval: { createTransaction: "user-approval" },
+    });
+
+    expect(executed).toBe(0);
+    const approvals = result.content.filter((part) => part.type === "tool-approval-request");
+    expect(approvals).toHaveLength(1);
+  });
+
+  it("gates a batch of transactions behind a single approval", async () => {
+    let executed = 0;
+    const model = new MockLanguageModelV3({
+      doGenerate: {
+        content: [
+          {
+            type: "tool-call",
+            toolCallId: "call-batch",
+            toolName: "createBatchTransactions",
+            input: JSON.stringify({
+              accountName: "BCA",
+              transactions: [
+                { amount: "53000", note: "bensin" },
+                { amount: "25000", note: "kopi" },
+                { amount: "120000", note: "belanja" },
+              ],
+            }),
+          },
+        ],
+        finishReason: { unified: "tool-calls", raw: "tool_calls" },
+        usage,
+        warnings: [],
+      },
+    });
+
+    const result = await generateText({
+      model,
+      messages: [{ role: "user", content: "catat pengeluaran 1 november" }],
+      tools: { createBatchTransactions: createBatchTransactions((count) => (executed += count)) },
+      toolApproval: { createBatchTransactions: "user-approval" },
     });
 
     expect(executed).toBe(0);

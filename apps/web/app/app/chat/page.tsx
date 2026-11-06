@@ -130,6 +130,7 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   getPlans: "Mengecek rencana keuangan masa depan",
   getRecurringTemplates: "Melihat jadwal tagihan rutin berulang",
   createTransaction: "Mencatat transaksi ke buku kas",
+  createBatchTransactions: "Mencatat transaksi massal ke buku kas",
   createTransfer: "Mencatat transfer antar rekening",
 };
 

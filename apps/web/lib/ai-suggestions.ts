@@ -28,6 +28,7 @@ const TOOL_SOURCES: Record<string, { label: string; href: string }> = {
   getPendingRecurringDrafts: { label: "Transaksi Berulang", href: "/app/recurring" },
   listCategories: { label: "Kategori", href: "/app/categories" },
   createTransaction: { label: "Buku Kas", href: "/app/transactions" },
+  createBatchTransactions: { label: "Buku Kas", href: "/app/transactions" },
   createTransfer: { label: "Daftar Rekening", href: "/app/accounts" },
 };
 
@@ -71,7 +72,7 @@ export function getFollowUpSuggestions(messages: UIMessage[]): FollowUpSuggestio
 
   const suggestions: FollowUpSuggestion[] = [];
 
-  if (toolNames.has("createTransaction")) {
+  if (toolNames.has("createTransaction") || toolNames.has("createBatchTransactions")) {
     suggestions.push(
       {
         key: "post-tx-balance",
