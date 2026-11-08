@@ -15,7 +15,7 @@ Ship one `docker-compose.yml` with:
 
 | Service    | Role                                                                         | Exposure                               |
 | ---------- | ---------------------------------------------------------------------------- | -------------------------------------- |
-| `postgres` | `docker.io/library/postgres:17-alpine`, named volume, tuned for small memory | internal only, no host port            |
+| `postgres` | `docker.io/library/postgres:18-alpine`, named volume, tuned for small memory | internal only, no host port            |
 | `migrate`  | one-shot `prisma db migrate` before web/worker                               | internal only                          |
 | `web`      | Next.js standalone output on Bun, non-root, read-only rootfs                 | internal; localhost port for debugging |
 | `worker`   | same image, worker entrypoint                                                | internal                               |

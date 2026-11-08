@@ -27,7 +27,7 @@ safe path is dump → new cluster → restore.
    at `pgdata`):
 
    ```bash
-   # edit docker-compose.yml: image: pgvector/pgvector:pg18
+   # edit docker-compose.yml: image: docker.io/library/postgres:18-alpine
    # and add a temporary volume name, e.g. pgdata_new
    docker compose up -d postgres
    ```

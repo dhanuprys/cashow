@@ -3,7 +3,7 @@
 #   web       Next.js standalone output on Bun               (port 3000)
 #   worker    background jobs and notifications              (backend)
 #   migrate   one-shot schema migration before web/worker     (backend)
-#   postgres  pinned official postgres:17-alpine, named volume (backend)
+#   postgres  pinned official postgres:18-alpine, named volume (backend)
 #   backup    nightly pg_dump + age -> local BACKUP_DIR      (profile: backup)
 #
 # Postgres is internal only. An external reverse proxy routes traffic to `web:3000`.
@@ -45,7 +45,7 @@ x-app-service: &app-service
 
 services:
   postgres:
-    image: docker.io/library/postgres:17-alpine
+    image: docker.io/library/postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-cashow}
@@ -69,7 +69,7 @@ services:
       - -c
       - log_min_duration_statement=500
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s

@@ -27,7 +27,7 @@ Cashow is a modern personal finance and cashflow tracking platform engineered fo
 | **Runtime & Package Manager** | [Bun](https://bun.sh) 1.4.2+                                                    | Workspaces monorepo, fast package resolution, single `bun.lock`                           |
 | **Web Framework**             | [Next.js](https://nextjs.org) 16 (App Router)                                   | Standalone output, Server Actions, Cache Components, React 19                             |
 | **UI & Styling**              | [Tailwind CSS](https://tailwindcss.com) v4 + [shadcn/ui](https://ui.shadcn.com) | Mobile-first responsive design, Base UI primitives, dark mode                             |
-| **Database**                  | [PostgreSQL](https://www.postgresql.org) 17                                     | `docker.io/library/postgres:17-alpine`, custom PL/pgSQL triggers for cross-row invariants |
+| **Database**                  | [PostgreSQL](https://www.postgresql.org) 18                                     | `docker.io/library/postgres:18-alpine`, custom PL/pgSQL triggers for cross-row invariants |
 | **ORM & Data Layer**          | [Prisma](https://www.prisma.io) 8                                               | Contract-first workflow (`contract.prisma` → `contract.json`)                             |
 | **Authentication**            | Passkeys + Passwords + OAuth                                                    | SimpleWebAuthn, scrypt (`crypto.scrypt`), Google OAuth, session cookies                   |
 | **AI Integration**            | [Vercel AI SDK](https://sdk.vercel.ai)                                          | Multi-provider streaming, dynamic tools, human-approval execution gates                   |
@@ -65,7 +65,7 @@ cashow/
 ### Prerequisites
 
 - [Bun](https://bun.sh) (v1.4.2 or higher)
-- PostgreSQL 17 (local instance or Docker container)
+- PostgreSQL 18 (local instance or Docker container)
 - Docker & Docker Compose v2 (optional, for containerized run)
 
 ### 1. Clone & Install Dependencies
@@ -194,7 +194,7 @@ Cashow ships with a production-ready, rootless multi-stage `Dockerfile` and a st
 │                          │                                             │
 │                          ▼                                             │
 │   ┌──────────────────────────────────────────────┐                     │
-│   │   cashow-postgres (PostgreSQL 17 Alpine)     │                     │
+│   │   cashow-postgres (PostgreSQL 18 Alpine)     │                     │
 │   └──────────────────────────────────────────────┘                     │
 └────────────────────────────────────────────────────────────────────────┘
 ```
