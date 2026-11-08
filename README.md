@@ -201,10 +201,10 @@ Cashow ships with a production-ready, rootless multi-stage `Dockerfile` and a st
 
 ### Deploying with Prebuilt GHCR Images
 
-1. **Clone the repository or copy `docker-compose.yml` and `.env.example`:**
+1. **Clone the repository and copy the production environment template:**
 
    ```bash
-   cp .env.example .env
+   cp .env.production.example .env
    ```
 
 2. **Configure your `.env`:**
