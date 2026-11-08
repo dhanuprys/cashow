@@ -50,7 +50,7 @@ cashow/
 │   ├── db/                      # Prisma 8 contract, migrations, generated client & seeds
 │   ├── config/                  # Validated Zod environment configuration & Docker secrets loader
 │   ├── ai/                      # AI provider abstraction (DeepSeek, Gemini, OpenAI)
-│   └── notify/                  # Notification transports (Web Push, ntfy)
+│   └── notify/                  # Notification transports (Web Push)
 ├── deploy/                      # Backup scripts, age encryption keys, recovery tooling
 ├── docs/                        # Architecture Decision Records (ADRs) and design specs
 ├── scripts/                     # Integration tests, benchmarks (100k seed), and verification gates

@@ -655,7 +655,7 @@ model ChannelEndpoint {
   id          String  @id @onCreate(uuid(7))
   userId      String
   user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // PUSH, NTFY, TELEGRAM, EMAIL
+  // PUSH, TELEGRAM, EMAIL
   kind        String
   // Push endpoint URL or channel address.
   endpoint    String

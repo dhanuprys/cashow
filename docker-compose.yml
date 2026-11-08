@@ -34,9 +34,6 @@ x-app-env: &app-env
   VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
   VAPID_SUBJECT: ${VAPID_SUBJECT:-}
-  NTFY_TOPIC: ${NTFY_TOPIC:-}
-  NTFY_SERVER: ${NTFY_SERVER:-https://ntfy.sh}
-  NTFY_TOKEN: ${NTFY_TOKEN:-}
   STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
   STORAGE_DIR: /app/data/uploads
   TZ: ${TZ:-Asia/Jakarta}

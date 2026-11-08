@@ -73,7 +73,6 @@ export const envSchema = z.object({
   VAPID_SUBJECT: z.string().optional(),
 
   /** Notification channels (optional, off by default). */
-  NTFY_TOPIC: z.string().optional(),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   SMTP_URL: z.string().optional(),
 

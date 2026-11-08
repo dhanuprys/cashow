@@ -7,7 +7,7 @@
 
 export type NotificationSeverity = "critical" | "warning" | "info";
 
-export type ChannelKind = "inbox" | "web-push" | "ntfy" | "telegram" | "email";
+export type ChannelKind = "inbox" | "web-push" | "telegram" | "email";
 
 export interface NotificationDraft {
   userId: string;
