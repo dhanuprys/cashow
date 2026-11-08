@@ -13,14 +13,14 @@ restored, not a platform-specific hosting stack.
 
 Ship one `docker-compose.yml` with:
 
-| Service    | Role                                                                   | Exposure                               |
-| ---------- | ---------------------------------------------------------------------- | -------------------------------------- |
-| `postgres` | `pgvector/pgvector:pg17`, named volume, tuned for small memory         | internal only, no host port            |
-| `migrate`  | one-shot `prisma db migrate` before web/worker                         | internal only                          |
-| `web`      | Next.js standalone output on Bun, non-root, read-only rootfs           | internal; localhost port for debugging |
-| `worker`   | same image, worker entrypoint                                          | internal                               |
-| `proxy`    | Caddy: TLS, headers, body cap, health-aware upstream                   | host 80/443                            |
-| `backup`   | nightly `pg_dump` + uploads tar → `age` → local dir (profile `backup`) | internal                               |
+| Service    | Role                                                                         | Exposure                               |
+| ---------- | ---------------------------------------------------------------------------- | -------------------------------------- |
+| `postgres` | `docker.io/library/postgres:17-alpine`, named volume, tuned for small memory | internal only, no host port            |
+| `migrate`  | one-shot `prisma db migrate` before web/worker                               | internal only                          |
+| `web`      | Next.js standalone output on Bun, non-root, read-only rootfs                 | internal; localhost port for debugging |
+| `worker`   | same image, worker entrypoint                                                | internal                               |
+| `proxy`    | Caddy: TLS, headers, body cap, health-aware upstream                         | host 80/443                            |
+| `backup`   | nightly `pg_dump` + uploads tar → `age` → local dir (profile `backup`)       | internal                               |
 
 Two networks: `backend` for Postgres/web/worker/migrate and `edge` for
 proxy/web. Postgres never joins `edge` and never publishes a port.

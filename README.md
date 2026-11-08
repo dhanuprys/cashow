@@ -22,18 +22,18 @@ Cashow is a modern personal finance and cashflow tracking platform engineered fo
 
 ## Tech Stack
 
-| Layer                         | Technology                                                                      | Details                                                                     |
-| :---------------------------- | :------------------------------------------------------------------------------ | :-------------------------------------------------------------------------- |
-| **Runtime & Package Manager** | [Bun](https://bun.sh) 1.4.2+                                                    | Workspaces monorepo, fast package resolution, single `bun.lock`             |
-| **Web Framework**             | [Next.js](https://nextjs.org) 16 (App Router)                                   | Standalone output, Server Actions, Cache Components, React 19               |
-| **UI & Styling**              | [Tailwind CSS](https://tailwindcss.com) v4 + [shadcn/ui](https://ui.shadcn.com) | Mobile-first responsive design, Base UI primitives, dark mode               |
-| **Database**                  | [PostgreSQL](https://www.postgresql.org) 17                                     | `pgvector/pgvector:pg17`, custom PL/pgSQL triggers for cross-row invariants |
-| **ORM & Data Layer**          | [Prisma](https://www.prisma.io) 8                                               | Contract-first workflow (`contract.prisma` → `contract.json`)               |
-| **Authentication**            | Passkeys + Passwords + OAuth                                                    | SimpleWebAuthn, scrypt (`crypto.scrypt`), Google OAuth, session cookies     |
-| **AI Integration**            | [Vercel AI SDK](https://sdk.vercel.ai)                                          | Multi-provider streaming, dynamic tools, human-approval execution gates     |
-| **Background Processing**     | Custom Outbox Worker                                                            | Transactional outbox pattern, scheduled rule engine, push notifications     |
-| **Quality & Linter**          | [Biome](https://biomejs.dev) 2 + TypeScript                                     | Fast linting, code formatting, strict TypeScript configuration              |
-| **Containerization**          | Docker & Compose v2                                                             | Multi-stage build, rootless execution, automated migration orchestrator     |
+| Layer                         | Technology                                                                      | Details                                                                                   |
+| :---------------------------- | :------------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------- |
+| **Runtime & Package Manager** | [Bun](https://bun.sh) 1.4.2+                                                    | Workspaces monorepo, fast package resolution, single `bun.lock`                           |
+| **Web Framework**             | [Next.js](https://nextjs.org) 16 (App Router)                                   | Standalone output, Server Actions, Cache Components, React 19                             |
+| **UI & Styling**              | [Tailwind CSS](https://tailwindcss.com) v4 + [shadcn/ui](https://ui.shadcn.com) | Mobile-first responsive design, Base UI primitives, dark mode                             |
+| **Database**                  | [PostgreSQL](https://www.postgresql.org) 17                                     | `docker.io/library/postgres:17-alpine`, custom PL/pgSQL triggers for cross-row invariants |
+| **ORM & Data Layer**          | [Prisma](https://www.prisma.io) 8                                               | Contract-first workflow (`contract.prisma` → `contract.json`)                             |
+| **Authentication**            | Passkeys + Passwords + OAuth                                                    | SimpleWebAuthn, scrypt (`crypto.scrypt`), Google OAuth, session cookies                   |
+| **AI Integration**            | [Vercel AI SDK](https://sdk.vercel.ai)                                          | Multi-provider streaming, dynamic tools, human-approval execution gates                   |
+| **Background Processing**     | Custom Outbox Worker                                                            | Transactional outbox pattern, scheduled rule engine, push notifications                   |
+| **Quality & Linter**          | [Biome](https://biomejs.dev) 2 + TypeScript                                     | Fast linting, code formatting, strict TypeScript configuration                            |
+| **Containerization**          | Docker & Compose v2                                                             | Multi-stage build, rootless execution, automated migration orchestrator                   |
 
 ---
 
@@ -194,7 +194,7 @@ Cashow ships with a production-ready, rootless multi-stage `Dockerfile` and a st
 │                          │                                             │
 │                          ▼                                             │
 │   ┌──────────────────────────────────────────────┐                     │
-│   │   cashow-postgres (PostgreSQL 17 + pgvector) │                     │
+│   │   cashow-postgres (PostgreSQL 17 Alpine)     │                     │
 │   └──────────────────────────────────────────────┘                     │
 └────────────────────────────────────────────────────────────────────────┘
 ```

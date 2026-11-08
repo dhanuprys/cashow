@@ -1,4 +1,4 @@
-FROM alpine:3.20
+FROM docker.io/library/alpine:3.20
 RUN apk add --no-cache postgresql17-client age tar gzip
 
 # Backup artifacts stay on the host under BACKUP_DIR (a plain local path).

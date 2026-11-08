@@ -9,7 +9,7 @@
 
 ARG BUN_VERSION=1.4.2
 
-FROM oven/bun:${BUN_VERSION}-alpine AS base
+FROM docker.io/oven/bun:${BUN_VERSION}-alpine AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 

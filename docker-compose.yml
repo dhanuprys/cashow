@@ -3,7 +3,7 @@
 #   web       Next.js standalone output on Bun               (port 3000)
 #   worker    background jobs and notifications              (backend)
 #   migrate   one-shot schema migration before web/worker     (backend)
-#   postgres  pinned pgvector/pgvector:pg17, named volume     (backend)
+#   postgres  pinned official postgres:17-alpine, named volume (backend)
 #   backup    nightly pg_dump + age -> local BACKUP_DIR      (profile: backup)
 #
 # Postgres is internal only. An external reverse proxy routes traffic to `web:3000`.
@@ -45,7 +45,7 @@ x-app-service: &app-service
 
 services:
   postgres:
-    image: pgvector/pgvector:pg17
+    image: docker.io/library/postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-cashow}

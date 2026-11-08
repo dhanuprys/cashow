@@ -22,7 +22,7 @@ jobs:
 
     services:
       postgres:
-        image: pgvector/pgvector:pg17
+        image: docker.io/library/postgres:17-alpine
         env:
           POSTGRES_USER: default
           POSTGRES_PASSWORD: default
