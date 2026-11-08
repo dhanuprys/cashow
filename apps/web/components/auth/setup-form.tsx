@@ -13,6 +13,7 @@ import type { PublicKeyCredentialCreationOptionsJSON } from "@simplewebauthn/bro
 import { browserSupportsWebAuthn, startRegistration } from "@simplewebauthn/browser";
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useState } from "react";
+import { LinkButton } from "@/components/ledger/link-button";
 import { AvatarPicker } from "@/components/ui/avatar-picker";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -566,12 +567,11 @@ export function SetupForm({
             </span>
           </div>
 
-          <Button
+          <LinkButton
+            href="/api/auth/google"
             variant="outline"
             size="lg"
-            className="w-full gap-2.5"
-            type="button"
-            render={<a href="/api/auth/google" />}
+            className="w-full gap-2.5 font-medium"
           >
             <svg className="size-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -592,7 +592,7 @@ export function SetupForm({
               />
             </svg>
             Daftar dengan Google
-          </Button>
+          </LinkButton>
         </div>
       )}
 

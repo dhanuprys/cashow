@@ -14,6 +14,7 @@ import { browserSupportsWebAuthn, startAuthentication } from "@simplewebauthn/br
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
+import { LinkButton } from "@/components/ledger/link-button";
 import { Button } from "@/components/ui/button";
 import { authErrorMessage, postJson } from "@/lib/auth/client";
 import { cn } from "@/lib/utils";
@@ -287,12 +288,11 @@ export function LoginForm({
             </span>
           </div>
 
-          <Button
+          <LinkButton
+            href={googleAuthHref}
             variant="outline"
             size="lg"
-            className="w-full gap-2.5"
-            type="button"
-            render={<a href={googleAuthHref} />}
+            className="w-full gap-2.5 font-medium"
           >
             <svg className="size-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -313,7 +313,7 @@ export function LoginForm({
               />
             </svg>
             Masuk dengan Google
-          </Button>
+          </LinkButton>
         </div>
       )}
 
